@@ -230,28 +230,32 @@ function AppBlue({ user, onLogout }) {
       const now = new Date()
       const newCustomers = customers.map(customer => {
         if (customer.id === id) {
-          const newIsRunning = !customer.is_running
-          
-          if (newIsRunning) {
-            // Resuming - was paused before
+          if (customer.is_running) {
+            // Currently running -> Pause
+            return {
+              ...customer,
+              is_running: false,
+              pause_time: now.toISOString()
+            }
+          } else {
+            // Currently paused -> Resume
             if (customer.pause_time) {
               const pauseDuration = Math.floor((now - new Date(customer.pause_time)) / 1000)
               return {
                 ...customer,
                 is_running: true,
                 pause_time: null,
-                total_pause_duration: customer.total_pause_duration + pauseDuration
+                total_pause_duration: (customer.total_pause_duration || 0) + pauseDuration
+              }
+            } else {
+              // Just resume without pause calculation
+              return {
+                ...customer,
+                is_running: true,
+                pause_time: null
               }
             }
-          } else {
-            // Pausing
-            return {
-              ...customer,
-              is_running: false,
-              pause_time: now.toISOString()
-            }
           }
-          return { ...customer, is_running: newIsRunning }
         }
         return customer
       })
