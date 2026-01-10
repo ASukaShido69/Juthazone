@@ -13,14 +13,33 @@ function HistoryViewBlue() {
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
   const [loading, setLoading] = useState(true)
+  const [users, setUsers] = useState({})
 
   useEffect(() => {
+    fetchUsers()
     fetchHistory()
   }, [])
 
   useEffect(() => {
     applyFilters()
   }, [history, searchTerm, filterRoom, filterPaid, dateFrom, dateTo])
+
+  const fetchUsers = async () => {
+    if (!supabase) return
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('username, display_name')
+      if (error) throw error
+      const userMap = {}
+      data.forEach(user => {
+        userMap[user.username] = user.display_name
+      })
+      setUsers(userMap)
+    } catch (error) {
+      console.error('Error fetching users:', error)
+    }
+  }
 
   const fetchHistory = async () => {
     if (!supabase) {
@@ -101,6 +120,24 @@ function HistoryViewBlue() {
       'Note': h.note || '-'
     }))
     exportToExcel(exportData, 'Juthazone_Blue_History')
+  }
+
+  const deleteHistory = async (recordId) => {
+    if (!supabase) return
+    try {
+      const { error } = await supabase
+        .from('juthazoneb_customers_history')
+        .delete()
+        .eq('id', recordId)
+      
+      if (error) throw error
+      
+      alert('✅ ลบรายการเรียบร้อยแล้ว')
+      fetchHistory()
+    } catch (error) {
+      console.error('Error deleting history:', error)
+      alert('❌ ไม่สามารถลบรายการได้: ' + error.message)
+    }
   }
 
   const clearFilters = () => {
@@ -273,8 +310,10 @@ function HistoryViewBlue() {
                     <th className="px-4 py-3 text-center text-sm">ระยะเวลา</th>
                     <th className="px-4 py-3 text-center text-sm">อัตรา/ชม</th>
                     <th className="px-4 py-3 text-center text-sm">ราคา</th>
+                    <th className="px-4 py-3 text-center text-sm">พนักงาน</th>
                     <th className="px-4 py-3 text-center text-sm">สถานะ</th>
-                    <th className="px-4 py-3 text-center rounded-tr-xl text-sm">เหตุผล</th>
+                    <th className="px-4 py-3 text-center text-sm">เหตุผล</th>
+                    <th className="px-4 py-3 text-center rounded-tr-xl text-sm">จัดการ</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -304,6 +343,11 @@ function HistoryViewBlue() {
                       <td className="px-4 py-3 text-center text-base font-bold text-green-600">
                         ฿{record.final_cost.toFixed(2)}
                       </td>
+                      <td className="px-4 py-3 text-center text-sm">
+                        <span className="inline-block bg-purple-100 text-purple-700 px-2 py-1 rounded-full text-xs font-semibold">
+                          {users[record.added_by] || record.added_by || '-'}
+                        </span>
+                      </td>
                       <td className="px-4 py-3 text-center">
                         <span
                           className={`inline-block px-2 py-1 rounded-full text-xs font-bold ${
@@ -322,6 +366,19 @@ function HistoryViewBlue() {
                           {record.end_reason === 'deleted' && '🗑️ ลบ'}
                           {record.end_reason === 'in_progress' && '⏳ กำลังใช้'}
                         </span>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <button
+                          onClick={() => {
+                            if (confirm(`ต้องการลบประวัติของ "${record.name}" ใช่หรือไม่?\n\nข้อมูลจะถูกลบถาวร!`)) {
+                              deleteHistory(record.id)
+                            }
+                          }}
+                          className="px-2 py-1 bg-red-500 hover:bg-red-600 text-white rounded-lg font-semibold text-xs"
+                          title="ลบรายการประวัติ"
+                        >
+                          🗑️
+                        </button>
                       </td>
                     </tr>
                   ))}

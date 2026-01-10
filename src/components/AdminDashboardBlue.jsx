@@ -9,6 +9,7 @@ function AdminDashboardBlue({
   addCustomer,
   toggleTimer,
   togglePayment,
+  completeCustomer,
   deleteCustomer,
   user,
   onLogout
@@ -188,7 +189,7 @@ function AdminDashboardBlue({
           {user && (
             <div className="absolute top-0 right-0 flex items-center gap-3">
               <div className="bg-white/90 text-blue-600 font-bold px-4 py-2 rounded-xl text-xs md:text-sm shadow-lg">
-                👤 {user.display_name}
+                👤 {user.displayName}
               </div>
               <button
                 onClick={onLogout}
@@ -455,7 +456,7 @@ function AdminDashboardBlue({
                                 }`}
                                 title={customer.is_running ? 'หยุดชั่วคราว' : 'เริ่มต่อ'}
                               >
-                                {customer.is_running ? '⏸️' : '▶️'}
+                                {customer.is_running ? '⏸️ หยุด' : '▶️ เริ่ม'}
                               </button>
                               <button
                                 onClick={() => togglePayment(customer.id)}
@@ -467,6 +468,17 @@ function AdminDashboardBlue({
                                 title="สลับสถานะการชำระเงิน"
                               >
                                 💰
+                              </button>
+                              <button
+                                onClick={() => {
+                                  if (confirm(`✅ เสร็จสิ้นการใช้งานของ "${customer.name}"?\n\nราคารวม: ฿${customer.currentCost.toFixed(2)}\nจะบันทึกไว้ในประวัติ`)) {
+                                    completeCustomer(customer.id)
+                                  }
+                                }}
+                                className="px-2 md:px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold text-xs md:text-sm"
+                                title="เสร็จสิ้นและบันทึกประวัติ"
+                              >
+                                ✅
                               </button>
                               <button
                                 onClick={() => {
@@ -489,31 +501,6 @@ function AdminDashboardBlue({
               </div>
             </div>
           )}
-        </div>
-
-        {/* Info Panel */}
-        <div className="mt-6 bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl p-4 md:p-6 border-2 border-blue-300">
-          <h3 className="text-lg md:text-xl font-bold text-blue-700 mb-3">💡 วิธีการคำนวณราคา (Pro-rated)</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm md:text-base">
-            <div className="bg-blue-50 p-4 rounded-xl border-2 border-blue-200">
-              <p className="font-bold text-blue-800 mb-2">📊 ตัวอย่างที่ 1</p>
-              <p className="text-gray-700">อัตรา: 159 บาท/ชม.</p>
-              <p className="text-gray-700">เวลา: 30 นาที (0.5 ชม.)</p>
-              <p className="text-green-600 font-bold mt-2">ราคา = 79.50 บาท</p>
-            </div>
-            <div className="bg-blue-50 p-4 rounded-xl border-2 border-blue-200">
-              <p className="font-bold text-blue-800 mb-2">📊 ตัวอย่างที่ 2</p>
-              <p className="text-gray-700">อัตรา: 159 บาท/ชม.</p>
-              <p className="text-gray-700">เวลา: 45 นาที (0.75 ชม.)</p>
-              <p className="text-green-600 font-bold mt-2">ราคา = 119.25 บาท</p>
-            </div>
-            <div className="bg-blue-50 p-4 rounded-xl border-2 border-blue-200">
-              <p className="font-bold text-blue-800 mb-2">📊 ตัวอย่างที่ 3</p>
-              <p className="text-gray-700">อัตรา: 159 บาท/ชม.</p>
-              <p className="text-gray-700">เวลา: 1.5 ชม.</p>
-              <p className="text-green-600 font-bold mt-2">ราคา = 238.50 บาท</p>
-            </div>
-          </div>
         </div>
       </div>
     </div>

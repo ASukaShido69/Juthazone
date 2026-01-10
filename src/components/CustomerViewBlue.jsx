@@ -162,32 +162,6 @@ function CustomerViewBlue({ customers }) {
             })}
           </div>
         )}
-
-        {/* Info Section */}
-        <div className="mt-8 bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl p-4 md:p-6 border-2 border-blue-300">
-          <h3 className="text-lg md:text-xl font-bold text-blue-700 mb-3 text-center">
-            💡 วิธีการคำนวณราคา
-          </h3>
-          <div className="text-sm md:text-base text-gray-700 space-y-2">
-            <p className="text-center">
-              <span className="font-bold text-blue-600">ระบบคำนวณแบบ Pro-rated:</span> คิดราคาตามเวลาที่ใช้จริง
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
-              <div className="bg-blue-50 p-3 rounded-lg border-2 border-blue-200 text-center">
-                <p className="font-bold text-blue-700">30 นาที</p>
-                <p className="text-xs text-gray-600">= ฿79.50</p>
-              </div>
-              <div className="bg-blue-50 p-3 rounded-lg border-2 border-blue-200 text-center">
-                <p className="font-bold text-blue-700">45 นาที</p>
-                <p className="text-xs text-gray-600">= ฿119.25</p>
-              </div>
-              <div className="bg-blue-50 p-3 rounded-lg border-2 border-blue-200 text-center">
-                <p className="font-bold text-blue-700">1 ชั่วโมง</p>
-                <p className="text-xs text-gray-600">= ฿159.00</p>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   )

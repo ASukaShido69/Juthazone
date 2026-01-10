@@ -322,6 +322,42 @@ function AppBlue({ user, onLogout }) {
     }
   }
 
+  const completeCustomer = async (id) => {
+    try {
+      const customerToComplete = customers.find(c => c.id === id)
+      if (customerToComplete) {
+        // Log activity
+        if (user && user.username) {
+          await logActivityBlue(
+            user.username,
+            'COMPLETE_CUSTOMER',
+            `Completed customer: ${customerToComplete.name} from room ${customerToComplete.room}`,
+            { 
+              name: customerToComplete.name, 
+              room: customerToComplete.room,
+              finalCost: calculateCostBlue(customerToComplete.start_time, customerToComplete.hourly_rate, customerToComplete.total_pause_duration)
+            },
+            customerToComplete.id
+          )
+        }
+        
+        // Save to history as completed
+        await saveToHistory(customerToComplete, 'completed')
+      }
+
+      const newCustomers = customers.filter(customer => customer.id !== id)
+      setCustomers(newCustomers)
+      await updateFirebase(newCustomers)
+      
+      channel.postMessage({
+        type: 'UPDATE_CUSTOMERS',
+        data: { customers: newCustomers, nextId }
+      })
+    } catch (error) {
+      console.error('Error completing customer (Blue):', error)
+    }
+  }
+
   const deleteCustomer = async (id) => {
     try {
       const customerToDelete = customers.find(c => c.id === id)
@@ -398,6 +434,7 @@ function AppBlue({ user, onLogout }) {
               addCustomer={addCustomer}
               toggleTimer={toggleTimer}
               togglePayment={togglePayment}
+              completeCustomer={completeCustomer}
               deleteCustomer={deleteCustomer}
               user={user}
               onLogout={handleLogout}
