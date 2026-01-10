@@ -133,101 +133,101 @@ function LoginPage({ onLogin }) {
                   selectedZone === 'red' 
                     ? 'bg-red-100 text-red-700' 
                     : 'bg-blue-100 text-blue-700'
-                }`}>selectedZone === 'red'
-                  ? 'bg-gradient-to-r from-red-600 to-red-500 hover:shadow-lg hover:scale-105 active:scale-95'
-                  : 'bg-gradient-to-r from-blue-600 to-blue-500 hover:shadow-lg hover:scale-105 active:scale-95'
-              }`}
-            >
-              {loading ? '⏳ กำลังเข้าสู่ระบบ...' : '🚀 เข้าสู่ระบบ'}
-            </button>
-          </form>
-
-          {/* Info Message */}
-          <div className={`mt-8 border-2 rounded-xl p-4 ${
-            selectedZone === 'red' 
-              ? 'bg-red-50 border-red-300' 
-              : 'bg-blue-50 border-blue-300'
-          }`}>
-            <p className={`font-bold text-center text-sm ${
-              selectedZone === 'red' ? 'text-red-700' : 'text-blue-700'
-            }`}>
-              ✅ ระบบเข้าสู่ระบบ Juthazone {selectedZone === 'red' ? 'Red' : 'Blue'}
-            </p>
-            <p className={`text-center text-xs mt-2 ${
-              selectedZone === 'red' ? 'text-red-600' : 'text-blue-600'
-            }`}>
-              {selectedZone === 'red' 
-                ? 'ระบบกำหนดเวลาและราคาล่วงหน้า' 
-                : 'ระบบคำนวณราคาตามเวลาจริง (Pro-rated)'}
-            </p>
-          </div>
-            </>
-          )}orm onSubmit={handleLogin} className="space-y-4">
-            {/* Username Input */}
-            <div>
-              <label className="block text-gray-700 font-bold mb-2">👤 ชื่อผู้ใช้</label>
-              <input
-                type="text"
-                value={username}
-                onChange={(e) => {
-                  setUsername(e.target.value)
-                  setError('')
-                }}
-                placeholder="Username"
-                className="w-full px-4 py-3 border-2 border-purple-300 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 text-base font-semibold"
-                disabled={loading}
-                autoComplete="username"
-              />
-            </div>
-
-            {/* Password Input */}
-            <div>
-              <label className="block text-gray-700 font-bold mb-2">🔑 รหัสผ่าน</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => {
-                  setPassword(e.target.value)
-                  setError('')
-                }}
-                placeholder="กรอกรหัสผ่าน"
-                className="w-full px-4 py-3 border-2 border-purple-300 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 text-base font-semibold"
-                disabled={loading}
-                autoComplete="current-password"
-              />
-            </div>
-
-            {/* Error Message */}
-            {error && (
-              <div className="bg-red-100 border-2 border-red-400 text-red-700 px-4 py-3 rounded-lg font-semibold text-center">
-                {error}
+                }`}>
+                  {selectedZone === 'red' ? '🔴 Juthazone Red' : '🔵 Juthazone Blue'}
+                </div>
+                <button
+                  onClick={() => setSelectedZone(null)}
+                  className="ml-2 text-sm text-gray-500 hover:text-gray-700 underline"
+                >
+                  เปลี่ยน
+                </button>
               </div>
-            )}
 
-            {/* Login Button */}
-            <button
-              type="submit"
-              disabled={loading || !username || !password}
-              className={`w-full py-3 px-6 rounded-xl font-bold text-white text-lg transform transition-all duration-300 ${
-                loading || !username || !password
-                  ? 'bg-gray-400 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 hover:shadow-lg hover:scale-105 active:scale-95'
-              }`}
-            >
-              {loading ? '⏳ กำลังเข้าสู่ระบบ...' : '🚀 เข้าสู่ระบบ'}
-            </button>
-          </form>
+              <form onSubmit={handleLogin} className="space-y-4">
+                {/* Username Input */}
+                <div>
+                  <label className="block text-gray-700 font-bold mb-2">👤 ชื่อผู้ใช้</label>
+                  <input
+                    type="text"
+                    value={username}
+                    onChange={(e) => {
+                      setUsername(e.target.value)
+                      setError('')
+                    }}
+                    placeholder="Username"
+                    className="w-full px-4 py-3 border-2 border-purple-300 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 text-base font-semibold"
+                    disabled={loading}
+                    autoComplete="username"
+                  />
+                </div>
 
-          {/* Info Message */}
-          <div className="mt-8 bg-green-50 border-2 border-green-300 rounded-xl p-4">
-            <p className="text-green-700 font-bold text-center text-sm">✅ ระบบเข้าสู่ระบบ Juthazone</p>
-            <p className="text-green-600 text-center text-xs mt-2">กรุณากรอกชื่อผู้ใช้และรหัสผ่านที่ถูกต้องนะจ๊ะจุ๊บๆ</p>
-          </div>
+                {/* Password Input */}
+                <div>
+                  <label className="block text-gray-700 font-bold mb-2">🔑 รหัสผ่าน</label>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => {
+                      setPassword(e.target.value)
+                      setError('')
+                    }}
+                    placeholder="กรอกรหัสผ่าน"
+                    className="w-full px-4 py-3 border-2 border-purple-300 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 text-base font-semibold"
+                    disabled={loading}
+                    autoComplete="current-password"
+                  />
+                </div>
+
+                {/* Error Message */}
+                {error && (
+                  <div className="bg-red-100 border-2 border-red-400 text-red-700 px-4 py-3 rounded-lg font-semibold text-center">
+                    {error}
+                  </div>
+                )}
+
+                {/* Login Button */}
+                <button
+                  type="submit"
+                  disabled={loading || !username || !password}
+                  className={`w-full py-3 px-6 rounded-xl font-bold text-white text-lg transform transition-all duration-300 ${
+                    loading || !username || !password
+                      ? 'bg-gray-400 cursor-not-allowed'
+                      : selectedZone === 'red'
+                      ? 'bg-gradient-to-r from-red-600 to-red-500 hover:shadow-lg hover:scale-105 active:scale-95'
+                      : 'bg-gradient-to-r from-blue-600 to-blue-500 hover:shadow-lg hover:scale-105 active:scale-95'
+                  }`}
+                >
+                  {loading ? '⏳ กำลังเข้าสู่ระบบ...' : '🚀 เข้าสู่ระบบ'}
+                </button>
+              </form>
+
+              {/* Info Message */}
+              <div className={`mt-8 border-2 rounded-xl p-4 ${
+                selectedZone === 'red' 
+                  ? 'bg-red-50 border-red-300' 
+                  : 'bg-blue-50 border-blue-300'
+              }`}>
+                <p className={`font-bold text-center text-sm ${
+                  selectedZone === 'red' ? 'text-red-700' : 'text-blue-700'
+                }`}>
+                  ✅ ระบบเข้าสู่ระบบ Juthazone {selectedZone === 'red' ? 'Red' : 'Blue'}
+                </p>
+                <p className={`text-center text-xs mt-2 ${
+                  selectedZone === 'red' ? 'text-red-600' : 'text-blue-600'
+                }`}>
+                  {selectedZone === 'red' 
+                    ? 'ระบบกำหนดเวลาและราคาล่วงหน้า' 
+                    : 'ระบบคำนวณราคาตามเวลาจริง (Pro-rated)'}
+                </p>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Footer */}
         <div className="text-center mt-6 text-white/90 font-semibold drop-shadow-lg">
-          <p>© 2026 Juthazone - ระบบจัดการเวลาเล่นทำโดยเทพลีโอ</p>
+          <p>© 2026 Juthazone - ระบบจัดการเวลาเล่น</p>
         </div>
       </div>
     </div>
