@@ -146,8 +146,19 @@ function AdminDashboardBlue({
 
   // Calculate real-time cost for each customer
   const displayCustomers = customers.map(customer => {
-    const currentCost = calculateCostBlue(customer.start_time, customer.hourly_rate, customer.total_pause_duration)
-    const elapsedTime = formatElapsedTime(customer.start_time, customer.total_pause_duration)
+    const currentCost = calculateCostBlue(
+      customer.start_time,
+      customer.hourly_rate,
+      customer.total_pause_duration,
+      customer.pause_time,
+      customer.is_running
+    )
+    const elapsedTime = formatElapsedTime(
+      customer.start_time,
+      customer.total_pause_duration,
+      customer.pause_time,
+      customer.is_running
+    )
     return {
       ...customer,
       currentCost,
@@ -282,7 +293,7 @@ function AdminDashboardBlue({
           {/* Add Customer Form */}
           <div className="lg:col-span-2 bg-white/95 backdrop-blur-sm rounded-xl md:rounded-2xl shadow-2xl p-4 md:p-6 transform hover:scale-[1.01] transition-all duration-300 border-3 md:border-4 border-blue-300">
             <h2 className="text-lg md:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent mb-3 md:mb-4">
-              ➕ เพิ่มลูกค้าใหม่
+              ➕
             </h2>
             <form onSubmit={handleSubmit} className="space-y-3 md:space-y-4">
               <div>

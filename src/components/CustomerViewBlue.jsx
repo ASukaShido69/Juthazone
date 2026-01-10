@@ -8,8 +8,19 @@ function CustomerViewBlue({ customers }) {
   const displayCustomers = useMemo(() => {
     return customers.map(customer => ({
       ...customer,
-      currentCost: calculateCostBlue(customer.start_time, customer.hourly_rate, customer.total_pause_duration),
-      elapsedTime: formatElapsedTime(customer.start_time, customer.total_pause_duration)
+      currentCost: calculateCostBlue(
+        customer.start_time,
+        customer.hourly_rate,
+        customer.total_pause_duration,
+        customer.pause_time,
+        customer.is_running
+      ),
+      elapsedTime: formatElapsedTime(
+        customer.start_time,
+        customer.total_pause_duration,
+        customer.pause_time,
+        customer.is_running
+      )
     }))
   }, [customers])
 

@@ -270,7 +270,9 @@ function AppBlue({ user, onLogout }) {
           const currentCost = calculateCostBlue(
             updatedCustomer.start_time,
             updatedCustomer.hourly_rate,
-            updatedCustomer.total_pause_duration
+            updatedCustomer.total_pause_duration,
+            updatedCustomer.pause_time,
+            updatedCustomer.is_running
           )
           await supabase
             .from('juthazoneb_customers_history')
@@ -400,7 +402,13 @@ function AppBlue({ user, onLogout }) {
     try {
       const endTime = new Date()
       const durationMinutes = getDurationMinutes(customer.start_time, endTime, customer.total_pause_duration)
-      const finalCost = calculateCostBlue(customer.start_time, customer.hourly_rate, customer.total_pause_duration)
+      const finalCost = calculateCostBlue(
+        customer.start_time,
+        customer.hourly_rate,
+        customer.total_pause_duration,
+        customer.pause_time,
+        customer.is_running
+      )
 
       const { error } = await supabase
         .from('juthazoneb_customers_history')

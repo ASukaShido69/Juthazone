@@ -70,10 +70,10 @@ export const authenticateUser = async (username, password) => {
 }
 
 // Calculate cost based on elapsed time and hourly rate (Blue Zone specific)
-export const calculateCostBlue = (startTime, hourlyRate, totalPauseDuration = 0) => {
-  const now = new Date()
+export const calculateCostBlue = (startTime, hourlyRate, totalPauseDuration = 0, pauseTime = null, isRunning = true) => {
+  const now = isRunning ? new Date() : (pauseTime ? new Date(pauseTime) : new Date())
   const start = new Date(startTime)
-  const elapsedMs = now - start - (totalPauseDuration * 1000) // Subtract pause duration
+  const elapsedMs = now - start - (totalPauseDuration * 1000) // Subtract accumulated pause duration
   const elapsedHours = elapsedMs / (1000 * 60 * 60) // Convert to hours
   
   const cost = Math.max(0, elapsedHours * hourlyRate)
@@ -81,8 +81,8 @@ export const calculateCostBlue = (startTime, hourlyRate, totalPauseDuration = 0)
 }
 
 // Format elapsed time for display
-export const formatElapsedTime = (startTime, totalPauseDuration = 0) => {
-  const now = new Date()
+export const formatElapsedTime = (startTime, totalPauseDuration = 0, pauseTime = null, isRunning = true) => {
+  const now = isRunning ? new Date() : (pauseTime ? new Date(pauseTime) : new Date())
   const start = new Date(startTime)
   const elapsedMs = now - start - (totalPauseDuration * 1000)
   const elapsedSeconds = Math.floor(elapsedMs / 1000)
