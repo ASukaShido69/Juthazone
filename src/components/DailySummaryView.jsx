@@ -42,7 +42,7 @@ function DailySummaryView({ user, onLogout }) {
     }
 
     const filteredVip = vipData.filter(e => (e.shift || getShiftFromTime(e.start_time)) === shift)
-    const filteredComputer = computerData.filter(e => (e.shift || 'all') === shift)
+    const filteredComputer = computerData.filter(e => (e.shift || getShiftFromTime(e.start_time || e.created_at)) === shift)
 
     setVipEntries(filteredVip)
     setComputerEntries(filteredComputer)
@@ -55,7 +55,13 @@ function DailySummaryView({ user, onLogout }) {
       setLoading(true)
       setError(null)
 
-      // Load VIP entries
+      // Date range for the selected day (UTC to avoid TZ drift)
+      const dayStart = new Date(`${selectedDate}T00:00:00.000Z`).toISOString()
+      const nextDay = new Date(`${selectedDate}T00:00:00.000Z`)
+      nextDay.setUTCDate(nextDay.getUTCDate() + 1)
+      const dayEnd = nextDay.toISOString()
+
+      // Load VIP entries (session_date or start_time date)
       const { data: vipData, error: vipError } = await supabase
         .from('customers_history')
         .select('*')
@@ -65,25 +71,35 @@ function DailySummaryView({ user, onLogout }) {
 
       if (vipError) throw vipError
 
-      // Load Computer Zone entries
+      // Load Computer Zone entries by created_at range (fallback if session_date missing)
       const { data: computerData, error: computerError } = await supabase
         .from('computer_zone_history')
         .select('*')
-        .eq('session_date', selectedDate)
+        .gte('created_at', dayStart)
+        .lt('created_at', dayEnd)
         .order('created_at', { ascending: false })
 
       if (computerError) throw computerError
 
-      // Add shift detection if missing
+      // Add shift/session_date detection if missing
       const processedVip = (vipData || []).map(entry => ({
         ...entry,
         shift: entry.shift || getShiftFromTime(entry.start_time)
       }))
 
+      const processedComputer = (computerData || []).map(entry => {
+        const fallbackDate = (entry.start_time || entry.created_at || `${selectedDate}T00:00:00Z`).split('T')[0]
+        return {
+          ...entry,
+          shift: entry.shift || getShiftFromTime(entry.start_time || entry.created_at),
+          session_date: entry.session_date || fallbackDate
+        }
+      })
+
       setAllVipEntries(processedVip)
-      setAllComputerEntries(computerData || [])
-      calculateSummary(processedVip, computerData || [])
-      applyShiftFilter(processedVip, computerData || [], selectedShift)
+      setAllComputerEntries(processedComputer)
+      calculateSummary(processedVip, processedComputer)
+      applyShiftFilter(processedVip, processedComputer, selectedShift)
 
     } catch (error) {
       console.error('Error loading data:', error)

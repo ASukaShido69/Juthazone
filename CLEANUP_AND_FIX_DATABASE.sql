@@ -68,10 +68,17 @@ DROP POLICY IF EXISTS "Allow authenticated insert" ON customers_history;
 DROP POLICY IF EXISTS "Allow authenticated update" ON customers_history;
 DROP POLICY IF EXISTS "Allow authenticated delete" ON customers_history;
 
+-- Allow history page (anon key) to read data
+DROP POLICY IF EXISTS "customers_history_public_select" ON customers_history;
+
 -- สร้าง RLS policies ใหม่ - ปลอดภัย
 CREATE POLICY "customers_history_authenticated_select" ON customers_history 
   FOR SELECT 
   USING (auth.role() = 'authenticated');
+
+CREATE POLICY "customers_history_public_select" ON customers_history
+  FOR SELECT
+  USING (true);
 
 CREATE POLICY "customers_history_authenticated_insert" ON customers_history 
   FOR INSERT 
@@ -104,6 +111,27 @@ ALTER TABLE IF EXISTS computer_zone_history
 -- เพิ่ม columns ที่ขาด (ถ้ายังไม่มี)
 ALTER TABLE IF EXISTS computer_zone_history 
   ADD COLUMN IF NOT EXISTS session_date DATE;
+
+-- Auto compute session_date and shift for computer_zone_history
+DROP TRIGGER IF EXISTS auto_compute_computer_shift ON computer_zone_history;
+DROP FUNCTION IF EXISTS compute_computer_shift_on_insert();
+
+CREATE OR REPLACE FUNCTION compute_computer_shift_on_insert()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.session_date IS NULL THEN
+    NEW.session_date := COALESCE(CAST(NEW.start_time AS DATE), CAST(NEW.created_at AS DATE), CURRENT_DATE);
+  END IF;
+  IF NEW.shift IS NULL OR NEW.shift = 'all' THEN
+    NEW.shift := get_shift_from_time(COALESCE(NEW.start_time, NEW.created_at));
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER auto_compute_computer_shift
+BEFORE INSERT OR UPDATE ON computer_zone_history
+FOR EACH ROW EXECUTE FUNCTION compute_computer_shift_on_insert();
 
 -- Enable RLS
 ALTER TABLE computer_zone_history ENABLE ROW LEVEL SECURITY;

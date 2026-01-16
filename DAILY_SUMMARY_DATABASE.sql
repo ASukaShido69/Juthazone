@@ -73,6 +73,15 @@ BEFORE INSERT OR UPDATE ON customers_history
 FOR EACH ROW EXECUTE FUNCTION compute_shift_on_insert();
 
 -- ==========================================
+-- RLS: Allow public (anon key) to read history
+-- ==========================================
+-- NOTE: If you require auth, remove this policy and use authenticated-only
+DROP POLICY IF EXISTS "customers_history_public_select" ON customers_history;
+CREATE POLICY "customers_history_public_select" ON customers_history
+  FOR SELECT
+  USING (true);
+
+-- ==========================================
 -- 3. DAILY SUMMARY VIEW (READ-ONLY)
 -- ==========================================
 -- View สำหรับแสดงสรุปยอดรายวันตามกะ
@@ -206,20 +215,20 @@ AND pg_proc.pronamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'public
 SELECT 
   trigger_name,
   event_manipulation,
-  table_name
+  event_object_table AS table_name
 FROM information_schema.triggers
-WHERE table_name IN ('customers_history', 'computer_zone_history')
+WHERE event_object_table IN ('customers_history', 'computer_zone_history')
 AND trigger_schema = 'public'
-ORDER BY table_name, trigger_name;
+ORDER BY event_object_table, trigger_name;
 
 -- ตรวจสอบ views
 SELECT
-  view_name,
-  table_schema as schema
+  table_name AS view_name,
+  table_schema AS schema
 FROM information_schema.views
 WHERE table_schema = 'public'
-AND (view_name LIKE '%shift%' OR view_name LIKE '%summary%')
-ORDER BY view_name;
+AND (table_name LIKE '%shift%' OR table_name LIKE '%summary%')
+ORDER BY table_name;
 
 -- ==========================================
 -- 8. TEST QUERIES
