@@ -25,6 +25,15 @@ function DailySummaryView({ user, onLogout }) {
     '3': { name: 'กะดึก', time: '01:00-10:00', color: 'bg-blue-100 text-blue-800' }
   }
 
+  const toBangkokDateString = (isoTs) => {
+    if (!isoTs) return null
+    const d = new Date(isoTs)
+    if (Number.isNaN(d.getTime())) return null
+    // Convert to Bangkok (+07:00) by shifting minutes
+    const bangkok = new Date(d.getTime() + 7 * 60 * 60 * 1000)
+    return bangkok.toISOString().split('T')[0]
+  }
+
   const getShiftFromTime = useCallback((timeStr) => {
     if (!timeStr) return 'all'
 
@@ -83,12 +92,13 @@ function DailySummaryView({ user, onLogout }) {
 
       if (vipError) throw vipError
 
-      // Load Computer Zone entries by session_date if exists, else created_at range
+      // Load Computer Zone entries: prefer session_date match; fallback to created_at range when session_date missing
       const { data: computerData, error: computerError } = await supabase
         .from('computer_zone_history')
         .select('*')
-        .or(`session_date.eq.${selectedDate},created_at.gte.${dayStart}`)
-        .lt('created_at', dayEnd)
+        .or(
+          `session_date.eq.${selectedDate},and(session_date.is.null,created_at.gte.${dayStart},created_at.lt.${dayEnd})`
+        )
         .order('created_at', { ascending: false })
 
       if (computerError) throw computerError
@@ -100,11 +110,13 @@ function DailySummaryView({ user, onLogout }) {
       }))
 
       const processedComputer = (computerData || []).map(entry => {
-        const fallbackDate = (entry.start_time || entry.created_at || `${selectedDate}T00:00:00Z`).split('T')[0]
+        const fallbackDate = entry.session_date
+          || toBangkokDateString(entry.created_at)
+          || selectedDate
         return {
           ...entry,
           shift: entry.shift || getShiftFromTime(entry.start_time || entry.created_at),
-          session_date: entry.session_date || fallbackDate
+          session_date: fallbackDate
         }
       })
 
