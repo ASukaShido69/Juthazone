@@ -27,7 +27,18 @@ function DailySummaryView({ user, onLogout }) {
 
   const getShiftFromTime = useCallback((timeStr) => {
     if (!timeStr) return 'all'
-    const hour = parseInt(timeStr.split(':')[0])
+
+    // Handle both HH:mm:ss and full ISO strings reliably
+    let hour = null
+    const asDate = new Date(timeStr)
+    if (!Number.isNaN(asDate.getTime())) {
+      hour = asDate.getHours()
+    } else {
+      const parts = timeStr.split(':')
+      hour = parseInt(parts[0], 10)
+    }
+
+    if (Number.isNaN(hour) || hour === null) return 'all'
     if (hour >= 10 && hour < 19) return '1'
     if (hour >= 19 || hour < 1) return '2'
     if (hour >= 1 && hour < 10) return '3'
