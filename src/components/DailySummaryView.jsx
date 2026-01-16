@@ -471,6 +471,7 @@ function DailySummaryView({ user, onLogout }) {
                     <th className="px-4 py-3 text-left text-gray-700 font-bold">#</th>
                     <th className="px-4 py-3 text-left text-gray-700 font-bold">👤 ชื่อ</th>
                     <th className="px-4 py-3 text-left text-gray-700 font-bold">🚪 ห้อง</th>
+                    <th className="px-4 py-3 text-center text-gray-700 font-bold">🔄 กะ</th>
                     <th className="px-4 py-3 text-right text-gray-700 font-bold">💰 ค่าใช้จ่าย</th>
                     <th className="px-4 py-3 text-center text-gray-700 font-bold">💳 วิธีจ่าย</th>
                   </tr>
@@ -488,12 +489,16 @@ function DailySummaryView({ user, onLogout }) {
                           </span>
                         </td>
                         <td className="px-4 py-3 text-center">
-                          <div className="text-gray-700">{entry.start_time || '-'}</div>
                           {shift && (
-                            <div className={`text-xs px-2 py-0.5 rounded-full inline-block mt-1 ${shifts[shift].color}`}>
+                            <span className={`px-3 py-1 rounded-full font-bold text-xs ${shifts[shift].color}`}>
                               {shifts[shift].name}
-                            </div>
+                            </span>
                           )}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <span className="text-green-600 font-bold text-lg">
+                            ฿{parseFloat(entry.final_cost || 0).toFixed(2)}
+                          </span>
                         </td>
                         <td className="px-4 py-3 text-center">
                           {entry.payment_method === 'cash' ? (
@@ -512,7 +517,7 @@ function DailySummaryView({ user, onLogout }) {
                 </tbody>
                 <tfoot>
                   <tr className="bg-gradient-to-r from-green-100 to-emerald-100 border-t-2 border-gray-300 font-bold">
-                    <td colSpan="5" className="px-4 py-3 text-gray-800 text-lg">
+                    <td colSpan="4" className="px-4 py-3 text-gray-800 text-lg">
                       รวม {selectedShift !== 'all' ? shifts[selectedShift].name : 'ทั้งหมด'}
                     </td>
                     <td className="px-4 py-3 text-right text-green-600 text-xl">
