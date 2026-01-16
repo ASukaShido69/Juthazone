@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import supabase from '../firebase'
 import { utils as XLSXUtils, writeFile } from 'xlsx'
 
@@ -6,9 +6,12 @@ function DailySummaryView({ user, onLogout }) {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
   const [selectedShift, setSelectedShift] = useState('all')
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
   
   const [vipEntries, setVipEntries] = useState([])
   const [computerEntries, setComputerEntries] = useState([])
+  const [allVipEntries, setAllVipEntries] = useState([])
+  const [allComputerEntries, setAllComputerEntries] = useState([])
   
   const [summary, setSummary] = useState({
     vip: { total: 0, transfer: 0, cash: 0, count: 0 },
@@ -22,52 +25,47 @@ function DailySummaryView({ user, onLogout }) {
     '3': { name: 'กะดึก', time: '01:00-10:00', color: 'bg-blue-100 text-blue-800' }
   }
 
-  const getShiftFromTime = (timeStr) => {
-    if (!timeStr) return null
+  const getShiftFromTime = useCallback((timeStr) => {
+    if (!timeStr) return 'all'
     const hour = parseInt(timeStr.split(':')[0])
     if (hour >= 10 && hour < 19) return '1'
     if (hour >= 19 || hour < 1) return '2'
     if (hour >= 1 && hour < 10) return '3'
-    return null
-  }
+    return 'all'
+  }, [])
 
-  useEffect(() => {
-    loadData()
-  }, [selectedDate])
-
-  useEffect(() => {
-    if (!supabase) return
-
-    const vipChannel = supabase
-      .channel('vip_summary')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'customers_history' }, loadData)
-      .subscribe()
-
-    const computerChannel = supabase
-      .channel('computer_summary')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'computer_zone_history' }, loadData)
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(vipChannel)
-      supabase.removeChannel(computerChannel)
+  const applyShiftFilter = useCallback((vipData, computerData, shift) => {
+    if (shift === 'all') {
+      setVipEntries(vipData)
+      setComputerEntries(computerData)
+      return
     }
-  }, [selectedDate])
 
-  const loadData = async () => {
+    const filteredVip = vipData.filter(e => (e.shift || getShiftFromTime(e.start_time)) === shift)
+    const filteredComputer = computerData.filter(e => (e.shift || 'all') === shift)
+
+    setVipEntries(filteredVip)
+    setComputerEntries(filteredComputer)
+  }, [getShiftFromTime])
+
+  const loadData = useCallback(async () => {
     if (!supabase) return
     
     try {
       setLoading(true)
+      setError(null)
 
+      // Load VIP entries
       const { data: vipData, error: vipError } = await supabase
         .from('customers_history')
         .select('*')
         .eq('session_date', selectedDate)
+        .neq('end_reason', 'in_progress')
         .order('start_time', { ascending: false })
 
       if (vipError) throw vipError
 
+      // Load Computer Zone entries
       const { data: computerData, error: computerError } = await supabase
         .from('computer_zone_history')
         .select('*')
@@ -76,17 +74,51 @@ function DailySummaryView({ user, onLogout }) {
 
       if (computerError) throw computerError
 
-      setVipEntries(vipData || [])
-      setComputerEntries(computerData || [])
-      calculateSummary(vipData || [], computerData || [])
+      // Add shift detection if missing
+      const processedVip = (vipData || []).map(entry => ({
+        ...entry,
+        shift: entry.shift || getShiftFromTime(entry.start_time)
+      }))
+
+      setAllVipEntries(processedVip)
+      setAllComputerEntries(computerData || [])
+      calculateSummary(processedVip, computerData || [])
+      applyShiftFilter(processedVip, computerData || [], selectedShift)
 
     } catch (error) {
       console.error('Error loading data:', error)
-      alert('❌ ไม่สามารถโหลดข้อมูลได้: ' + error.message)
+      setError('❌ ไม่สามารถโหลดข้อมูลได้: ' + error.message)
     } finally {
       setLoading(false)
     }
-  }
+  }, [selectedDate, selectedShift, getShiftFromTime, applyShiftFilter])
+
+  useEffect(() => {
+    loadData()
+  }, [loadData])
+
+  useEffect(() => {
+    if (!supabase) return
+
+    const vipChannel = supabase
+      .channel('vip_summary')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'customers_history' }, () => {
+        loadData()
+      })
+      .subscribe()
+
+    const computerChannel = supabase
+      .channel('computer_summary')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'computer_zone_history' }, () => {
+        loadData()
+      })
+      .subscribe()
+
+    return () => {
+      vipChannel.unsubscribe()
+      computerChannel.unsubscribe()
+    }
+  }, [loadData])
 
   const calculateSummary = (vipData, computerData) => {
     const vipSummary = vipData.reduce((acc, entry) => {
@@ -124,24 +156,12 @@ function DailySummaryView({ user, onLogout }) {
     })
   }
 
-  const getFilteredData = () => {
-    if (selectedShift === 'all') {
-      return { vip: vipEntries, computer: computerEntries }
-    }
+  const getFilteredData = useCallback(() => {
+    return { vip: vipEntries, computer: computerEntries }
+  }, [vipEntries, computerEntries])
 
-    const filteredVip = vipEntries.filter(e => 
-      e.start_time && getShiftFromTime(e.start_time) === selectedShift
-    )
-    
-    const filteredComputer = computerEntries.filter(e => e.shift === selectedShift)
-
-    return { vip: filteredVip, computer: filteredComputer }
-  }
-
-  const getFilteredSummary = () => {
-    const { vip, computer } = getFilteredData()
-    
-    const vipSum = vip.reduce((acc, e) => {
+  const getFilteredSummary = useCallback(() => {
+    const vipSum = vipEntries.reduce((acc, e) => {
       const cost = parseFloat(e.final_cost) || 0
       const isTransfer = (e.payment_method || 'transfer') === 'transfer'
       acc.total += cost
@@ -150,7 +170,7 @@ function DailySummaryView({ user, onLogout }) {
       return acc
     }, { total: 0, transfer: 0, cash: 0 })
 
-    const computerSum = computer.reduce((acc, e) => {
+    const computerSum = computerEntries.reduce((acc, e) => {
       const transfer = parseFloat(e.transfer_amount) || 0
       const cash = parseFloat(e.cash_amount) || 0
       acc.total += (transfer + cash)
@@ -168,9 +188,14 @@ function DailySummaryView({ user, onLogout }) {
         cash: vipSum.cash + computerSum.cash
       }
     }
-  }
+  }, [vipEntries, computerEntries])
 
-  const exportToExcel = () => {
+  const handleShiftChange = useCallback((shift) => {
+    setSelectedShift(shift)
+    applyShiftFilter(allVipEntries, allComputerEntries, shift)
+  }, [allVipEntries, allComputerEntries, applyShiftFilter])
+
+  const exportToExcel = useCallback(() => {
     const { vip, computer } = getFilteredData()
     const filtered = getFilteredSummary()
 
@@ -210,15 +235,18 @@ function DailySummaryView({ user, onLogout }) {
     const fileName = `สรุปยอด_${selectedDate}${selectedShift !== 'all' ? `_กะ${selectedShift}` : ''}.xlsx`
     writeFile(wb, fileName)
     alert('✅ ส่งออก Excel สำเร็จ')
-  }
+  }, [selectedDate, selectedShift, getFilteredData, getFilteredSummary])
 
-  const displaySummary = selectedShift === 'all' ? summary : getFilteredSummary()
+  const displaySummary = getFilteredSummary()
   const { vip: displayVip, computer: displayComputer } = getFilteredData()
 
-  if (loading && vipEntries.length === 0 && computerEntries.length === 0) {
+  if (loading && allVipEntries.length === 0 && allComputerEntries.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
-        <div className="text-white text-2xl">⏳ กำลังโหลดข้อมูล...</div>
+        <div className="text-white text-center">
+          <div className="text-6xl mb-4">⏳</div>
+          <div className="text-2xl">กำลังโหลดข้อมูล...</div>
+        </div>
       </div>
     )
   }
@@ -272,7 +300,7 @@ function DailySummaryView({ user, onLogout }) {
             <label className="block text-gray-700 font-bold mb-2">🔄 เลือกกะ</label>
             <select
               value={selectedShift}
-              onChange={(e) => setSelectedShift(e.target.value)}
+              onChange={(e) => handleShiftChange(e.target.value)}
               className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 bg-white text-lg"
             >
               <option value="all">📊 ทั้งหมด</option>
@@ -349,13 +377,33 @@ function DailySummaryView({ user, onLogout }) {
           </div>
         </div>
 
+        {/* Error Banner */}
+        {error && (
+          <div className="bg-red-500 text-white rounded-xl p-4 mb-6 flex items-center gap-3">
+            <span className="text-2xl">⚠️</span>
+            <span>{error}</span>
+            <button
+              onClick={() => setError(null)}
+              className="ml-auto text-lg font-bold hover:bg-red-600 px-3 py-1 rounded"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
         {/* Export Button */}
-        <div className="mb-6">
+        <div className="mb-6 flex gap-3">
           <button
             onClick={exportToExcel}
             className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold py-4 px-8 rounded-xl transition-all shadow-2xl transform hover:scale-105 active:scale-95 flex items-center gap-3 text-lg"
           >
             📥 ส่งออก Excel
+          </button>
+          <button
+            onClick={loadData}
+            className="bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white font-bold py-4 px-8 rounded-xl transition-all shadow-2xl transform hover:scale-105 active:scale-95 flex items-center gap-3 text-lg"
+          >
+            🔄 รีโหลด
           </button>
         </div>
 
