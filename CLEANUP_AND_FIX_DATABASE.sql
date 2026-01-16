@@ -24,6 +24,9 @@ DROP VIEW IF EXISTS public.computer_zone_summary_by_shift CASCADE;
 DROP VIEW IF EXISTS public.room_stats CASCADE;
 DROP VIEW IF EXISTS public.login_statistics CASCADE;
 DROP VIEW IF EXISTS public.activity_statistics CASCADE;
+DROP VIEW IF EXISTS public.vip_entries_by_shift CASCADE;
+DROP VIEW IF EXISTS public.computer_entries_by_shift CASCADE;
+DROP VIEW IF EXISTS public.aggregated_daily_summary_by_shift CASCADE;
 
 -- ตรวจสอบให้แน่ใจว่าลบเสร็จ
 -- SELECT * FROM pg_views WHERE schemaname = 'public';
@@ -51,27 +54,30 @@ ALTER TABLE IF EXISTS customers_history
 ALTER TABLE IF EXISTS customers_history 
   ADD COLUMN IF NOT EXISTS end_reason VARCHAR(50) DEFAULT 'in_progress';
 
+ALTER TABLE IF EXISTS customers_history 
+  ADD COLUMN IF NOT EXISTS initial_time DECIMAL(10, 2) DEFAULT 0;
+
 -- Enable RLS
 ALTER TABLE customers_history ENABLE ROW LEVEL SECURITY;
 
--- ลบ policy เก่า (ถ้ามี)
-DROP POLICY IF EXISTS "Allow all reads on history" ON customers_history;
-DROP POLICY IF EXISTS "Allow all inserts on history" ON customers_history;
-DROP POLICY IF EXISTS "Allow all updates on history" ON customers_history;
-DROP POLICY IF EXISTS "Allow all deletes on history" ON customers_history;
-DROP POLICY IF EXISTS "customers_history_select" ON customers_history;
-DROP POLICY IF EXISTS "customers_history_insert" ON customers_history;
-DROP POLICY IF EXISTS "customers_history_update" ON customers_history;
-DROP POLICY IF EXISTS "customers_history_delete" ON customers_history;
-DROP POLICY IF EXISTS "Allow authenticated select" ON customers_history;
-DROP POLICY IF EXISTS "Allow authenticated insert" ON customers_history;
-DROP POLICY IF EXISTS "Allow authenticated update" ON customers_history;
-DROP POLICY IF EXISTS "Allow authenticated delete" ON customers_history;
+-- ลบ policy เก่า (ถ้ามี) - COMMENTED OUT
+-- DROP POLICY IF EXISTS "Allow all reads on history" ON customers_history;
+-- DROP POLICY IF EXISTS "Allow all inserts on history" ON customers_history;
+-- DROP POLICY IF EXISTS "Allow all updates on history" ON customers_history;
+-- DROP POLICY IF EXISTS "Allow all deletes on history" ON customers_history;
+-- DROP POLICY IF EXISTS "customers_history_select" ON customers_history;
+-- DROP POLICY IF EXISTS "customers_history_insert" ON customers_history;
+-- DROP POLICY IF EXISTS "customers_history_update" ON customers_history;
+-- DROP POLICY IF EXISTS "customers_history_delete" ON customers_history;
+-- DROP POLICY IF EXISTS "Allow authenticated select" ON customers_history;
+-- DROP POLICY IF EXISTS "Allow authenticated insert" ON customers_history;
+-- DROP POLICY IF EXISTS "Allow authenticated update" ON customers_history;
+-- DROP POLICY IF EXISTS "Allow authenticated delete" ON customers_history;
 
 -- Allow history page (anon key) to read data
-DROP POLICY IF EXISTS "customers_history_public_select" ON customers_history;
+-- DROP POLICY IF EXISTS "customers_history_public_select" ON customers_history;
 
--- สร้าง RLS policies ใหม่ - ปลอดภัย
+-- สร้าง RLS policies ใหม่ - รองรับทั้ง authenticated และ anon key
 CREATE POLICY "customers_history_authenticated_select" ON customers_history 
   FOR SELECT 
   USING (auth.role() = 'authenticated');
@@ -84,14 +90,27 @@ CREATE POLICY "customers_history_authenticated_insert" ON customers_history
   FOR INSERT 
   WITH CHECK (auth.role() = 'authenticated');
 
+CREATE POLICY "customers_history_public_insert" ON customers_history 
+  FOR INSERT 
+  WITH CHECK (true);
+
 CREATE POLICY "customers_history_authenticated_update" ON customers_history 
   FOR UPDATE 
   USING (auth.role() = 'authenticated')
   WITH CHECK (auth.role() = 'authenticated');
 
+CREATE POLICY "customers_history_public_update" ON customers_history 
+  FOR UPDATE 
+  USING (true)
+  WITH CHECK (true);
+
 CREATE POLICY "customers_history_authenticated_delete" ON customers_history 
   FOR DELETE 
   USING (auth.role() = 'authenticated');
+
+CREATE POLICY "customers_history_public_delete" ON customers_history 
+  FOR DELETE 
+  USING (true);
 
 -- Enable realtime
 ALTER TABLE customers_history REPLICA IDENTITY FULL;
@@ -149,23 +168,40 @@ DROP POLICY IF EXISTS "Allow authenticated insert" ON computer_zone_history;
 DROP POLICY IF EXISTS "Allow authenticated update" ON computer_zone_history;
 DROP POLICY IF EXISTS "Allow authenticated delete" ON computer_zone_history;
 
--- สร้าง RLS policies ใหม่ - ปลอดภัย
+-- สร้าง RLS policies ใหม่ - รองรับทั้ง authenticated และ anon key
 CREATE POLICY "computer_zone_authenticated_select" ON computer_zone_history 
   FOR SELECT 
   USING (auth.role() = 'authenticated');
 
+CREATE POLICY "computer_zone_public_select" ON computer_zone_history 
+  FOR SELECT 
+  USING (true);
+
 CREATE POLICY "computer_zone_authenticated_insert" ON computer_zone_history 
   FOR INSERT 
   WITH CHECK (auth.role() = 'authenticated');
+
+CREATE POLICY "computer_zone_public_insert" ON computer_zone_history 
+  FOR INSERT 
+  WITH CHECK (true);
 
 CREATE POLICY "computer_zone_authenticated_update" ON computer_zone_history 
   FOR UPDATE 
   USING (auth.role() = 'authenticated')
   WITH CHECK (auth.role() = 'authenticated');
 
+CREATE POLICY "computer_zone_public_update" ON computer_zone_history 
+  FOR UPDATE 
+  USING (true)
+  WITH CHECK (true);
+
 CREATE POLICY "computer_zone_authenticated_delete" ON computer_zone_history 
   FOR DELETE 
   USING (auth.role() = 'authenticated');
+
+CREATE POLICY "computer_zone_public_delete" ON computer_zone_history 
+  FOR DELETE 
+  USING (true);
 
 -- Enable realtime
 ALTER TABLE computer_zone_history REPLICA IDENTITY FULL;
@@ -185,23 +221,40 @@ DROP POLICY IF EXISTS "Allow authenticated insert" ON customers;
 DROP POLICY IF EXISTS "Allow authenticated update" ON customers;
 DROP POLICY IF EXISTS "Allow authenticated delete" ON customers;
 
--- สร้าง RLS policies ใหม่
+-- สร้าง RLS policies ใหม่ - รองรับทั้ง authenticated และ anon key
 CREATE POLICY "customers_authenticated_select" ON customers 
   FOR SELECT 
   USING (auth.role() = 'authenticated');
 
+CREATE POLICY "customers_public_select" ON customers 
+  FOR SELECT 
+  USING (true);
+
 CREATE POLICY "customers_authenticated_insert" ON customers 
   FOR INSERT 
   WITH CHECK (auth.role() = 'authenticated');
+
+CREATE POLICY "customers_public_insert" ON customers 
+  FOR INSERT 
+  WITH CHECK (true);
 
 CREATE POLICY "customers_authenticated_update" ON customers 
   FOR UPDATE 
   USING (auth.role() = 'authenticated')
   WITH CHECK (auth.role() = 'authenticated');
 
+CREATE POLICY "customers_public_update" ON customers 
+  FOR UPDATE 
+  USING (true)
+  WITH CHECK (true);
+
 CREATE POLICY "customers_authenticated_delete" ON customers 
   FOR DELETE 
   USING (auth.role() = 'authenticated');
+
+CREATE POLICY "customers_public_delete" ON customers 
+  FOR DELETE 
+  USING (true);
 
 -- ==========================================
 -- 5. FIX: users TABLE
@@ -214,12 +267,18 @@ DROP POLICY IF EXISTS "users_insert" ON users;
 DROP POLICY IF EXISTS "Allow authenticated select" ON users;
 DROP POLICY IF EXISTS "users_authenticated_select" ON users;
 DROP POLICY IF EXISTS "users_authenticated_update_self" ON users;
+DROP POLICY IF EXISTS "users_public_select" ON users;
 
 -- สร้าง RLS policies ใหม่ - ง่าย เน้นความปลอดภัย
 -- อนุญาต authenticated users ทั้งหมด (ไม่ต้อง uid check เพราะ id type ไม่ match)
 CREATE POLICY "users_authenticated_select" ON users 
   FOR SELECT 
   USING (auth.role() = 'authenticated');
+
+-- Allow legacy login (anon key) to read users table
+CREATE POLICY "users_public_select" ON users
+  FOR SELECT
+  USING (true);
 
 CREATE POLICY "users_authenticated_insert" ON users 
   FOR INSERT 

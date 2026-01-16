@@ -14,6 +14,8 @@ function HistoryView() {
   const [loading, setLoading] = useState(true)
   const [editingId, setEditingId] = useState(null)
   const [editData, setEditData] = useState({})
+  const [rowStatus, setRowStatus] = useState({}) // track syncing/saving states per row
+  const [originalSnapshot, setOriginalSnapshot] = useState({}) // latest data pulled before edit
 
   useEffect(() => {
     fetchHistory()
@@ -94,6 +96,17 @@ function HistoryView() {
     })
   }
 
+  const formatShort = (timestamp) => {
+    if (!timestamp) return ''
+    const date = new Date(timestamp)
+    return date.toLocaleString('th-TH', {
+      day: '2-digit',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  }
+
   const formatDateTimeLocal = (timestamp) => {
     if (!timestamp) return ''
     const d = new Date(timestamp)
@@ -150,6 +163,7 @@ function HistoryView() {
     if (!data) return
 
     try {
+      setRowStatus(prev => ({ ...prev, [id]: { ...(prev[id] || {}), saving: true } }))
       const payload = {
         name: data.name || 'ไม่ระบุ',
         room: data.room || 'ไม่ระบุ',
@@ -189,12 +203,55 @@ function HistoryView() {
       await fetchHistory()
       setEditingId(null)
       setEditData({})
+            setOriginalSnapshot(prev => ({ ...prev, [id]: result?.[0] || null }))
       alert('✅ อัพเดทข้อมูลสำเร็จ')
     } catch (error) {
       console.error('Error updating history:', error)
       alert('ไม่สามารถอัพเดทข้อมูลได้: ' + error.message)
+          } finally {
+            setRowStatus(prev => ({ ...prev, [id]: { ...(prev[id] || {}), saving: false } }))
     }
   }
+
+        const loadRowBeforeEdit = async (record) => {
+          const id = record.id
+          setRowStatus(prev => ({ ...prev, [id]: { ...(prev[id] || {}), syncing: true, syncError: null } }))
+          try {
+            const { data: fresh, error } = await supabase
+              .from('customers_history')
+              .select('*')
+              .eq('id', id)
+              .single()
+
+            if (error) throw error
+
+            const base = fresh || record
+            setOriginalSnapshot(prev => ({ ...prev, [id]: base }))
+            setEditData({
+              [id]: {
+                name: base.name ?? '',
+                note: base.note ?? '',
+                room: base.room ?? '',
+                added_by: base.added_by ?? '',
+                start_time: formatDateTimeLocal(base.start_time),
+                end_time: formatDateTimeLocal(base.end_time),
+                duration_minutes: base.duration_minutes ?? '',
+                final_cost: base.final_cost ?? '',
+                is_paid: base.is_paid ?? false,
+                end_reason: base.end_reason ?? 'completed',
+                shift: base.shift ?? 'all',
+                payment_method: base.payment_method ?? 'transfer'
+              }
+            })
+            setEditingId(id)
+          } catch (error) {
+            console.error('Sync row before edit failed:', error)
+            alert('ซิงค์ข้อมูลล่าสุดไม่สำเร็จ: ' + error.message)
+            setRowStatus(prev => ({ ...prev, [id]: { ...(prev[id] || {}), syncError: error.message } }))
+          } finally {
+            setRowStatus(prev => ({ ...prev, [id]: { ...(prev[id] || {}), syncing: false } }))
+          }
+        }
 
   const clearAllHistory = async () => {
     const confirmed = window.confirm(
@@ -532,7 +589,12 @@ function HistoryView() {
                             className="w-full px-2 py-1 border-2 border-purple-300 rounded text-xs"
                           />
                         ) : (
-                          formatDateTime(record.end_time)
+                          <div className="space-y-1">
+                            <div>{formatDateTime(record.end_time)}</div>
+                            {originalSnapshot[record.id]?.updated_at && (
+                              <div className="text-[10px] text-gray-500">ซิงค์ล่าสุด {formatShort(originalSnapshot[record.id]?.updated_at)}</div>
+                            )}
+                          </div>
                         )}
                       </td>
                       <td className="px-2 md:px-4 py-2 md:py-3 text-center font-semibold text-xs md:text-sm">
@@ -616,9 +678,10 @@ function HistoryView() {
                           <div className="flex gap-2 justify-center">
                             <button
                               onClick={() => updateHistoryItem(record.id)}
-                              className="px-2 py-1 bg-green-500 hover:bg-green-600 text-white rounded text-xs font-semibold"
+                              disabled={rowStatus[record.id]?.saving}
+                              className={`px-2 py-1 rounded text-xs font-semibold text-white ${rowStatus[record.id]?.saving ? 'bg-green-300 cursor-not-allowed' : 'bg-green-500 hover:bg-green-600'}`}
                             >
-                              💾
+                              {rowStatus[record.id]?.saving ? 'กำลังบันทึก...' : '💾'}
                             </button>
                             <button
                               onClick={() => {
@@ -651,28 +714,12 @@ function HistoryView() {
                               🖨️
                             </button>
                             <button
-                              onClick={() => {
-                                setEditingId(record.id)
-                                setEditData({
-                                  [record.id]: {
-                                    name: record.name ?? '',
-                                    note: record.note ?? '',
-                                    room: record.room ?? '',
-                                    added_by: record.added_by ?? '',
-                                    start_time: formatDateTimeLocal(record.start_time),
-                                    end_time: formatDateTimeLocal(record.end_time),
-                                    duration_minutes: record.duration_minutes ?? '',
-                                    final_cost: record.final_cost ?? '',
-                                    is_paid: record.is_paid ?? false,
-                                    end_reason: record.end_reason ?? 'completed',
-                                    shift: record.shift ?? 'all'
-                                  }
-                                })
-                              }}
-                              className="px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs font-semibold"
+                              onClick={() => loadRowBeforeEdit(record)}
+                              disabled={rowStatus[record.id]?.syncing}
+                              className={`px-2 py-1 rounded text-xs font-semibold text-white ${rowStatus[record.id]?.syncing ? 'bg-blue-300 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600'}`}
                               title="แก้ไข"
                             >
-                              ✏️
+                              {rowStatus[record.id]?.syncing ? 'ซิงค์...' : '✏️'}
                             </button>
                             <button
                               onClick={() => deleteHistoryItem(record.id)}
