@@ -553,7 +553,6 @@ function DailySummaryView({ user, onLogout }) {
                     <th className="px-4 py-3 text-right text-gray-700 font-bold">💳 สด</th>
                     <th className="px-4 py-3 text-right text-gray-700 font-bold">💰 รวม</th>
                     <th className="px-4 py-3 text-center text-gray-700 font-bold">👤 พนักงาน</th>
-                    <th className="px-4 py-3 text-center text-gray-700 font-bold">⏰ เวลา</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -584,9 +583,6 @@ function DailySummaryView({ user, onLogout }) {
                         <span className="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full font-semibold text-xs">
                           {entry.added_by || 'ไม่ระบุ'}
                         </span>
-                      </td>
-                      <td className="px-4 py-3 text-center text-gray-700">
-                        {entry.start_time || '-'}
                       </td>
                     </tr>
                   ))}
