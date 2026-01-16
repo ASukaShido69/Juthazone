@@ -55,27 +55,28 @@ function DailySummaryView({ user, onLogout }) {
       setLoading(true)
       setError(null)
 
-      // Date range for the selected day (UTC to avoid TZ drift)
-      const dayStart = new Date(`${selectedDate}T00:00:00.000Z`).toISOString()
-      const nextDay = new Date(`${selectedDate}T00:00:00.000Z`)
-      nextDay.setUTCDate(nextDay.getUTCDate() + 1)
+      // Date range for the selected day (Bangkok local time) to avoid cross-day drift
+      const dayStart = new Date(`${selectedDate}T00:00:00+07:00`).toISOString()
+      const nextDay = new Date(`${selectedDate}T00:00:00+07:00`)
+      nextDay.setDate(nextDay.getDate() + 1)
       const dayEnd = nextDay.toISOString()
 
-      // Load VIP entries (session_date or start_time date)
+      // Load VIP entries (session_date preferred, fallback to start_time range)
       const { data: vipData, error: vipError } = await supabase
         .from('customers_history')
         .select('*')
         .eq('session_date', selectedDate)
+        .or(`start_time.gte.${dayStart},start_time.lt.${dayEnd}`)
         .neq('end_reason', 'in_progress')
         .order('start_time', { ascending: false })
 
       if (vipError) throw vipError
 
-      // Load Computer Zone entries by created_at range (fallback if session_date missing)
+      // Load Computer Zone entries by session_date if exists, else created_at range
       const { data: computerData, error: computerError } = await supabase
         .from('computer_zone_history')
         .select('*')
-        .gte('created_at', dayStart)
+        .or(`session_date.eq.${selectedDate},created_at.gte.${dayStart}`)
         .lt('created_at', dayEnd)
         .order('created_at', { ascending: false })
 
