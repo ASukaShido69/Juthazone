@@ -223,11 +223,13 @@ function AdminDashboard({
 
     const fetchNotifications = async () => {
       if (!supabase || !active) return
+      // Show calls from last 12 hours (not just unresolved)
+      const twelvHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString()
       const { data, error } = await supabase
         .from('activity_logs')
         .select('*')
         .eq('action_type', 'CALL_STAFF')
-        .is('resolved_at', null)
+        .gte('created_at', twelvHoursAgo)
         .order('created_at', { ascending: false })
         .limit(20)
       if (!error && data && active) {
@@ -237,12 +239,11 @@ function AdminDashboard({
 
     const handleUpsert = (record) => {
       if (!record) return
-      if (record.resolved_at) {
-        setNotifications(prev => prev.filter(n => n.id !== record.id))
-        return
+      if (record.action_type === 'CALL_STAFF') {
+        // Add new call to top of notifications
+        setNotifications(prev => [record, ...prev.filter(n => n.id !== record.id)].slice(0, 20))
+        playBeep()
       }
-      setNotifications(prev => [record, ...prev.filter(n => n.id !== record.id)].slice(0, 20))
-      playBeep()
     }
 
     fetchNotifications()
@@ -253,12 +254,6 @@ function AdminDashboard({
         .channel('call-staff-notify')
         .on('postgres_changes', {
           event: 'insert',
-          schema: 'public',
-          table: 'activity_logs',
-          filter: 'action_type=eq.CALL_STAFF'
-        }, (payload) => handleUpsert(payload.new))
-        .on('postgres_changes', {
-          event: 'update',
           schema: 'public',
           table: 'activity_logs',
           filter: 'action_type=eq.CALL_STAFF'
