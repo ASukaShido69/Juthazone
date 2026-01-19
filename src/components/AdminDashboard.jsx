@@ -39,16 +39,6 @@ function AdminDashboard({
   const [vipEntries, setVipEntries] = useState([]) // รายการห้อง VIP วันนี้
   const [selectedVipShift, setSelectedVipShift] = useState('all') // กะที่เลือกสำหรับ VIP
   const [loadingVip, setLoadingVip] = useState(false)
-  
-  // Modal state for add/extend time with cost
-  const [timeModal, setTimeModal] = useState({
-    isOpen: false,
-    customerId: null,
-    minutes: '',
-    newCost: '',
-    mode: 'add' // 'add' or 'extend'
-  })
-  
   const audioRef = useRef(null)
   const alarmTimeoutRef = useRef(null)
   const notificationsRef = useRef([])
@@ -223,13 +213,11 @@ function AdminDashboard({
 
     const fetchNotifications = async () => {
       if (!supabase || !active) return
-      // Show calls from last 12 hours (not just unresolved)
-      const twelvHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString()
       const { data, error } = await supabase
         .from('activity_logs')
         .select('*')
         .eq('action_type', 'CALL_STAFF')
-        .gte('created_at', twelvHoursAgo)
+        .is('resolved_at', null)
         .order('created_at', { ascending: false })
         .limit(20)
       if (!error && data && active) {
@@ -239,11 +227,12 @@ function AdminDashboard({
 
     const handleUpsert = (record) => {
       if (!record) return
-      if (record.action_type === 'CALL_STAFF') {
-        // Add new call to top of notifications
-        setNotifications(prev => [record, ...prev.filter(n => n.id !== record.id)].slice(0, 20))
-        playBeep()
+      if (record.resolved_at) {
+        setNotifications(prev => prev.filter(n => n.id !== record.id))
+        return
       }
+      setNotifications(prev => [record, ...prev.filter(n => n.id !== record.id)].slice(0, 20))
+      playBeep()
     }
 
     fetchNotifications()
@@ -254,6 +243,12 @@ function AdminDashboard({
         .channel('call-staff-notify')
         .on('postgres_changes', {
           event: 'insert',
+          schema: 'public',
+          table: 'activity_logs',
+          filter: 'action_type=eq.CALL_STAFF'
+        }, (payload) => handleUpsert(payload.new))
+        .on('postgres_changes', {
+          event: 'update',
           schema: 'public',
           table: 'activity_logs',
           filter: 'action_type=eq.CALL_STAFF'
@@ -350,67 +345,40 @@ function AdminDashboard({
 
   const handleCompleteSession = async (customer) => {
     try {
-      // ✅ Get realtime customer data from state (most up-to-date)
-      const realtimeCustomer = customers.find(c => c.id === customer.id) || customer
-      
       // Calculate actual duration
-      const startTime = new Date(realtimeCustomer.startTime)
+      const startTime = new Date(customer.startTime)
       const endTime = new Date()
       const durationMs = endTime - startTime
       const durationMinutes = (durationMs / (1000 * 60)).toFixed(2)
 
       // Get session_date from start_time
-      const sessionDate = realtimeCustomer.startTime.split('T')[0]
+      const sessionDate = customer.startTime.split('T')[0]
 
-      // ✅ Update existing history record (not insert new)
+      // Save to history
       if (supabase) {
-        try {
-          // Use history_record_id if available, otherwise fallback to customer_id filter
-          let query = supabase
-            .from('customers_history')
-            .update({
-              // ✅ Use realtime data
-              name: realtimeCustomer.name,
-              room: realtimeCustomer.room,
-              end_time: endTime.toISOString(),
-              duration_minutes: parseFloat(durationMinutes),
-              is_paid: realtimeCustomer.isPaid,  // ✅ Realtime payment status
-              final_cost: realtimeCustomer.cost,  // ✅ Realtime cost (may be updated)
-              note: realtimeCustomer.note || '',
-              end_reason: 'completed',  // ✅ Mark as completed
-              session_date: sessionDate,
-              shift: realtimeCustomer.shift || 'all',
-              payment_method: realtimeCustomer.payment_method || 'transfer',
-              updated_at: new Date().toISOString()
-            })
-          
-          if (realtimeCustomer.history_record_id) {
-            query = query.eq('id', realtimeCustomer.history_record_id)
-            console.log(`✅ Using history_record_id: ${realtimeCustomer.history_record_id}`)
-          } else {
-            console.warn('⚠️ history_record_id not found, using fallback filter')
-            query = query.eq('customer_id', realtimeCustomer.id).eq('end_reason', 'in_progress')
-          }
-          
-          const { data, error } = await query.select()
+        // Insert new record to customers_history (VIP Room)
+        const { error } = await supabase
+          .from('customers_history')
+          .insert({
+            customer_id: customer.id,
+            name: customer.name,
+            room: customer.room,
+            start_time: customer.startTime,
+            end_time: endTime.toISOString(),
+            duration_minutes: parseFloat(durationMinutes),
+            initial_time: customer.initialMinutes || 0,
+            is_paid: customer.isPaid,
+            final_cost: customer.cost,
+            note: customer.note || '',
+            end_reason: 'completed',
+            session_date: sessionDate,
+            shift: customer.shift || 'all',
+            payment_method: customer.payment_method || 'transfer'
+          })
 
-          if (error) {
-            console.error('Error updating history:', error)
-            alert('⚠️ ไม่สามารถบันทึก history ได้: ' + error.message)
-            return
-          }
-
-          // If no record was updated, log warning
-          if (!data || data.length === 0) {
-            console.warn('⚠️ No history record found to update for customer:', realtimeCustomer.id)
-            alert('⚠️ Warning: Could not update history record. May need manual intervention.')
-            return
-          }
-          
-          console.log(`✅ History record updated successfully for customer ${realtimeCustomer.id}`)
-        } catch (err) {
-          console.error('Unexpected error updating history:', err)
-          alert('❌ Unexpected error: ' + err.message)
+        if (error) {
+          console.error('Error saving to history:', error)
+          alert('⚠️ ไม่สามารถบันทึก history ได้: ' + error.message)
           return
         }
       }
@@ -420,25 +388,25 @@ function AdminDashboard({
         await logActivity(
           user.username,
           'COMPLETE_SESSION',
-          `สิ้นสุดเซสชั่น: ${realtimeCustomer.name} ใช้เวลา ${durationMinutes} นาที ค่าใช้จ่าย ${realtimeCustomer.cost} บาท`,
+          `สิ้นสุดเซสชั่น: ${customer.name} ใช้เวลา ${durationMinutes} นาที`,
           { 
-            name: realtimeCustomer.name,
-            room: realtimeCustomer.room,
+            name: customer.name,
+            room: customer.room,
             duration: durationMinutes,
-            cost: realtimeCustomer.cost,
-            is_paid: realtimeCustomer.isPaid
+            cost: customer.cost,
+            is_paid: customer.isPaid
           },
-          realtimeCustomer.id
+          customer.id
         )
       }
 
       // Delete customer from active list
-      deleteCustomer(realtimeCustomer.id)
+      deleteCustomer(customer.id)
       
       // Close modal
       setCompletionConfirm(null)
       
-      alert(`✅ สิ้นสุด "${realtimeCustomer.name}" และบันทึกลง History แล้ว`)
+      alert(`✅ สิ้นสุด "${customer.name}" และบันทึกลง History แล้ว`)
     } catch (error) {
       console.error('Error completing session:', error)
       alert('❌ เกิดข้อผิดพลาด: ' + error.message)
@@ -446,17 +414,14 @@ function AdminDashboard({
   }
 
   const openCompletionConfirm = (customer) => {
-    // ✅ Get realtime customer data from state
-    const realtimeCustomer = customers.find(c => c.id === customer.id) || customer
-    
-    const startTime = new Date(realtimeCustomer.startTime)
+    const startTime = new Date(customer.startTime)
     const endTime = new Date()
     const durationMs = endTime - startTime
     const durationMinutes = Math.floor(durationMs / (1000 * 60))
     const durationSeconds = Math.floor((durationMs / 1000) % 60)
 
     setCompletionConfirm({
-      customer: realtimeCustomer,  // ✅ Use realtime data
+      customer,
       durationMinutes,
       durationSeconds
     })
@@ -464,56 +429,6 @@ function AdminDashboard({
 
   const closeCompletionConfirm = () => {
     setCompletionConfirm(null)
-  }
-
-  // ✅ New: Modal handlers for add/extend time with cost
-  const openTimeModal = (customerId, mode = 'add') => {
-    const customer = customers.find(c => c.id === customerId)
-    setTimeModal({
-      isOpen: true,
-      customerId,
-      minutes: '',
-      newCost: customer?.cost?.toString() || '',
-      mode
-    })
-  }
-
-  const closeTimeModal = () => {
-    setTimeModal({
-      isOpen: false,
-      customerId: null,
-      minutes: '',
-      newCost: '',
-      mode: 'add'
-    })
-  }
-
-  const handleTimeModalSubmit = async () => {
-    const { customerId, minutes, newCost, mode } = timeModal
-    
-    if (!minutes || parseInt(minutes) <= 0) {
-      alert('❌ กรุณากรอกจำนวนนาที')
-      return
-    }
-
-    const minutesInt = parseInt(minutes)
-    const costValue = newCost ? parseFloat(newCost) : null
-
-    try {
-      if (mode === 'extend') {
-        // For extended time (after expiration)
-        await extendTime(customerId, minutesInt, costValue)
-      } else {
-        // For regular addTime
-        await addTime(customerId, minutesInt, costValue)
-      }
-      
-      alert(`✅ ${mode === 'extend' ? 'ขยายเวลา' : 'เพิ่มเวลา'} ${minutesInt} นาที สำเร็จ`)
-      closeTimeModal()
-    } catch (error) {
-      console.error(`Error ${mode} time:`, error)
-      alert(`❌ เกิดข้อผิดพลาด: ${error.message}`)
-    }
   }
 
   const handleSubmit = (e) => {
@@ -968,7 +883,17 @@ function AdminDashboard({
                               </button>
                               {customer.displayTimeRemaining <= 0 ? (
                                 <button
-                                  onClick={() => openTimeModal(customer.id, 'extend')}
+                                  onClick={async () => {
+                                    const minutes = prompt('ขยายเวลา (นาที):', '30')
+                                    if (minutes && parseInt(minutes) > 0) {
+                                      try {
+                                        await extendTime(customer.id, parseInt(minutes))
+                                      } catch (error) {
+                                        console.error('Error extending time:', error)
+                                        alert('❌ เกิดข้อผิดพลาด: ' + error.message)
+                                      }
+                                    }
+                                  }}
                                   className="px-2 md:px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold text-xs md:text-sm animate-pulse"
                                   title="หมดเวลา - คลิกเพื่อขยายเวลา"
                                 >
@@ -977,11 +902,18 @@ function AdminDashboard({
                               ) : (
                                 <>
                                   <button
-                                    onClick={() => openTimeModal(customer.id, 'add')}
+                                    onClick={async () => {
+                                      try {
+                                        await addTime(customer.id, 5)
+                                      } catch (error) {
+                                        console.error('Error adding time:', error)
+                                        alert('❌ เกิดข้อผิดพลาด: ' + error.message)
+                                      }
+                                    }}
                                     className="px-2 md:px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold text-xs md:text-sm"
-                                    title="เพิ่มเวลา"
+                                    title="เพิ่มเวลา 5 นาที"
                                   >
-                                    ➕ เวลา
+                                    ➕5
                                   </button>
                                   <button
                                     onClick={async () => {
@@ -1345,83 +1277,6 @@ function AdminDashboard({
           onClose={() => setShowComputerZoneManager(false)}
           user={user}
         />
-
-        {/* ✅ Time Modal - Add/Extend time with cost */}
-        {timeModal.isOpen && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 animate-scale-in">
-              <h2 className="text-2xl font-bold text-purple-600 mb-4">
-                {timeModal.mode === 'extend' ? '🔄 ขยายเวลา' : '➕ เพิ่มเวลา'}
-              </h2>
-              
-              <div className="space-y-4">
-                {/* Minutes Input */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    จำนวนนาที
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={timeModal.minutes}
-                    onChange={(e) => setTimeModal({...timeModal, minutes: e.target.value})}
-                    placeholder="เช่น 30"
-                    className="w-full px-4 py-2 border-2 border-purple-300 rounded-lg focus:outline-none focus:border-purple-500 text-lg font-semibold"
-                    autoFocus
-                  />
-                </div>
-
-                {/* Cost Input */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    ยอดเงิน (บาท)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={timeModal.newCost}
-                    onChange={(e) => setTimeModal({...timeModal, newCost: e.target.value})}
-                    placeholder="เช่น 150"
-                    className="w-full px-4 py-2 border-2 border-green-300 rounded-lg focus:outline-none focus:border-green-500 text-lg font-semibold"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">ปล่อยว่างไว้เพื่อใช้ยอดเงินเดิม</p>
-                </div>
-
-                {/* Summary */}
-                <div className="bg-purple-50 rounded-lg p-4 border-2 border-purple-200">
-                  <div className="text-sm font-semibold text-gray-700 mb-2">สรุป:</div>
-                  <div className="space-y-1 text-sm">
-                    <div className="flex justify-between">
-                      <span>⏱️ เพิ่มเวลา:</span>
-                      <span className="font-bold text-purple-600">{timeModal.minutes || '0'} นาที</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>💰 ยอดเงิน:</span>
-                      <span className="font-bold text-green-600">฿{timeModal.newCost || '0'}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Buttons */}
-                <div className="flex gap-3 pt-4">
-                  <button
-                    onClick={handleTimeModalSubmit}
-                    className="flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold py-3 px-4 rounded-lg transform hover:scale-105 active:scale-95 transition-all duration-300 shadow-lg"
-                  >
-                    ✅ ยืนยัน
-                  </button>
-                  <button
-                    onClick={closeTimeModal}
-                    className="flex-1 bg-gray-400 hover:bg-gray-500 text-white font-bold py-3 px-4 rounded-lg transform hover:scale-105 active:scale-95 transition-all duration-300"
-                  >
-                    ❌ ยกเลิก
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   )

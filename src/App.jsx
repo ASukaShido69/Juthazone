@@ -281,80 +281,27 @@ function App() {
         )
       }
       
-      // Create initial history record and store its ID
+      // Create initial history record
       if (supabase && isSupabaseReady) {
-        try {
-          // Try to INSERT new history record
-          const { data: historyData, error: historyError } = await supabase
-            .from('customers_history')
-            .insert([{
-              customer_id: newCustomer.id,
-              name: newCustomer.name,
-              room: newCustomer.room,
-              note: newCustomer.note || '',
-              added_by: user?.username || 'Unknown',
-              start_time: nowIso,
-              end_time: expectedEndTime,
-              duration_minutes: customerData.minutes,
-              original_cost: customerData.cost,
-              final_cost: customerData.cost,
-              is_paid: false,
-              end_reason: 'in_progress',
-              session_date: sessionDate,
-              shift: customerData.shift || 'all',
-              payment_method: customerData.payment_method || 'transfer'
-            }])
-            .select('id')
-            .single()
-          
-          if (historyError) {
-            // Check if error is due to duplicate in_progress (unique constraint)
-            if (historyError.code === '23505' || historyError.message?.includes('duplicate')) {
-              console.warn('Duplicate in_progress record detected, attempting update instead...')
-              
-              // Fallback: UPDATE existing 'in_progress' record instead
-              const { data: updateData, error: updateError } = await supabase
-                .from('customers_history')
-                .update({
-                  name: newCustomer.name,
-                  room: newCustomer.room,
-                  note: newCustomer.note || '',
-                  end_time: expectedEndTime,
-                  duration_minutes: customerData.minutes,
-                  original_cost: customerData.cost,
-                  final_cost: customerData.cost,
-                  is_paid: false,
-                  session_date: sessionDate,
-                  shift: customerData.shift || 'all',
-                  payment_method: customerData.payment_method || 'transfer',
-                  updated_at: nowIso
-                })
-                .eq('customer_id', newCustomer.id)
-                .eq('end_reason', 'in_progress')
-                .select('id')
-                .single()
-              
-              if (updateData && !updateError) {
-                console.warn('Fallback UPDATE successful, using history_record_id:', updateData.id)
-                newCustomer.history_record_id = updateData.id
-                newCustomers[newCustomers.length - 1].history_record_id = updateData.id
-              } else {
-                console.error('Fallback UPDATE failed:', updateError)
-                alert('⚠️ Warning: Could not create/update history record. Please try again.')
-              }
-            } else {
-              console.error('History insert error:', historyError)
-              alert('⚠️ Warning: Could not create history record. Error: ' + historyError.message)
-            }
-          } else if (historyData) {
-            // Store history record ID in customer object for future updates
-            newCustomer.history_record_id = historyData.id
-            newCustomers[newCustomers.length - 1].history_record_id = historyData.id
-          }
-        } catch (err) {
-          console.error('Unexpected error creating history:', err)
-          alert('⚠️ Unexpected error: ' + err.message)
-        }
+        await supabase
+          .from('customers_history')
+          .insert([{
+            customer_id: newCustomer.id,
+            name: newCustomer.name,
+            room: newCustomer.room,
+            note: newCustomer.note || '',
+            added_by: user?.username || 'Unknown',
+            start_time: nowIso,
+            end_time: expectedEndTime,
+            duration_minutes: customerData.minutes,
+            original_cost: customerData.cost,
+            final_cost: customerData.cost,
+            is_paid: false,
+            end_reason: 'in_progress',
+            session_date: sessionDate,  // บันทึกวันที่เริ่มใช้บริการ
+            shift: customerData.shift || 'all',  // บันทึกกะที่เลือก
+            payment_method: customerData.payment_method || 'transfer'  // บันทึกวิธีการจ่าย
+          }])
       }
       
       // Update Supabase
@@ -437,7 +384,7 @@ function App() {
     }
   }
 
-  const addTime = async (id, minutesToAdd, newCost = null) => {
+  const addTime = async (id, minutesToAdd) => {
     try {
       const newCustomers = customers.map(customer => {
         if (customer.id === id) {
@@ -447,9 +394,7 @@ function App() {
           return { 
             ...customer, 
             timeRemaining: customer.timeRemaining + (minutesToAdd * 60),
-            expectedEndTime: newEnd.toISOString(),
-            // ✅ Update cost if provided (new cost)
-            cost: newCost !== null ? newCost : customer.cost
+            expectedEndTime: newEnd.toISOString()
           }
         }
         return customer
@@ -461,17 +406,10 @@ function App() {
       if (supabase && isSupabaseReady) {
         const updatedCustomer = newCustomers.find(c => c.id === id)
         if (updatedCustomer) {
-          // Recalculate duration
-          const startTime = new Date(updatedCustomer.startTime)
-          const endTime = new Date(updatedCustomer.expectedEndTime)
-          const durationMinutes = (endTime - startTime) / (1000 * 60)
-          
           await supabase
             .from('customers_history')
             .update({
-              end_time: updatedCustomer.expectedEndTime,  // ✅ Update end time to match expectedEndTime
-              duration_minutes: durationMinutes.toFixed(2),  // ✅ Recalculate duration
-              final_cost: updatedCustomer.cost,  // ✅ Update with new cost if provided
+              final_cost: updatedCustomer.cost,
               shift: updatedCustomer.shift || 'all',  // บันทึกกะ
               payment_method: updatedCustomer.payment_method || 'transfer',  // บันทึกวิธีการจ่าย
               updated_at: new Date().toISOString()
@@ -490,7 +428,7 @@ function App() {
     }
   }
 
-  const extendTime = async (id, minutesToExtend = 30, newCost = null) => {
+  const extendTime = async (id, minutesToExtend = 30) => {
     try {
       // Add to end time when customer wants to extend after time expires
       const newCustomers = customers.map(customer => {
@@ -501,9 +439,7 @@ function App() {
             ...customer, 
             timeRemaining: minutesToExtend * 60,
             expectedEndTime: newEnd.toISOString(),
-            isRunning: true, // Auto-start the timer again
-            // ✅ Update cost if provided (new cost)
-            cost: newCost !== null ? newCost : customer.cost
+            isRunning: true // Auto-start the timer again
           }
         }
         return customer
@@ -523,9 +459,8 @@ function App() {
           await supabase
             .from('customers_history')
             .update({
-              end_time: updatedCustomer.expectedEndTime,  // ✅ Update end time
               duration_minutes: durationMinutes.toFixed(2),
-              final_cost: updatedCustomer.cost,  // ✅ Update with new cost if provided
+              final_cost: updatedCustomer.cost,
               end_reason: 'in_progress', // Reset to in_progress
               shift: updatedCustomer.shift || 'all',  // บันทึกกะ
               payment_method: updatedCustomer.payment_method || 'transfer',  // บันทึกวิธีการจ่าย
@@ -583,16 +518,9 @@ function App() {
       if (supabase && isSupabaseReady && !removedCustomer) {
         const updatedCustomer = newCustomers.find(c => c.id === id)
         if (updatedCustomer) {
-          // Recalculate duration
-          const startTime = new Date(updatedCustomer.startTime)
-          const endTime = new Date(updatedCustomer.expectedEndTime)
-          const durationMinutes = (endTime - startTime) / (1000 * 60)
-          
           await supabase
             .from('customers_history')
             .update({
-              end_time: updatedCustomer.expectedEndTime,  // ✅ Update end time to match expectedEndTime
-              duration_minutes: durationMinutes.toFixed(2),  // ✅ Recalculate duration
               final_cost: updatedCustomer.cost,
               shift: updatedCustomer.shift || 'all',  // บันทึกกะ
               payment_method: updatedCustomer.payment_method || 'transfer',  // บันทึกวิธีการจ่าย
@@ -627,8 +555,7 @@ function App() {
       const sessionDate = startTime.toISOString().split('T')[0]
 
       // Update existing history record with end_time and end_reason
-      // Use history_record_id if available, otherwise fallback to customer_id + end_reason filter
-      let query = supabase
+      const { error } = await supabase
         .from('customers_history')
         .update({
           end_time: endTime.toISOString(),
@@ -640,21 +567,10 @@ function App() {
           shift: customer.shift || 'all',  // บันทึกกะที่เลือก
           payment_method: customer.payment_method || 'transfer'  // บันทึกวิธีการจ่าย
         })
-      
-      if (customer.history_record_id) {
-        query = query.eq('id', customer.history_record_id)
-      } else {
-        query = query.eq('customer_id', customer.id).eq('end_reason', 'in_progress')
-      }
-      
-      const { error } = await query
+        .eq('customer_id', customer.id)
+        .eq('end_reason', 'in_progress')
 
-      if (error) {
-        console.error('Error saving to history:', error)
-      } else {
-        // Success - record updated
-        console.log(`✅ History saved for customer ${customer.id}: ${endReason}`)
-      }
+      if (error) throw error
     } catch (error) {
       console.error('Error saving to history:', error)
     }

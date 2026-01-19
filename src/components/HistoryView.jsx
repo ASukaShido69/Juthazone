@@ -463,186 +463,20 @@ function HistoryView() {
               <p className="text-sm mt-2">ลองเปลี่ยนตัวกรองหรือเพิ่มลูกค้าใหม่</p>
             </div>
           ) : (
-            <div className="space-y-3 md:space-y-0 md:overflow-x-auto -mx-4 md:mx-0">
-              {/* Mobile Card View */}
-              <div className="block md:hidden space-y-3">
-                {filteredHistory.map((record, index) => (
-                  <div 
-                    key={record.id}
-                    className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg border-l-4 border-purple-600 p-4 shadow-md"
-                  >
-                    {editingId === record.id ? (
-                      // Edit Mode Card
-                      <div className="space-y-3">
-                        <div>
-                          <label className="text-xs font-bold text-gray-700">ชื่อ</label>
-                          <input
-                            type="text"
-                            value={editData[record.id]?.name ?? record.name ?? ''}
-                            onChange={(e) => setEditData({...editData, [record.id]: {...editData[record.id], name: e.target.value}})}
-                            className="w-full px-2 py-1 border-2 border-purple-300 rounded text-xs"
-                            placeholder="ชื่อลูกค้า"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-xs font-bold text-gray-700">ห้อง</label>
-                          <input
-                            type="text"
-                            value={editData[record.id]?.room ?? record.room ?? ''}
-                            onChange={(e) => setEditData({...editData, [record.id]: {...editData[record.id], room: e.target.value}})}
-                            className="w-full px-2 py-1 border-2 border-blue-300 rounded text-xs"
-                            placeholder="ห้อง"
-                          />
-                        </div>
-                        <div className="grid grid-cols-2 gap-2">
-                          <div>
-                            <label className="text-xs font-bold text-gray-700">เริ่ม</label>
-                            <input
-                              type="datetime-local"
-                              value={editData[record.id]?.start_time ?? formatDateTimeLocal(record.start_time)}
-                              onChange={(e) => setEditData({...editData, [record.id]: {...editData[record.id], start_time: e.target.value}})}
-                              className="w-full px-2 py-1 border-2 border-purple-300 rounded text-xs"
-                            />
-                          </div>
-                          <div>
-                            <label className="text-xs font-bold text-gray-700">จบ</label>
-                            <input
-                              type="datetime-local"
-                              value={editData[record.id]?.end_time ?? formatDateTimeLocal(record.end_time)}
-                              onChange={(e) => setEditData({...editData, [record.id]: {...editData[record.id], end_time: e.target.value}})}
-                              className="w-full px-2 py-1 border-2 border-purple-300 rounded text-xs"
-                            />
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-2">
-                          <div>
-                            <label className="text-xs font-bold text-gray-700">ค่าใช้จ่าย</label>
-                            <input
-                              type="number"
-                              value={editData[record.id]?.final_cost ?? record.final_cost ?? ''}
-                              onChange={(e) => setEditData({...editData, [record.id]: {...editData[record.id], final_cost: e.target.value}})}
-                              className="w-full px-2 py-1 border-2 border-green-300 rounded text-xs"
-                              placeholder="0"
-                            />
-                          </div>
-                          <div>
-                            <label className="text-xs font-bold text-gray-700">สถานะจ่าย</label>
-                            <select
-                              value={editData[record.id]?.is_paid ?? record.is_paid ?? false}
-                              onChange={(e) => setEditData({...editData, [record.id]: {...editData[record.id], is_paid: e.target.value === 'true'}})}
-                              className="w-full px-2 py-1 border-2 border-orange-300 rounded text-xs"
-                            >
-                              <option value="true">✅ จ่ายแล้ว</option>
-                              <option value="false">❌ ยังไม่จ่าย</option>
-                            </select>
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => updateHistoryItem(record.id)}
-                            disabled={rowStatus[record.id]?.saving}
-                            className={`flex-1 px-2 py-2 rounded text-xs font-semibold text-white ${rowStatus[record.id]?.saving ? 'bg-green-300 cursor-not-allowed' : 'bg-green-500 hover:bg-green-600'}`}
-                          >
-                            {rowStatus[record.id]?.saving ? 'กำลังบันทึก...' : '💾 บันทึก'}
-                          </button>
-                          <button
-                            onClick={() => {
-                              setEditingId(null)
-                              setEditData({})
-                            }}
-                            className="flex-1 px-2 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded text-xs font-semibold"
-                          >
-                            ยกเลิก
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      // View Mode Card
-                      <>
-                        <div className="flex justify-between items-start mb-3">
-                          <div>
-                            <h3 className="font-bold text-base text-gray-800">{record.name}</h3>
-                            {record.note && <p className="text-xs text-gray-600 mt-1">📝 {record.note}</p>}
-                          </div>
-                          <span className="inline-block bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-semibold">
-                            {record.room}
-                          </span>
-                        </div>
-                        
-                        <div className="bg-white rounded p-3 mb-3 space-y-2">
-                          <div className="flex justify-between text-xs">
-                            <span className="text-gray-600">⏰ เริ่ม:</span>
-                            <span className="font-semibold">{formatDateTime(record.start_time)}</span>
-                          </div>
-                          <div className="flex justify-between text-xs">
-                            <span className="text-gray-600">⏰ จบ:</span>
-                            <span className="font-semibold">{formatDateTime(record.end_time)}</span>
-                          </div>
-                          <div className="flex justify-between text-xs">
-                            <span className="text-gray-600">⏱️ ระยะเวลา:</span>
-                            <span className="font-semibold text-purple-600">{formatDuration(record.duration_minutes)}</span>
-                          </div>
-                          <div className="flex justify-between text-xs">
-                            <span className="text-gray-600">💰 ค่าใช้จ่าย:</span>
-                            <span className="font-semibold text-green-600">฿{record.final_cost}</span>
-                          </div>
-                          <div className="flex justify-between text-xs">
-                            <span className="text-gray-600">💳 สถานะจ่าย:</span>
-                            <span className={`font-semibold ${record.is_paid ? 'text-green-600' : 'text-red-600'}`}>
-                              {record.is_paid ? '✅ จ่ายแล้ว' : '❌ ยังไม่จ่าย'}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => {
-                              const customer = {
-                                name: record.name,
-                                room: record.room,
-                                note: record.note,
-                                startTime: record.start_time,
-                                expectedEndTime: record.end_time,
-                                cost: record.final_cost,
-                                isPaid: record.is_paid
-                              }
-                              printReceipt(customer).catch(err => console.error('Print error:', err))
-                            }}
-                            className="flex-1 px-2 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded text-xs font-semibold"
-                          >
-                            🖨️ พิมพ์
-                          </button>
-                          <button
-                            onClick={() => loadRowBeforeEdit(record)}
-                            disabled={rowStatus[record.id]?.syncing}
-                            className={`flex-1 px-2 py-2 rounded text-xs font-semibold text-white ${rowStatus[record.id]?.syncing ? 'bg-blue-300 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600'}`}
-                          >
-                            {rowStatus[record.id]?.syncing ? 'ซิงค์...' : '✏️ แก้ไข'}
-                          </button>
-                          <button
-                            onClick={() => deleteHistoryItem(record.id)}
-                            className="flex-1 px-2 py-2 bg-red-500 hover:bg-red-600 text-white rounded text-xs font-semibold"
-                          >
-                            🗑️ ลบ
-                          </button>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              {/* Desktop Table View */}
-              <table className="hidden md:table min-w-full">
+            <div className="overflow-x-auto -mx-4 md:mx-0">
+              <table className="min-w-full">
                 <thead>
                   <tr className="bg-gradient-to-r from-purple-600 to-pink-600 text-white">
                     <th className="px-2 md:px-4 py-2 md:py-3 text-left text-xs md:text-sm">ชื่อ</th>
                     <th className="px-2 md:px-4 py-2 md:py-3 text-left text-xs md:text-sm">ห้อง</th>
-                    <th className="px-2 md:px-4 py-2 md:py-3 text-center text-xs md:text-sm hidden lg:table-cell">เริ่ม</th>
-                    <th className="px-2 md:px-4 py-2 md:py-3 text-center text-xs md:text-sm hidden lg:table-cell">จบ</th>
+                    <th className="px-2 md:px-4 py-2 md:py-3 text-left text-xs md:text-sm hidden sm:table-cell">👥 พนักงาน</th>
+                    <th className="px-2 md:px-4 py-2 md:py-3 text-center text-xs md:text-sm hidden sm:table-cell">🔄 กะ</th>
+                    <th className="px-2 md:px-4 py-2 md:py-3 text-center text-xs md:text-sm hidden md:table-cell">เริ่ม</th>
+                    <th className="px-2 md:px-4 py-2 md:py-3 text-center text-xs md:text-sm hidden md:table-cell">จบ</th>
                     <th className="px-2 md:px-4 py-2 md:py-3 text-center text-xs md:text-sm">ระยะเวลา</th>
                     <th className="px-2 md:px-4 py-2 md:py-3 text-center text-xs md:text-sm">ค่าใช้จ่าย</th>
                     <th className="px-2 md:px-4 py-2 md:py-3 text-center text-xs md:text-sm">สถานะจ่าย</th>
+                    <th className="px-2 md:px-4 py-2 md:py-3 text-center text-xs md:text-sm hidden lg:table-cell">สถานะ</th>
                     <th className="px-2 md:px-4 py-2 md:py-3 text-center text-xs md:text-sm">จัดการ</th>
                   </tr>
                 </thead>
