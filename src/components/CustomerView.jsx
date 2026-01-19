@@ -1,0 +1,204 @@
+import { useMemo } from 'react'
+import { formatTimeDisplay, getDurationText, calculateTimeRemaining } from '../utils/timeFormat'
+import { logActivity } from '../utils/authUtils'
+
+function CustomerView({ customers }) {
+  // OPTIMIZATION: Calculate real-time remaining for each customer based on expectedEndTime
+  const displayCustomers = useMemo(() => {
+    return customers.map(customer => ({
+      ...customer,
+      displayTimeRemaining: customer.expectedEndTime 
+        ? calculateTimeRemaining(customer.startTime, customer.expectedEndTime)
+        : customer.timeRemaining
+    }))
+  }, [customers])
+
+  const handleCallStaff = async (customer) => {
+    const note = window.prompt('ระบุโน้ตสำหรับพนักงาน (เช่น สิ่งที่ต้องการให้ช่วย)', '')
+    if (note === null) return
+    try {
+      await logActivity(
+        customer.name || 'customer',
+        'CALL_STAFF',
+        `เรียกพนักงานจากหน้าลูกค้า: ${customer.name || ''}`,
+        { note: note || '-', room: customer.room }
+      )
+      alert('เรียกพนักงานแล้ว')
+    } catch (error) {
+      console.error('Call staff error:', error)
+      alert('ไม่สามารถบันทึกการเรียกพนักงานได้')
+    }
+  }
+  const formatTime = (seconds) => {
+    const hours = Math.floor(seconds / 3600)
+    const minutes = Math.floor((seconds % 3600) / 60)
+    const secs = seconds % 60
+    if (hours > 0) {
+      return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+    }
+    return `${minutes}:${secs.toString().padStart(2, '0')}`
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 animate-gradient p-3 md:p-4 lg:p-6">
+      <div className="max-w-6xl mx-auto">
+        <div className="text-center mb-6 md:mb-8 pt-2 md:pt-4">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white drop-shadow-2xl mb-2 md:mb-3 animate-float">
+            🎮 JUTHAZONE 🎮
+          </h1>
+          <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-white drop-shadow-lg font-semibold bg-white/20 backdrop-blur-sm inline-block px-4 py-2 md:px-6 md:py-2 rounded-full border-2 border-white/40">
+            รายการทั้งหมด: {customers.length} รายการ
+          </p>
+        </div>
+
+        {customers.length === 0 ? (
+          <div className="bg-white/95 backdrop-blur-sm rounded-2xl md:rounded-3xl shadow-2xl p-8 md:p-12 text-center border-4 border-white/50">
+            <div className="text-6xl md:text-8xl mb-4 md:mb-6 animate-bounce-slow">🎯</div>
+            <p className="text-2xl md:text-3xl text-gray-700 font-bold mb-2">ยังไม่มีรายการ</p>
+            <p className="text-gray-500 text-base md:text-lg">รอลูกค้าเข้าใช้งาน</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+            {displayCustomers.map((customer) => {
+              const isLowTime = customer.displayTimeRemaining < 300 // Less than 5 minutes
+              const cardBgColor = isLowTime
+                ? 'bg-gradient-to-br from-red-100 via-red-50 to-orange-100 border-red-500'
+                : 'bg-gradient-to-br from-white via-purple-50 to-pink-50 border-purple-400'
+
+              return (
+                <div
+                  key={customer.id}
+                  className={`${cardBgColor} rounded-2xl md:rounded-3xl shadow-2xl p-4 md:p-6 border-3 md:border-4 transform transition-all duration-300 hover:shadow-purple-500/50 active:scale-95`}
+                >
+                  {/* Customer Name */}
+                  <div className="mb-3 md:mb-4">
+                    <h2 className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-purple-700 to-pink-600 bg-clip-text text-transparent mb-2">
+                      👤 {customer.name}
+                    </h2>
+                    <div className="inline-block bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-3 py-1.5 md:px-4 md:py-2 rounded-full text-xs sm:text-sm font-bold shadow-lg">
+                      📍 {customer.room}
+                    </div>
+                  </div>
+
+                  {/* Note Section */}
+                  {customer.note && (
+                    <div className="mb-3 md:mb-4">
+                      <div className="bg-yellow-100 border-2 border-yellow-400 rounded-lg p-2 md:p-3">
+                        <p className="text-xs sm:text-sm text-gray-700 font-semibold mb-1">📝 Note</p>
+                        <p className="text-sm md:text-base text-gray-800 break-words">{customer.note}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Countdown Timer */}
+                  <div className={`mb-3 md:mb-4 ${isLowTime ? 'countdown-alert' : ''}`}>
+                    <p className="text-xs sm:text-sm text-gray-600 mb-1 font-semibold">⏰ เวลาที่เหลือ</p>
+                    <div
+                      className={`text-4xl sm:text-5xl md:text-6xl font-bold text-center py-4 md:py-6 rounded-xl md:rounded-2xl shadow-inner ${
+                        isLowTime
+                          ? 'bg-gradient-to-br from-red-300 to-red-200 text-red-800 animate-pulse border-3 md:border-4 border-red-400'
+                          : 'bg-gradient-to-br from-green-200 to-emerald-200 text-green-800 border-3 md:border-4 border-green-400'
+                      }`}
+                    >
+                      {formatTime(customer.displayTimeRemaining)}
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 md:gap-3 mt-2 md:mt-3">
+                      <div className="bg-blue-100 border-2 border-blue-400 rounded-lg p-2 text-center">
+                        <p className="text-xs text-gray-600 font-semibold">🕐 เริ่ม</p>
+                        <p className="text-sm md:text-base font-bold text-blue-700">
+                          {formatTimeDisplay(customer.startTime)}
+                        </p>
+                      </div>
+                      <div className="bg-orange-100 border-2 border-orange-400 rounded-lg p-2 text-center">
+                        <p className="text-xs text-gray-600 font-semibold">🕑 จบ</p>
+                        <p className="text-sm md:text-base font-bold text-orange-700">
+                          {formatTimeDisplay(customer.expectedEndTime)}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="mt-2 md:mt-3 text-center text-xs md:text-sm text-gray-600 font-semibold">
+                      ⏱️ เหลือ: {getDurationText(customer.displayTimeRemaining)}
+                    </div>
+                    {isLowTime && (
+                      <p className="text-red-700 text-center mt-2 md:mt-3 font-bold animate-pulse text-sm md:text-lg bg-red-200 py-1.5 md:py-2 rounded-lg md:rounded-xl">
+                        ⚠️ เวลาใกล้หมดแล้ว!
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Cost */}
+                  <div className="mb-3 md:mb-4">
+                    <div className="bg-gradient-to-br from-yellow-200 to-orange-200 border-3 md:border-4 border-yellow-500 rounded-xl md:rounded-2xl p-3 md:p-4 shadow-lg">
+                      <p className="text-xs sm:text-sm text-gray-700 font-semibold">💰 ค่าใช้จ่าย</p>
+                      <p className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-yellow-700 to-orange-700 bg-clip-text text-transparent">
+                        ฿{customer.cost}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Status Section */}
+                  <div className="mb-3 md:mb-4 grid grid-cols-2 gap-2">
+                    <div
+                      className={`rounded-lg p-2 md:p-3 text-center border-2 ${
+                        customer.isPaid
+                          ? 'bg-green-100 border-green-500'
+                          : 'bg-red-100 border-red-500'
+                      }`}
+                    >
+                      <p className="text-xs text-gray-600 font-semibold">💰 สถานะการจ่าย</p>
+                      <p className={`text-sm md:text-base font-bold ${
+                        customer.isPaid
+                          ? 'text-green-700'
+                          : 'text-red-700'
+                      }`}>
+                        {customer.isPaid ? '✅ จ่ายแล้ว' : '❌ ยังไม่จ่าย'}
+                      </p>
+                    </div>
+                    <div className="bg-purple-100 border-2 border-purple-400 rounded-lg p-2 md:p-3 text-center">
+                      <p className="text-xs text-gray-600 font-semibold">🎯 สถานะ</p>
+                      <p className="text-sm md:text-base font-bold text-purple-700">
+                        {customer.isRunning ? '⏳ กำลังจับเวลา' : '⏸️ หยุดแล้ว'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Payment Status (old) */}
+                  <div className="flex justify-center">
+                    <span
+                      className={`inline-block px-4 py-2 md:px-6 md:py-3 rounded-xl md:rounded-2xl text-base sm:text-lg md:text-xl font-bold shadow-xl transform active:scale-95 transition-all duration-300 ${
+                        customer.isPaid
+                          ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white'
+                          : 'bg-gradient-to-r from-red-500 to-pink-500 text-white animate-pulse'
+                      }`}
+                    >
+                      {customer.isPaid ? '✅ จ่ายเงินแล้ว' : '❌ ยังไม่ได้จ่าย'}
+                    </span>
+                  </div>
+
+                  {/* Call staff button */}
+                  <div className="mt-3">
+                    <button
+                      onClick={() => handleCallStaff(customer)}
+                      className="w-full bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600 text-white font-bold py-2.5 md:py-3 px-4 rounded-xl md:rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-[1.01] active:scale-95 transition-all duration-300"
+                    >
+                      📞 เรียกพนักงาน
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        {/* Auto-refresh indicator */}
+        <div className="mt-6 md:mt-8 text-center">
+          <p className="text-white text-sm sm:text-base md:text-lg drop-shadow-lg bg-white/20 backdrop-blur-sm inline-block px-4 py-2 md:px-6 md:py-3 rounded-full border-2 border-white/40 font-semibold animate-pulse">
+            🔄 อัพเดทอัตโนมัติทุกวินาที
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default CustomerView
