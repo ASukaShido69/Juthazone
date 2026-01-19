@@ -369,37 +369,54 @@ function AdminDashboard({
 
       // ✅ Update existing history record (not insert new)
       if (supabase) {
-        // Update the existing record that was created during addCustomer
-        const { data, error } = await supabase
-          .from('customers_history')
-          .update({
-            // ✅ Use realtime data
-            name: realtimeCustomer.name,
-            room: realtimeCustomer.room,
-            end_time: endTime.toISOString(),
-            duration_minutes: parseFloat(durationMinutes),
-            is_paid: realtimeCustomer.isPaid,  // ✅ Realtime payment status
-            final_cost: realtimeCustomer.cost,  // ✅ Realtime cost (may be updated)
-            note: realtimeCustomer.note || '',
-            end_reason: 'completed',  // ✅ Mark as completed
-            session_date: sessionDate,
-            shift: realtimeCustomer.shift || 'all',
-            payment_method: realtimeCustomer.payment_method || 'transfer',
-            updated_at: new Date().toISOString()
-          })
-          .eq('customer_id', realtimeCustomer.id)
-          .eq('end_reason', 'in_progress')  // ✅ Only update in-progress records
-          .select()
+        try {
+          // Use history_record_id if available, otherwise fallback to customer_id filter
+          let query = supabase
+            .from('customers_history')
+            .update({
+              // ✅ Use realtime data
+              name: realtimeCustomer.name,
+              room: realtimeCustomer.room,
+              end_time: endTime.toISOString(),
+              duration_minutes: parseFloat(durationMinutes),
+              is_paid: realtimeCustomer.isPaid,  // ✅ Realtime payment status
+              final_cost: realtimeCustomer.cost,  // ✅ Realtime cost (may be updated)
+              note: realtimeCustomer.note || '',
+              end_reason: 'completed',  // ✅ Mark as completed
+              session_date: sessionDate,
+              shift: realtimeCustomer.shift || 'all',
+              payment_method: realtimeCustomer.payment_method || 'transfer',
+              updated_at: new Date().toISOString()
+            })
+          
+          if (realtimeCustomer.history_record_id) {
+            query = query.eq('id', realtimeCustomer.history_record_id)
+            console.log(`✅ Using history_record_id: ${realtimeCustomer.history_record_id}`)
+          } else {
+            console.warn('⚠️ history_record_id not found, using fallback filter')
+            query = query.eq('customer_id', realtimeCustomer.id).eq('end_reason', 'in_progress')
+          }
+          
+          const { data, error } = await query.select()
 
-        if (error) {
-          console.error('Error updating history:', error)
-          alert('⚠️ ไม่สามารถบันทึก history ได้: ' + error.message)
+          if (error) {
+            console.error('Error updating history:', error)
+            alert('⚠️ ไม่สามารถบันทึก history ได้: ' + error.message)
+            return
+          }
+
+          // If no record was updated, log warning
+          if (!data || data.length === 0) {
+            console.warn('⚠️ No history record found to update for customer:', realtimeCustomer.id)
+            alert('⚠️ Warning: Could not update history record. May need manual intervention.')
+            return
+          }
+          
+          console.log(`✅ History record updated successfully for customer ${realtimeCustomer.id}`)
+        } catch (err) {
+          console.error('Unexpected error updating history:', err)
+          alert('❌ Unexpected error: ' + err.message)
           return
-        }
-
-        // If no record was updated (shouldn't happen), log warning
-        if (!data || data.length === 0) {
-          console.warn('No history record found to update for customer:', realtimeCustomer.id)
         }
       }
 
