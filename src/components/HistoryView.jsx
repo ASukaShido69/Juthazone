@@ -1086,6 +1086,28 @@ function HistoryView() {
                   </div>
                 </div>
 
+                {/* วิธีชำระเงิน */}
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">💰 วิธีชำระเงิน</label>
+                  <div className="space-y-2">
+                    <select
+                      value={editData[editingId]?.payment_method ?? 'transfer'}
+                      onChange={(e) => setEditData({...editData, [editingId]: {...editData[editingId], payment_method: e.target.value}})}
+                      className="w-full px-4 py-2 border-2 border-green-300 rounded-lg text-base font-semibold focus:outline-none focus:border-green-600"
+                    >
+                      <option value="transfer">💳 โอนเงิน</option>
+                      <option value="cash">💵 เงินสด</option>
+                    </select>
+                    <div className="text-xs text-gray-500 italic bg-gray-100 p-2 rounded">
+                      💾 ต้นฉบับ: {
+                        originalSnapshot[editingId]?.payment_method === 'transfer' ? '💳 โอนเงิน' :
+                        originalSnapshot[editingId]?.payment_method === 'cash' ? '💵 เงินสด' :
+                        '💳 โอนเงิน'
+                      }
+                    </div>
+                  </div>
+                </div>
+
                 {/* สถานะ */}
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-2">📊 สถานะ</label>
