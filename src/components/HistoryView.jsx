@@ -16,6 +16,7 @@ function HistoryView() {
   const [editData, setEditData] = useState({})
   const [rowStatus, setRowStatus] = useState({}) // track syncing/saving states per row
   const [originalSnapshot, setOriginalSnapshot] = useState({}) // latest data pulled before edit
+  const [showEditModal, setShowEditModal] = useState(false) // modal state สำหรับแก้ไข
 
   useEffect(() => {
     fetchHistory()
@@ -334,7 +335,8 @@ function HistoryView() {
               }
             })
             setEditingId(id)
-            console.log('Edit mode activated with latest data')
+            setShowEditModal(true) // เปิด modal
+            console.log('Edit modal activated with latest data')
           } catch (error) {
             console.error('Sync row before edit failed:', error)
             alert('❌ ซิงค์ข้อมูลล่าสุดไม่สำเร็จ: ' + error.message)
@@ -580,60 +582,15 @@ function HistoryView() {
                       } hover:bg-purple-100 transition-all duration-200`}
                     >
                       <td className="px-2 md:px-4 py-2 md:py-3 font-semibold text-xs md:text-sm">
-                        {editingId === record.id ? (
-                          <div className="space-y-2">
-                            <div>
-                              <label className="text-xs text-gray-600 font-semibold">ชื่อ:</label>
-                              <input
-                                type="text"
-                                value={editData[record.id]?.name ?? ''}
-                                onChange={(e) => setEditData({...editData, [record.id]: {...editData[record.id], name: e.target.value}})}
-                                className="w-full px-3 py-2 border-2 border-purple-300 rounded-lg text-sm font-semibold"
-                                placeholder="ชื่อลูกค้า"
-                              />
-                            </div>
-                            <div>
-                              <label className="text-xs text-gray-600 font-semibold">บันทึก:</label>
-                              <textarea
-                                value={editData[record.id]?.note ?? ''}
-                                onChange={(e) => setEditData({...editData, [record.id]: {...editData[record.id], note: e.target.value}})}
-                                className="w-full px-3 py-2 border-2 border-purple-200 rounded-lg text-sm"
-                                placeholder="บันทึก (ถ้ามี)"
-                                rows="2"
-                              />
-                            </div>
-                            <div className="text-xs text-gray-500 italic">
-                              💾 ข้อมูลต้นฉบับ: {originalSnapshot[record.id]?.name || record.name}
-                            </div>
-                          </div>
-                        ) : (
-                          <>
-                            {record.name}
-                            {record.note && (
-                              <div className="text-xs text-gray-500 mt-1">📝 {record.note}</div>
-                            )}
-                          </>
+                        {record.name}
+                        {record.note && (
+                          <div className="text-xs text-gray-500 mt-1">📝 {record.note}</div>
                         )}
                       </td>
                       <td className="px-2 md:px-4 py-2 md:py-3">
-                        {editingId === record.id ? (
-                          <div>
-                            <label className="text-xs text-gray-600 font-semibold block mb-1">ห้อง:</label>
-                            <select
-                              value={editData[record.id]?.room ?? ''}
-                              onChange={(e) => setEditData({...editData, [record.id]: {...editData[record.id], room: e.target.value}})}
-                              className="w-full px-2 py-2 border-2 border-blue-300 rounded-lg text-sm"
-                            >
-                              <option value="ชั้น 2 ห้อง VIP">ชั้น 2 ห้อง VIP</option>
-                              <option value="ชั้น 3 ห้อง VIP KARAOKE">ชั้น 3 ห้อง VIP KARAOKE</option>
-                              <option value="ชั้น 3 ห้อง Golf">ชั้น 3 Golf</option>
-                            </select>
-                          </div>
-                        ) : (
-                          <span className="inline-block bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs">
-                            {record.room}
-                          </span>
-                        )}
+                        <span className="inline-block bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs">
+                          {record.room}
+                        </span>
                       </td>
                       <td className="px-2 md:px-4 py-2 md:py-3 text-xs font-semibold hidden sm:table-cell">
                         {editingId === record.id ? (
@@ -674,160 +631,49 @@ function HistoryView() {
                         )}
                       </td>
                       <td className="px-2 md:px-4 py-2 md:py-3 text-center text-xs hidden md:table-cell">
-                        {editingId === record.id ? (
-                          <div>
-                            <label className="text-xs text-gray-600 font-semibold block mb-1">เวลาเริ่ม:</label>
-                            <input
-                              type="datetime-local"
-                              value={editData[record.id]?.start_time ?? ''}
-                              onChange={(e) => setEditData({...editData, [record.id]: {...editData[record.id], start_time: e.target.value}})}
-                              className="w-full px-2 py-2 border-2 border-green-300 rounded-lg text-sm"
-                            />
-                            <div className="text-xs text-gray-500 mt-1 italic">
-                              💾 ต้นฉบับ: {formatDateTime(originalSnapshot[record.id]?.start_time || record.start_time)}
-                            </div>
-                          </div>
-                        ) : (
-                          formatDateTime(record.start_time)
-                        )}
+                        {formatDateTime(record.start_time)}
                       </td>
                       <td className="px-2 md:px-4 py-2 md:py-3 text-center text-xs hidden md:table-cell">
-                        {editingId === record.id ? (
-                          <div>
-                            <label className="text-xs text-gray-600 font-semibold block mb-1">เวลาจบ:</label>
-                            <input
-                              type="datetime-local"
-                              value={editData[record.id]?.end_time ?? ''}
-                              onChange={(e) => setEditData({...editData, [record.id]: {...editData[record.id], end_time: e.target.value}})}
-                              className="w-full px-2 py-2 border-2 border-red-300 rounded-lg text-sm"
-                            />
-                            <div className="text-xs text-gray-500 mt-1 italic">
-                              💾 ต้นฉบับ: {formatDateTime(originalSnapshot[record.id]?.end_time || record.end_time)}
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="space-y-1">
-                            <div>{formatDateTime(record.end_time)}</div>
-                            {record.updated_at && (
-                              <div className="text-[10px] text-gray-500">อัพเดท: {formatShort(record.updated_at)}</div>
-                            )}
-                          </div>
-                        )}
+                        <div className="space-y-1">
+                          <div>{formatDateTime(record.end_time)}</div>
+                          {record.updated_at && (
+                            <div className="text-[10px] text-gray-500">อัพเดท: {formatShort(record.updated_at)}</div>
+                          )}
+                        </div>
                       </td>
                       <td className="px-2 md:px-4 py-2 md:py-3 text-center font-semibold text-xs md:text-sm">
-                        {editingId === record.id ? (
-                          <div>
-                            <label className="text-xs text-gray-600 font-semibold block mb-1">นาที:</label>
-                            <input
-                              type="number"
-                              value={editData[record.id]?.duration_minutes ?? ''}
-                              onChange={(e) => setEditData({...editData, [record.id]: {...editData[record.id], duration_minutes: Number(e.target.value)}})}
-                              className="w-full px-3 py-2 border-2 border-blue-300 rounded-lg text-sm font-semibold"
-                              min="0"
-                              step="1"
-                              placeholder="นาที"
-                            />
-                          </div>
-                        ) : (
-                          formatDuration(record.duration_minutes)
-                        )}
+                        {formatDuration(record.duration_minutes)}
                       </td>
                       <td className="px-2 md:px-4 py-2 md:py-3 text-center font-bold text-sm md:text-base text-green-600">
-                        {editingId === record.id ? (
-                          <div>
-                            <label className="text-xs text-gray-600 font-semibold block mb-1">ราคา (฿):</label>
-                            <input
-                              type="number"
-                              value={editData[record.id]?.final_cost ?? ''}
-                              onChange={(e) => setEditData({...editData, [record.id]: {...editData[record.id], final_cost: e.target.value}})}
-                              className="w-full px-3 py-2 border-2 border-green-300 rounded-lg text-sm font-bold"
-                              step="0.01"
-                              placeholder="ราคา"
-                            />
-                          </div>
-                        ) : (
-                          `฿${record.final_cost}`
-                        )}
+                        ฿{record.final_cost}
                       </td>
                       <td className="px-2 md:px-4 py-2 md:py-3 text-center">
-                        {editingId === record.id ? (
-                          <div>
-                            <label className="text-xs text-gray-600 font-semibold block mb-1">สถานะ:</label>
-                            <select
-                              value={(editData[record.id]?.is_paid ?? false) ? 'true' : 'false'}
-                              onChange={(e) => setEditData({...editData, [record.id]: {...editData[record.id], is_paid: e.target.value === 'true'}})}
-                              className="w-full px-3 py-2 border-2 border-purple-300 rounded-lg text-sm font-semibold"
-                            >
-                              <option value="true">✅ จ่ายแล้ว</option>
-                              <option value="false">❌ ยังไม่จ่าย</option>
-                            </select>
-                          </div>
-                        ) : (
-                          <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold ${
-                            record.is_paid ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                          }`}>
-                            {record.is_paid ? '✅ จ่ายแล้ว' : '❌ ยังไม่จ่าย'}
-                          </span>
-                        )}
+                        <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold ${
+                          record.is_paid ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                        }`}>
+                          {record.is_paid ? '✅ จ่ายแล้ว' : '❌ ยังไม่จ่าย'}
+                        </span>
                       </td>
                       <td className="px-2 md:px-4 py-2 md:py-3 text-center hidden lg:table-cell">
-                        {editingId === record.id ? (
-                          <select
-                            value={editData[record.id]?.end_reason ?? record.end_reason ?? 'completed'}
-                            onChange={(e) => setEditData({...editData, [record.id]: {...editData[record.id], end_reason: e.target.value}})}
-                            className="w-full px-2 py-1 border-2 border-purple-300 rounded text-xs"
-                          >
-                            <option value="completed">เสร็จแล้ว</option>
-                            <option value="expired">หมดเวลา</option>
-                            <option value="deleted">ลบแล้ว</option>
-                            <option value="in_progress">ดำเนินการ</option>
-                          </select>
-                        ) : (
-                          <span
-                            className={`inline-block px-3 py-1 rounded-full text-xs font-bold ${
-                              record.end_reason === 'completed'
-                                ? 'bg-green-100 text-green-700'
-                                : record.end_reason === 'expired'
-                                ? 'bg-orange-100 text-orange-700'
-                                : record.end_reason === 'deleted'
-                                ? 'bg-red-100 text-red-700'
-                                : 'bg-yellow-100 text-yellow-700'
-                            }`}
-                          >
-                            {record.end_reason === 'completed' && '✅ เสร็จแล้ว'}
-                            {record.end_reason === 'expired' && '⏰ หมดเวลา'}
-                            {record.end_reason === 'deleted' && '🗑️ ลบแล้ว'}
-                            {record.end_reason === 'in_progress' && '⏳ ดำเนินการ'}
-                          </span>
-                        )}
+                        <span
+                          className={`inline-block px-3 py-1 rounded-full text-xs font-bold ${
+                            record.end_reason === 'completed'
+                              ? 'bg-green-100 text-green-700'
+                              : record.end_reason === 'expired'
+                              ? 'bg-orange-100 text-orange-700'
+                              : record.end_reason === 'deleted'
+                              ? 'bg-red-100 text-red-700'
+                              : 'bg-yellow-100 text-yellow-700'
+                          }`}
+                        >
+                          {record.end_reason === 'completed' && '✅ เสร็จแล้ว'}
+                          {record.end_reason === 'expired' && '⏰ หมดเวลา'}
+                          {record.end_reason === 'deleted' && '🗑️ ลบแล้ว'}
+                          {record.end_reason === 'in_progress' && '⏳ ดำเนินการ'}
+                        </span>
                       </td>
                       <td className="px-2 md:px-4 py-2 md:py-3 text-center">
-                        {editingId === record.id ? (
-                          <div className="flex flex-col gap-2 justify-center min-w-[120px]">
-                            <button
-                              onClick={() => updateHistoryItem(record.id)}
-                              disabled={rowStatus[record.id]?.saving}
-                              className={`px-4 py-2 rounded-lg text-sm font-bold text-white shadow-lg transform transition-all ${
-                                rowStatus[record.id]?.saving 
-                                  ? 'bg-green-300 cursor-not-allowed' 
-                                  : 'bg-green-500 hover:bg-green-600 hover:scale-105 active:scale-95'
-                              }`}
-                            >
-                              {rowStatus[record.id]?.saving ? '⏳ บันทึก...' : '💾 บันทึก'}
-                            </button>
-                            <button
-                              onClick={() => {
-                                setEditingId(null)
-                                setEditData({})
-                                setOriginalSnapshot({})
-                              }}
-                              className="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg text-sm font-bold shadow-lg transform hover:scale-105 active:scale-95 transition-all"
-                            >
-                              ✕ ยกเลิก
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="flex flex-col gap-1 justify-center min-w-[100px]">
+                        <div className="flex flex-col gap-1 justify-center min-w-[100px]">
                             <button
                               onClick={() => {
                                 const customer = {
@@ -866,7 +712,6 @@ function HistoryView() {
                               🗑️ ลบ
                             </button>
                           </div>
-                        )}
                       </td>
                     </tr>
                   ))}
@@ -875,6 +720,219 @@ function HistoryView() {
             </div>
           )}
         </div>
+
+        {/* Edit Modal Dialog */}
+        {showEditModal && editingId && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+            <div className="bg-white rounded-2xl shadow-2xl p-6 md:p-8 max-w-4xl w-full border-4 border-purple-500 my-auto">
+              {/* Header */}
+              <div className="flex justify-between items-center mb-6 pb-4 border-b-2 border-purple-300">
+                <h2 className="text-2xl md:text-3xl font-bold text-purple-700">✏️ แก้ไขข้อมูลประวัติ</h2>
+                <button
+                  onClick={() => {
+                    setShowEditModal(false)
+                    setEditingId(null)
+                    setEditData({})
+                  }}
+                  className="text-2xl text-gray-500 hover:text-gray-700 font-bold"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Edit Form - 2 Columns */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 max-h-[60vh] overflow-y-auto">
+                {/* ชื่อ */}
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">📝 ชื่อลูกค้า</label>
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      value={editData[editingId]?.name ?? ''}
+                      onChange={(e) => setEditData({...editData, [editingId]: {...editData[editingId], name: e.target.value}})}
+                      className="w-full px-4 py-2 border-2 border-purple-300 rounded-lg text-base font-semibold focus:outline-none focus:border-purple-600"
+                      placeholder="ชื่อลูกค้า"
+                    />
+                    <div className="text-xs text-gray-500 italic bg-gray-100 p-2 rounded">
+                      💾 ต้นฉบับ: {originalSnapshot[editingId]?.name || '-'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* ห้อง */}
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">🏠 ห้อง</label>
+                  <div className="space-y-2">
+                    <select
+                      value={editData[editingId]?.room ?? ''}
+                      onChange={(e) => setEditData({...editData, [editingId]: {...editData[editingId], room: e.target.value}})}
+                      className="w-full px-4 py-2 border-2 border-blue-300 rounded-lg text-base focus:outline-none focus:border-blue-600"
+                    >
+                      <option value="ชั้น 2 ห้อง VIP">ชั้น 2 ห้อง VIP</option>
+                      <option value="ชั้น 3 ห้อง VIP KARAOKE">ชั้น 3 ห้อง VIP KARAOKE</option>
+                      <option value="ชั้น 3 ห้อง Golf">ชั้น 3 Golf</option>
+                    </select>
+                    <div className="text-xs text-gray-500 italic bg-gray-100 p-2 rounded">
+                      💾 ต้นฉบับ: {originalSnapshot[editingId]?.room || '-'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* เวลาเริ่ม */}
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">🕐 เวลาเริ่มต้น</label>
+                  <div className="space-y-2">
+                    <input
+                      type="datetime-local"
+                      value={editData[editingId]?.start_time ?? ''}
+                      onChange={(e) => setEditData({...editData, [editingId]: {...editData[editingId], start_time: e.target.value}})}
+                      className="w-full px-4 py-2 border-2 border-green-300 rounded-lg text-base focus:outline-none focus:border-green-600"
+                    />
+                    <div className="text-xs text-gray-500 italic bg-gray-100 p-2 rounded">
+                      💾 ต้นฉบับ: {formatDateTime(originalSnapshot[editingId]?.start_time) || '-'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* เวลาจบ */}
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">🕑 เวลาสิ้นสุด</label>
+                  <div className="space-y-2">
+                    <input
+                      type="datetime-local"
+                      value={editData[editingId]?.end_time ?? ''}
+                      onChange={(e) => setEditData({...editData, [editingId]: {...editData[editingId], end_time: e.target.value}})}
+                      className="w-full px-4 py-2 border-2 border-red-300 rounded-lg text-base focus:outline-none focus:border-red-600"
+                    />
+                    <div className="text-xs text-gray-500 italic bg-gray-100 p-2 rounded">
+                      💾 ต้นฉบับ: {formatDateTime(originalSnapshot[editingId]?.end_time) || '-'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* ระยะเวลา */}
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">⏱️ ระยะเวลา (นาที)</label>
+                  <div className="space-y-2">
+                    <input
+                      type="number"
+                      value={editData[editingId]?.duration_minutes ?? ''}
+                      onChange={(e) => setEditData({...editData, [editingId]: {...editData[editingId], duration_minutes: Number(e.target.value)}})}
+                      className="w-full px-4 py-2 border-2 border-blue-300 rounded-lg text-base focus:outline-none focus:border-blue-600"
+                      min="0"
+                      step="1"
+                    />
+                    <div className="text-xs text-gray-500 italic bg-gray-100 p-2 rounded">
+                      💾 ต้นฉบับ: {formatDuration(originalSnapshot[editingId]?.duration_minutes) || '-'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* ราคา */}
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">💰 ราคา (฿)</label>
+                  <div className="space-y-2">
+                    <input
+                      type="number"
+                      value={editData[editingId]?.final_cost ?? ''}
+                      onChange={(e) => setEditData({...editData, [editingId]: {...editData[editingId], final_cost: e.target.value}})}
+                      className="w-full px-4 py-2 border-2 border-green-300 rounded-lg text-base font-bold focus:outline-none focus:border-green-600"
+                      step="0.01"
+                    />
+                    <div className="text-xs text-gray-500 italic bg-gray-100 p-2 rounded">
+                      💾 ต้นฉบับ: ฿{originalSnapshot[editingId]?.final_cost || 0}
+                    </div>
+                  </div>
+                </div>
+
+                {/* บันทึก */}
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-bold text-gray-700 mb-2">📝 บันทึก</label>
+                  <div className="space-y-2">
+                    <textarea
+                      value={editData[editingId]?.note ?? ''}
+                      onChange={(e) => setEditData({...editData, [editingId]: {...editData[editingId], note: e.target.value}})}
+                      className="w-full px-4 py-2 border-2 border-purple-300 rounded-lg text-base focus:outline-none focus:border-purple-600"
+                      placeholder="บันทึกเพิ่มเติม (ถ้ามี)"
+                      rows="3"
+                    />
+                    <div className="text-xs text-gray-500 italic bg-gray-100 p-2 rounded">
+                      💾 ต้นฉบับ: {originalSnapshot[editingId]?.note || '(ไม่มี)'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* สถานะจ่าย */}
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">💳 สถานะจ่าย</label>
+                  <div className="space-y-2">
+                    <select
+                      value={(editData[editingId]?.is_paid ?? false) ? 'true' : 'false'}
+                      onChange={(e) => setEditData({...editData, [editingId]: {...editData[editingId], is_paid: e.target.value === 'true'}})}
+                      className="w-full px-4 py-2 border-2 border-purple-300 rounded-lg text-base font-semibold focus:outline-none focus:border-purple-600"
+                    >
+                      <option value="true">✅ จ่ายแล้ว</option>
+                      <option value="false">❌ ยังไม่จ่าย</option>
+                    </select>
+                    <div className="text-xs text-gray-500 italic bg-gray-100 p-2 rounded">
+                      💾 ต้นฉบับ: {originalSnapshot[editingId]?.is_paid ? '✅ จ่ายแล้ว' : '❌ ยังไม่จ่าย'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* สถานะ */}
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">📊 สถานะ</label>
+                  <div className="space-y-2">
+                    <select
+                      value={editData[editingId]?.end_reason ?? 'completed'}
+                      onChange={(e) => setEditData({...editData, [editingId]: {...editData[editingId], end_reason: e.target.value}})}
+                      className="w-full px-4 py-2 border-2 border-purple-300 rounded-lg text-base focus:outline-none focus:border-purple-600"
+                    >
+                      <option value="completed">✅ เสร็จแล้ว</option>
+                      <option value="expired">⏰ หมดเวลา</option>
+                      <option value="deleted">🗑️ ลบแล้ว</option>
+                      <option value="in_progress">⏳ ดำเนินการ</option>
+                    </select>
+                    <div className="text-xs text-gray-500 italic bg-gray-100 p-2 rounded">
+                      💾 ต้นฉบับ: {
+                        originalSnapshot[editingId]?.end_reason === 'completed' ? '✅ เสร็จแล้ว' :
+                        originalSnapshot[editingId]?.end_reason === 'expired' ? '⏰ หมดเวลา' :
+                        originalSnapshot[editingId]?.end_reason === 'deleted' ? '🗑️ ลบแล้ว' :
+                        originalSnapshot[editingId]?.end_reason === 'in_progress' ? '⏳ ดำเนินการ' : '-'
+                      }
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Buttons */}
+              <div className="flex gap-3 justify-center pt-6 border-t-2 border-purple-300">
+                <button
+                  onClick={() => updateHistoryItem(editingId)}
+                  disabled={rowStatus[editingId]?.saving}
+                  className={`px-6 py-3 rounded-lg text-lg font-bold text-white shadow-lg transform transition-all ${
+                    rowStatus[editingId]?.saving 
+                      ? 'bg-green-300 cursor-not-allowed' 
+                      : 'bg-green-500 hover:bg-green-600 hover:scale-105 active:scale-95'
+                  }`}
+                >
+                  {rowStatus[editingId]?.saving ? '⏳ บันทึก...' : '💾 บันทึก'}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowEditModal(false)
+                    setEditingId(null)
+                    setEditData({})
+                  }}
+                  className="px-6 py-3 bg-gray-500 hover:bg-gray-600 text-white rounded-lg text-lg font-bold shadow-lg transform hover:scale-105 active:scale-95 transition-all"
+                >
+                  ✕ ยกเลิก
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
