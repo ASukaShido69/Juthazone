@@ -625,22 +625,8 @@ function App() {
 
   const deleteCustomer = async (id) => {
     try {
-      // Save to history before deleting
-      const customerToDelete = customers.find(c => c.id === id)
-      if (customerToDelete) {
-        // Log activity
-        if (user && user.username) {
-          await logActivity(
-            user.username,
-            'DELETE_CUSTOMER',
-            `Deleted customer: ${customerToDelete.name} from room ${customerToDelete.room}`,
-            { name: customerToDelete.name, room: customerToDelete.room, cost: customerToDelete.cost },
-            customerToDelete.id
-          )
-        }
-        await saveToHistory(customerToDelete, 'deleted')
-      }
-
+      console.log('🗑️ Deleting customer from active list:', id)
+      
       const newCustomers = customers.filter(customer => customer.id !== id)
       setCustomers(newCustomers)
       updateFirebase(newCustomers)
@@ -648,6 +634,8 @@ function App() {
         type: 'UPDATE_CUSTOMERS',
         data: { customers: newCustomers, nextId }
       })
+      
+      console.log('✅ Customer removed from active list successfully')
     } catch (error) {
       console.error('Error deleting customer:', error)
     }
