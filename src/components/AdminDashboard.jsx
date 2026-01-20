@@ -398,7 +398,9 @@ function AdminDashboard({
       }
 
       // Delete customer from active list
-      deleteCustomer(customer.id)
+      await deleteCustomer(customer.id)
+      
+      console.log('✅ Customer removed from active list after completion')
       
       // Close modal
       setCompletionConfirm(null)
