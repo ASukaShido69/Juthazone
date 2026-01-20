@@ -354,31 +354,28 @@ function AdminDashboard({
       // Get session_date from start_time
       const sessionDate = customer.startTime.split('T')[0]
 
-      // Save to history
+      // Update existing history record from 'in_progress' to 'completed'
       if (supabase) {
-        // Insert new record to customers_history (VIP Room)
+        // อัพเดต record ที่มีอยู่แล้วแทนการสร้างใหม่
         const { error } = await supabase
           .from('customers_history')
-          .insert({
-            customer_id: customer.id,
-            name: customer.name,
-            room: customer.room,
-            start_time: customer.startTime,
+          .update({
             end_time: endTime.toISOString(),
             duration_minutes: parseFloat(durationMinutes),
-            initial_time: customer.initialMinutes || 0,
             is_paid: customer.isPaid,
             final_cost: customer.cost,
             note: customer.note || '',
             end_reason: 'completed',
-            session_date: sessionDate,
             shift: customer.shift || 'all',
-            payment_method: customer.payment_method || 'transfer'
+            payment_method: customer.payment_method || 'transfer',
+            updated_at: endTime.toISOString()
           })
+          .eq('customer_id', customer.id)
+          .eq('end_reason', 'in_progress')
 
         if (error) {
-          console.error('Error saving to history:', error)
-          alert('⚠️ ไม่สามารถบันทึก history ได้: ' + error.message)
+          console.error('Error updating history:', error)
+          alert('⚠️ ไม่สามารถอัพเดต history ได้: ' + error.message)
           return
         }
       }
