@@ -17,6 +17,7 @@ function HistoryView() {
   const [rowStatus, setRowStatus] = useState({}) // track syncing/saving states per row
   const [originalSnapshot, setOriginalSnapshot] = useState({}) // latest data pulled before edit
   const [showEditModal, setShowEditModal] = useState(false) // modal state สำหรับแก้ไข
+  const [showShiftModal, setShowShiftModal] = useState(false) // modal state สำหรับจัดการกะ
 
   useEffect(() => {
     fetchHistory()
@@ -389,6 +390,27 @@ function HistoryView() {
     return total
   }
 
+  const getShiftStats = () => {
+    const shifts = {
+      '1': { name: 'กะ 1 (10:00-19:00)', count: 0, revenue: 0, duration: 0, paid: 0, color: 'green' },
+      '2': { name: 'กะ 2 (19:00-01:00)', count: 0, revenue: 0, duration: 0, paid: 0, color: 'orange' },
+      '3': { name: 'กะ 3 (01:00-10:00)', count: 0, revenue: 0, duration: 0, paid: 0, color: 'purple' },
+      'all': { name: 'ทั้งหมด/ไม่ระบุ', count: 0, revenue: 0, duration: 0, paid: 0, color: 'gray' }
+    }
+
+    filteredHistory.forEach(h => {
+      const shiftKey = h.shift || 'all'
+      if (shifts[shiftKey]) {
+        shifts[shiftKey].count++
+        shifts[shiftKey].revenue += parseFloat(h.final_cost || 0)
+        shifts[shiftKey].duration += parseFloat(h.duration_minutes || 0)
+        if (h.is_paid) shifts[shiftKey].paid++
+      }
+    })
+
+    return shifts
+  }
+
   const stats = getTotalStats()
 
   return (
@@ -414,12 +436,20 @@ function HistoryView() {
               Juthazone - ระบบจัดการประวัติและสถิติ
             </p>
           </div>
-          <Link
-            to="/admin"
-            className="bg-white/90 hover:bg-white text-purple-600 font-bold py-2 px-6 rounded-xl shadow-lg hover:shadow-2xl transform hover:scale-105 active:scale-95 transition-all duration-300"
-          >
-            ← กลับแอดมิน
-          </Link>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setShowShiftModal(true)}
+              className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-bold py-2 px-6 rounded-xl shadow-lg hover:shadow-2xl transform hover:scale-105 active:scale-95 transition-all duration-300"
+            >
+              🔄 จัดการกะ
+            </button>
+            <Link
+              to="/admin"
+              className="bg-white/90 hover:bg-white text-purple-600 font-bold py-2 px-6 rounded-xl shadow-lg hover:shadow-2xl transform hover:scale-105 active:scale-95 transition-all duration-300"
+            >
+              ← กลับแอดมิน
+            </Link>
+          </div>
         </div>
 
         {/* Stats Cards */}
@@ -721,6 +751,140 @@ function HistoryView() {
           )}
         </div>
 
+        {/* Shift Management Modal */}
+        {showShiftModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+            <div className="bg-white rounded-2xl shadow-2xl p-6 md:p-8 max-w-6xl w-full border-4 border-blue-500 my-auto max-h-[90vh] overflow-y-auto">
+              {/* Header */}
+              <div className="flex justify-between items-center mb-6 pb-4 border-b-2 border-blue-300">
+                <h2 className="text-2xl md:text-3xl font-bold text-blue-700">🔄 สถิติและจัดการตามกะ</h2>
+                <button
+                  onClick={() => setShowShiftModal(false)}
+                  className="text-2xl text-gray-500 hover:text-gray-700 font-bold"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Shift Stats Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                {Object.entries(getShiftStats()).map(([shiftKey, stats]) => (
+                  <div
+                    key={shiftKey}
+                    className={`bg-${stats.color}-50 border-2 border-${stats.color}-300 rounded-xl p-4 shadow-lg hover:shadow-xl transition-all`}
+                  >
+                    <div className={`text-lg font-bold text-${stats.color}-700 mb-3`}>
+                      {stats.name}
+                    </div>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">จำนวน:</span>
+                        <span className="font-bold">{stats.count} รายการ</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">รายได้:</span>
+                        <span className="font-bold text-green-600">฿{stats.revenue.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">เวลารวม:</span>
+                        <span className="font-bold">{formatDuration(stats.duration)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">จ่ายแล้ว:</span>
+                        <span className="font-bold text-blue-600">{stats.paid}/{stats.count}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Shift History Table */}
+              <div className="space-y-6">
+                {['1', '2', '3', 'all'].map(shiftKey => {
+                  const shiftData = filteredHistory.filter(h => (h.shift || 'all') === shiftKey)
+                  if (shiftData.length === 0) return null
+
+                  const shiftInfo = {
+                    '1': { name: 'กะ 1 (10:00-19:00)', color: 'green' },
+                    '2': { name: 'กะ 2 (19:00-01:00)', color: 'orange' },
+                    '3': { name: 'กะ 3 (01:00-10:00)', color: 'purple' },
+                    'all': { name: 'ทั้งหมด/ไม่ระบุ', color: 'gray' }
+                  }[shiftKey]
+
+                  return (
+                    <div key={shiftKey} className="border-2 border-gray-200 rounded-xl p-4">
+                      <h3 className={`text-xl font-bold text-${shiftInfo.color}-700 mb-4`}>
+                        {shiftInfo.name} ({shiftData.length} รายการ)
+                      </h3>
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full text-sm">
+                          <thead>
+                            <tr className={`bg-${shiftInfo.color}-100`}>
+                              <th className="px-3 py-2 text-left">ชื่อ</th>
+                              <th className="px-3 py-2 text-left">ห้อง</th>
+                              <th className="px-3 py-2 text-center">พนักงาน</th>
+                              <th className="px-3 py-2 text-center">เวลาเริ่ม</th>
+                              <th className="px-3 py-2 text-center">ระยะเวลา</th>
+                              <th className="px-3 py-2 text-center">ราคา</th>
+                              <th className="px-3 py-2 text-center">สถานะ</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {shiftData.map((record, index) => (
+                              <tr
+                                key={record.id}
+                                className={`border-b ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-${shiftInfo.color}-50 transition-all`}
+                              >
+                                <td className="px-3 py-2 font-semibold">{record.name}</td>
+                                <td className="px-3 py-2">
+                                  <span className="inline-block bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs">
+                                    {record.room}
+                                  </span>
+                                </td>
+                                <td className="px-3 py-2 text-center">
+                                  <span className="inline-block bg-orange-100 text-orange-700 px-2 py-1 rounded text-xs">
+                                    {record.added_by || '—'}
+                                  </span>
+                                </td>
+                                <td className="px-3 py-2 text-center text-xs">
+                                  {formatDateTime(record.start_time)}
+                                </td>
+                                <td className="px-3 py-2 text-center font-semibold">
+                                  {formatDuration(record.duration_minutes)}
+                                </td>
+                                <td className="px-3 py-2 text-center font-bold text-green-600">
+                                  ฿{record.final_cost}
+                                </td>
+                                <td className="px-3 py-2 text-center">
+                                  <span className={`inline-block px-2 py-1 rounded text-xs font-bold ${
+                                    record.is_paid ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                                  }`}>
+                                    {record.is_paid ? '✅' : '❌'}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Close Button */}
+              <div className="flex justify-center mt-6 pt-6 border-t-2 border-gray-200">
+                <button
+                  onClick={() => setShowShiftModal(false)}
+                  className="px-6 py-3 bg-gray-500 hover:bg-gray-600 text-white rounded-lg text-lg font-bold shadow-lg transform hover:scale-105 active:scale-95 transition-all"
+                >
+                  ✕ ปิด
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Edit Modal Dialog */}
         {showEditModal && editingId && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 overflow-y-auto">
@@ -858,6 +1022,48 @@ function HistoryView() {
                     />
                     <div className="text-xs text-gray-500 italic bg-gray-100 p-2 rounded">
                       💾 ต้นฉบับ: {originalSnapshot[editingId]?.note || '(ไม่มี)'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* พนักงาน */}
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">👤 พนักงาน</label>
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      value={editData[editingId]?.added_by ?? ''}
+                      onChange={(e) => setEditData({...editData, [editingId]: {...editData[editingId], added_by: e.target.value}})}
+                      className="w-full px-4 py-2 border-2 border-orange-300 rounded-lg text-base focus:outline-none focus:border-orange-600"
+                      placeholder="ชื่อพนักงาน"
+                    />
+                    <div className="text-xs text-gray-500 italic bg-gray-100 p-2 rounded">
+                      💾 ต้นฉบับ: {originalSnapshot[editingId]?.added_by || '(ไม่ระบุ)'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* กะ */}
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">🔄 กะ</label>
+                  <div className="space-y-2">
+                    <select
+                      value={editData[editingId]?.shift ?? 'all'}
+                      onChange={(e) => setEditData({...editData, [editingId]: {...editData[editingId], shift: e.target.value}})}
+                      className="w-full px-4 py-2 border-2 border-blue-300 rounded-lg text-base font-semibold focus:outline-none focus:border-blue-600"
+                    >
+                      <option value="all">ทั้งหมด</option>
+                      <option value="1">กะ 1 (10:00-19:00)</option>
+                      <option value="2">กะ 2 (19:00-01:00)</option>
+                      <option value="3">กะ 3 (01:00-10:00)</option>
+                    </select>
+                    <div className="text-xs text-gray-500 italic bg-gray-100 p-2 rounded">
+                      💾 ต้นฉบับ: {
+                        originalSnapshot[editingId]?.shift === '1' ? 'กะ 1 (10:00-19:00)' :
+                        originalSnapshot[editingId]?.shift === '2' ? 'กะ 2 (19:00-01:00)' :
+                        originalSnapshot[editingId]?.shift === '3' ? 'กะ 3 (01:00-10:00)' :
+                        'ทั้งหมด'
+                      }
                     </div>
                   </div>
                 </div>
