@@ -627,9 +627,25 @@ function App() {
     try {
       console.log('🗑️ Deleting customer from active list:', id)
       
+      // ลบออกจาก Supabase ก่อน
+      if (supabase && isSupabaseReady) {
+        const { error } = await supabase
+          .from('customers')
+          .delete()
+          .eq('id', id)
+        
+        if (error) {
+          console.error('Error deleting from Supabase:', error)
+          throw error
+        }
+        console.log('✅ Deleted from Supabase successfully')
+      }
+      
+      // ลบออกจาก local state
       const newCustomers = customers.filter(customer => customer.id !== id)
       setCustomers(newCustomers)
-      updateFirebase(newCustomers)
+      
+      // ส่งข้อความไปยัง tabs อื่น
       channel.postMessage({
         type: 'UPDATE_CUSTOMERS',
         data: { customers: newCustomers, nextId }
@@ -638,6 +654,7 @@ function App() {
       console.log('✅ Customer removed from active list successfully')
     } catch (error) {
       console.error('Error deleting customer:', error)
+      alert('❌ ไม่สามารถลบลูกค้าได้: ' + error.message)
     }
   }
 
