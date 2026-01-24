@@ -20,9 +20,9 @@ function DailySummaryView({ user, onLogout }) {
   })
 
   const shifts = {
-    '1': { name: 'กะเช้า', time: '10:00-19:00', color: 'bg-yellow-100 text-yellow-800' },
-    '2': { name: 'กะเย็น', time: '19:00-01:00', color: 'bg-purple-100 text-purple-800' },
-    '3': { name: 'กะดึก', time: '01:00-10:00', color: 'bg-blue-100 text-blue-800' }
+    '1': { name: 'กะ 10:00-19:00', time: '10:00-19:00', color: 'bg-yellow-100 text-yellow-800' },
+    '2': { name: 'กะ 19:00-01:00', time: '19:00-01:00', color: 'bg-purple-100 text-purple-800' },
+    '3': { name: 'กะ 01:00-10:00', time: '01:00-10:00', color: 'bg-blue-100 text-blue-800' }
   }
 
   const toBangkokDateString = (isoTs) => {
