@@ -348,7 +348,7 @@ function DailySummaryView({ user, onLogout }) {
   // คำนวณวันที่แสดงแบบภาษาไทย
   const getThaiDateDisplay = () => {
     const date = new Date(selectedDate)
-    const thaiYear = date.getFullYear() + 543 - 2000 // แปลงเป็น พ.ศ. แบบ 2 หลัก
+    const thaiYear = date.getFullYear() + 543 // แปลงเป็น พ.ศ.
     const day = date.getDate()
     const month = date.getMonth() + 1
     return `${day.toString().padStart(2, '0')}/${month.toString().padStart(2, '0')}/${thaiYear}`
@@ -357,7 +357,7 @@ function DailySummaryView({ user, onLogout }) {
   const getNextDayThaiDate = () => {
     const date = new Date(selectedDate)
     date.setDate(date.getDate() + 1)
-    const thaiYear = date.getFullYear() + 543 - 2000
+    const thaiYear = date.getFullYear() + 543 // แปลงเป็น พ.ศ.
     const day = date.getDate()
     const month = date.getMonth() + 1
     return `${day.toString().padStart(2, '0')}/${month.toString().padStart(2, '0')}/${thaiYear}`
