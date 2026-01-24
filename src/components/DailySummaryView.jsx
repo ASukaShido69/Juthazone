@@ -406,9 +406,9 @@ function DailySummaryView({ user, onLogout }) {
               className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 bg-white text-lg"
             >
               <option value="all">📊 ทั้งหมด</option>
-              <option value="1">☀️ กะ 10:00-19:00: เช้า-เย็น </option>
-              <option value="2">🌙 กะ 19:00-01:00: เย็น-ดึก </option>
-              <option value="3">🌃 กะ 01:00-10:00: ดึก-เช้า </option>
+              <option value="1">☀️ กะ 1: เช้า-เย็น (10:00-19:00)</option>
+              <option value="2">🌙 กะ 2: เย็น-ดึก (19:00-01:00)</option>
+              <option value="3">🌃 กะ 3: ดึก-เช้า (01:00-10:00)</option>
             </select>
           </div>
         </div>
@@ -741,7 +741,7 @@ function DailySummaryView({ user, onLogout }) {
                       <td className="px-4 py-3 text-center">
                         {entry.shift ? (
                           <span className={`px-3 py-1 rounded-full font-bold text-xs ${shifts[entry.shift]?.color || 'bg-gray-100 text-gray-800'}`}>
-                            กะ {shifts[entry.shift]?.name || entry.shift}
+                            {shifts[entry.shift]?.name || entry.shift}
                           </span>
                         ) : (
                           <span className="text-gray-400">-</span>
