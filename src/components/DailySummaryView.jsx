@@ -75,37 +75,30 @@ function DailySummaryView({ user, onLogout }) {
       setLoading(true)
       setError(null)
 
-      // Date range for the selected day (Bangkok local time)
-      const dayStart = new Date(`${selectedDate}T00:00:00+07:00`).toISOString()
-      const nextDay = new Date(`${selectedDate}T00:00:00+07:00`)
+      // เวลารอบวัน: 10:00 ของวันที่เลือก -> 10:00 ของวันถัดไป (ตามเวลาประเทศไทย)
+      const windowStart = new Date(`${selectedDate}T10:00:00+07:00`).toISOString()
+      const nextDay = new Date(`${selectedDate}T10:00:00+07:00`)
       nextDay.setDate(nextDay.getDate() + 1)
-      const dayEnd = nextDay.toISOString()
+      const windowEnd = nextDay.toISOString()
 
-      // คำนวณวันถัดไปสำหรับดึงกะ 3
-      const nextDayDate = new Date(selectedDate)
-      nextDayDate.setDate(nextDayDate.getDate() + 1)
-      const nextDayString = nextDayDate.toISOString().split('T')[0]
-
-      // Load VIP entries
-      // รวม: session_date = วันที่เลือก + กะ 3 ของวันถัดไป (01:00-10:00)
+      // Load VIP entries: ใช้ช่วงเวลา 10:00-10:00 และกรณี session_date ตรงกับวันที่ที่เลือก (รองรับ start_time ว่าง)
       const { data: vipData, error: vipError } = await supabase
         .from('customers_history')
         .select('*')
         .or(
-          `session_date.eq.${selectedDate},and(session_date.eq.${nextDayString},start_time.gte.${nextDayString}T01:00:00,start_time.lt.${nextDayString}T10:00:00)`
+          `session_date.eq.${selectedDate},and(start_time.gte.${windowStart},start_time.lt.${windowEnd})`
         )
         .neq('end_reason', 'in_progress')
         .order('start_time', { ascending: false })
 
       if (vipError) throw vipError
 
-      // Load Computer Zone entries
-      // รวม: session_date = วันที่เลือก + กะ 3 ของวันถัดไป
+      // Load Computer Zone entries: ใช้ช่วงเวลาเดียวกัน พร้อม fallback created_at
       const { data: computerData, error: computerError } = await supabase
         .from('computer_zone_history')
         .select('*')
         .or(
-          `session_date.eq.${selectedDate},and(session_date.eq.${nextDayString},shift.eq.3)`
+          `session_date.eq.${selectedDate},and(created_at.gte.${windowStart},created_at.lt.${windowEnd})`
         )
         .order('created_at', { ascending: false })
 
@@ -114,30 +107,16 @@ function DailySummaryView({ user, onLogout }) {
       // Add shift/session_date detection if missing
       const processedVip = (vipData || []).map(entry => {
         let shift = entry.shift || getShiftFromTime(entry.start_time)
-        let adjustedSessionDate = entry.session_date
-        
-        // ถ้าเป็นกะ 3 ของวันถัดไป ให้นับเป็นของวันที่เลือก
-        if (shift === '3' && entry.session_date === nextDayString) {
-          adjustedSessionDate = selectedDate
-        }
-        
         return {
           ...entry,
           shift: shift,
-          session_date: adjustedSessionDate
+          session_date: entry.session_date
         }
       })
 
       const processedComputer = (computerData || []).map(entry => {
         let shift = entry.shift || getShiftFromTime(entry.start_time || entry.created_at)
-        let adjustedSessionDate = entry.session_date
-        
-        // ถ้าเป็นกะ 3 ของวันถัดไป ให้นับเป็นของวันที่เลือก
-        if (shift === '3' && entry.session_date === nextDayString) {
-          adjustedSessionDate = selectedDate
-        }
-        
-        const fallbackDate = adjustedSessionDate
+        const fallbackDate = entry.session_date
           || toBangkokDateString(entry.created_at)
           || selectedDate
         
