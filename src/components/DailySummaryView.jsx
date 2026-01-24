@@ -280,6 +280,61 @@ function DailySummaryView({ user, onLogout }) {
   const displaySummary = getFilteredSummary()
   const { vip: displayVip, computer: displayComputer } = getFilteredData()
 
+  // คำนวณยอดรวมแต่ละกะ
+  const calculateShiftSummaries = useCallback(() => {
+    const shiftSummaries = {
+      '1': { total: 0, transfer: 0, cash: 0 },
+      '2': { total: 0, transfer: 0, cash: 0 },
+      '3': { total: 0, transfer: 0, cash: 0 }
+    }
+
+    // VIP entries
+    allVipEntries.forEach(entry => {
+      const shift = entry.shift || getShiftFromTime(entry.start_time)
+      if (shift && shiftSummaries[shift]) {
+        const cost = parseFloat(entry.final_cost) || 0
+        const isTransfer = (entry.payment_method || 'transfer') === 'transfer'
+        shiftSummaries[shift].total += cost
+        if (isTransfer) shiftSummaries[shift].transfer += cost
+        else shiftSummaries[shift].cash += cost
+      }
+    })
+
+    // Computer entries
+    allComputerEntries.forEach(entry => {
+      const shift = entry.shift || getShiftFromTime(entry.start_time || entry.created_at)
+      if (shift && shiftSummaries[shift]) {
+        const transfer = parseFloat(entry.transfer_amount) || 0
+        const cash = parseFloat(entry.cash_amount) || 0
+        shiftSummaries[shift].total += (transfer + cash)
+        shiftSummaries[shift].transfer += transfer
+        shiftSummaries[shift].cash += cash
+      }
+    })
+
+    return shiftSummaries
+  }, [allVipEntries, allComputerEntries, getShiftFromTime])
+
+  const shiftSummaries = calculateShiftSummaries()
+
+  // คำนวณวันที่แสดงแบบภาษาไทย
+  const getThaiDateDisplay = () => {
+    const date = new Date(selectedDate)
+    const thaiYear = date.getFullYear() + 543 - 2000 // แปลงเป็น พ.ศ. แบบ 2 หลัก
+    const day = date.getDate()
+    const month = date.getMonth() + 1
+    return `${day.toString().padStart(2, '0')}/${month.toString().padStart(2, '0')}/${thaiYear}`
+  }
+
+  const getNextDayThaiDate = () => {
+    const date = new Date(selectedDate)
+    date.setDate(date.getDate() + 1)
+    const thaiYear = date.getFullYear() + 543 - 2000
+    const day = date.getDate()
+    const month = date.getMonth() + 1
+    return `${day.toString().padStart(2, '0')}/${month.toString().padStart(2, '0')}/${thaiYear}`
+  }
+
   if (loading && allVipEntries.length === 0 && allComputerEntries.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
@@ -348,6 +403,118 @@ function DailySummaryView({ user, onLogout }) {
               <option value="2">🌙 กะ 2: เย็น-ดึก (19:00-01:00)</option>
               <option value="3">🌃 กะ 3: ดึก-เช้า (01:00-10:00)</option>
             </select>
+          </div>
+        </div>
+
+        {/* สรุปยอดตามช่วงเวลา */}
+        <div className="bg-white rounded-2xl shadow-2xl p-6 mb-8">
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-6 text-center">
+            📊 สรุปรายวัน
+          </h2>
+          <div className="bg-gradient-to-r from-purple-100 to-pink-100 rounded-xl p-6 mb-4">
+            <p className="text-center text-lg md:text-xl font-bold text-gray-800">
+              ยอดรวมเมื่อวันที่ <span className="text-purple-600">{getThaiDateDisplay()}</span> ตั้งแต่ 10:00 - 10:00 ของวันที่ <span className="text-purple-600">{getNextDayThaiDate()}</span>
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            {/* กะ 1 */}
+            <div className="bg-gradient-to-br from-yellow-100 to-orange-100 rounded-xl p-5 shadow-lg border-2 border-yellow-300">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-2xl">☀️</span>
+                <h3 className="font-bold text-gray-800 text-lg">กะ 1 (เช้า-เย็น)</h3>
+              </div>
+              <p className="text-sm text-gray-600 mb-3">10:00 - 19:00</p>
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">โอน:</span>
+                  <span className="font-semibold text-blue-600">฿{shiftSummaries['1'].transfer.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">สด:</span>
+                  <span className="font-semibold text-orange-600">฿{shiftSummaries['1'].cash.toFixed(2)}</span>
+                </div>
+                <div className="border-t-2 border-yellow-300 pt-2 flex justify-between">
+                  <span className="font-bold text-gray-800">ยอดรวมกะ 1 =</span>
+                  <span className="font-bold text-xl text-green-600">฿{shiftSummaries['1'].total.toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* กะ 2 */}
+            <div className="bg-gradient-to-br from-purple-100 to-pink-100 rounded-xl p-5 shadow-lg border-2 border-purple-300">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-2xl">🌙</span>
+                <h3 className="font-bold text-gray-800 text-lg">กะ 2 (เย็น-ดึก)</h3>
+              </div>
+              <p className="text-sm text-gray-600 mb-3">19:00 - 01:00</p>
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">โอน:</span>
+                  <span className="font-semibold text-blue-600">฿{shiftSummaries['2'].transfer.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">สด:</span>
+                  <span className="font-semibold text-orange-600">฿{shiftSummaries['2'].cash.toFixed(2)}</span>
+                </div>
+                <div className="border-t-2 border-purple-300 pt-2 flex justify-between">
+                  <span className="font-bold text-gray-800">ยอดรวมกะ 2 =</span>
+                  <span className="font-bold text-xl text-green-600">฿{shiftSummaries['2'].total.toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* กะ 3 */}
+            <div className="bg-gradient-to-br from-blue-100 to-cyan-100 rounded-xl p-5 shadow-lg border-2 border-blue-300">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-2xl">🌃</span>
+                <h3 className="font-bold text-gray-800 text-lg">กะ 3 (ดึก-เช้า)</h3>
+              </div>
+              <p className="text-sm text-gray-600 mb-3">01:00 - 10:00</p>
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">โอน:</span>
+                  <span className="font-semibold text-blue-600">฿{shiftSummaries['3'].transfer.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">สด:</span>
+                  <span className="font-semibold text-orange-600">฿{shiftSummaries['3'].cash.toFixed(2)}</span>
+                </div>
+                <div className="border-t-2 border-blue-300 pt-2 flex justify-between">
+                  <span className="font-bold text-gray-800">ยอดรวมกะ 3 =</span>
+                  <span className="font-bold text-xl text-green-600">฿{shiftSummaries['3'].total.toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* รวมทั้งหมด */}
+            <div className="bg-gradient-to-br from-green-100 to-emerald-100 rounded-xl p-5 shadow-lg border-4 border-green-400">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-2xl">💰</span>
+                <h3 className="font-bold text-gray-800 text-lg">รวมทั้งหมด</h3>
+              </div>
+              <p className="text-sm text-gray-600 mb-3">ทุกกะ (24 ชม.)</p>
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">โอน:</span>
+                  <span className="font-semibold text-blue-600">
+                    ฿{(shiftSummaries['1'].transfer + shiftSummaries['2'].transfer + shiftSummaries['3'].transfer).toFixed(2)}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">สด:</span>
+                  <span className="font-semibold text-orange-600">
+                    ฿{(shiftSummaries['1'].cash + shiftSummaries['2'].cash + shiftSummaries['3'].cash).toFixed(2)}
+                  </span>
+                </div>
+                <div className="border-t-4 border-green-400 pt-2 flex justify-between">
+                  <span className="font-bold text-gray-800 text-lg">รวมยอดทั้งหมด =</span>
+                  <span className="font-bold text-2xl text-green-600">
+                    ฿{(shiftSummaries['1'].total + shiftSummaries['2'].total + shiftSummaries['3'].total).toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
