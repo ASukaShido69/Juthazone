@@ -8,11 +8,6 @@ function DailySummaryView({ user, onLogout }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   
-  // Filter mode: 'single' = วันเดียว, 'range' = หลายวัน
-  const [filterMode, setFilterMode] = useState('single')
-  const [dateFrom, setDateFrom] = useState(new Date().toISOString().split('T')[0])
-  const [dateTo, setDateTo] = useState(new Date().toISOString().split('T')[0])
-  
   const [vipEntries, setVipEntries] = useState([])
   const [computerEntries, setComputerEntries] = useState([])
   const [allVipEntries, setAllVipEntries] = useState([])
@@ -80,22 +75,18 @@ function DailySummaryView({ user, onLogout }) {
       setLoading(true)
       setError(null)
 
-      // กำหนดช่วงวันที่ให้ค้นหา
-      const startDate = filterMode === 'range' ? dateFrom : selectedDate
-      const endDate = filterMode === 'range' ? dateTo : selectedDate
-
       // เวลารอบวัน: 10:00 ของวันที่เลือก -> 10:00 ของวันถัดไป (ตามเวลาประเทศไทย)
-      const windowStart = new Date(`${startDate}T10:00:00+07:00`).toISOString()
-      const lastDay = new Date(`${endDate}T10:00:00+07:00`)
-      lastDay.setDate(lastDay.getDate() + 1)
-      const windowEnd = lastDay.toISOString()
+      const windowStart = new Date(`${selectedDate}T10:00:00+07:00`).toISOString()
+      const nextDay = new Date(`${selectedDate}T10:00:00+07:00`)
+      nextDay.setDate(nextDay.getDate() + 1)
+      const windowEnd = nextDay.toISOString()
 
       // Load VIP entries: ใช้ช่วงเวลา 10:00-10:00 และกรณี session_date ตรงกับวันที่ที่เลือก (รองรับ start_time ว่าง)
       const { data: vipData, error: vipError } = await supabase
         .from('customers_history')
         .select('*')
         .or(
-          `session_date.gte.${startDate},session_date.lte.${endDate},and(start_time.gte.${windowStart},start_time.lt.${windowEnd})`
+          `session_date.eq.${selectedDate},and(start_time.gte.${windowStart},start_time.lt.${windowEnd})`
         )
         .neq('end_reason', 'in_progress')
         .order('start_time', { ascending: false })
@@ -107,7 +98,7 @@ function DailySummaryView({ user, onLogout }) {
         .from('computer_zone_history')
         .select('*')
         .or(
-          `session_date.gte.${startDate},session_date.lte.${endDate},and(created_at.gte.${windowStart},created_at.lt.${windowEnd})`
+          `session_date.eq.${selectedDate},and(created_at.gte.${windowStart},created_at.lt.${windowEnd})`
         )
         .order('created_at', { ascending: false })
 
@@ -147,7 +138,7 @@ function DailySummaryView({ user, onLogout }) {
     } finally {
       setLoading(false)
     }
-  }, [selectedDate, selectedShift, filterMode, dateFrom, dateTo, getShiftFromTime, applyShiftFilter])
+  }, [selectedDate, selectedShift, getShiftFromTime, applyShiftFilter])
 
   useEffect(() => {
     loadData()
@@ -396,51 +387,16 @@ function DailySummaryView({ user, onLogout }) {
         </div>
 
         {/* Controls */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           <div className="bg-white rounded-xl p-4 shadow-xl">
-            <label className="block text-gray-700 font-bold mb-2">📋 โหมดตัวกรอง</label>
-            <select
-              value={filterMode}
-              onChange={(e) => setFilterMode(e.target.value)}
-              className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 bg-white text-lg"
-            >
-              <option value="single">📅 วันเดียว</option>
-              <option value="range">📆 หลายวัน</option>
-            </select>
+            <label className="block text-gray-700 font-bold mb-2"> เลือกวันที่</label>
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-lg"
+            />
           </div>
-
-          {filterMode === 'single' ? (
-            <div className="bg-white rounded-xl p-4 shadow-xl">
-              <label className="block text-gray-700 font-bold mb-2">📅 เลือกวันที่</label>
-              <input
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-lg"
-              />
-            </div>
-          ) : (
-            <>
-              <div className="bg-white rounded-xl p-4 shadow-xl">
-                <label className="block text-gray-700 font-bold mb-2">📅 วันที่เริ่ม</label>
-                <input
-                  type="date"
-                  value={dateFrom}
-                  onChange={(e) => setDateFrom(e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-lg"
-                />
-              </div>
-              <div className="bg-white rounded-xl p-4 shadow-xl">
-                <label className="block text-gray-700 font-bold mb-2">📅 วันที่สิ้นสุด</label>
-                <input
-                  type="date"
-                  value={dateTo}
-                  onChange={(e) => setDateTo(e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-lg"
-                />
-              </div>
-            </>
-          )}
           
           <div className="bg-white rounded-xl p-4 shadow-xl">
             <label className="block text-gray-700 font-bold mb-2">🔄 เลือกกะ</label>
