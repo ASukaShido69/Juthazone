@@ -141,32 +141,13 @@ function ComputerZoneEntry({ user }) {
       const currentTime = now.toTimeString().slice(0, 5) // HH:MM format
       const startTime = entryData.startTime || currentTime // ใช้เวลาปัจจุบันถ้าไม่กรอก
 
-      // Use selected shift from dropdown หรือคำนวณจากเวลา
+      // Use selected shift from dropdown หรือคำนวณจากเวลา (ไม่ปรับวันที่อัตโนมัติแล้ว)
       let shift = entryData.shift
       if (shift === 'all' || !shift) {
         shift = getShiftFromTime(startTime)
       }
-      
-      let sessionDate = entryData.sessionDate
-      
-      // ⚠️ สำคัญ: ปรับวันที่สำหรับกะที่ข้ามวัน
-      // รอบวันทำงาน = 10:00 - 10:00 วันถัดไป
-      // - กะ 2 (19:00-01:00): ถ้าอยู่ในช่วง 00:00-00:59 ต้องนับเป็นวันก่อนหน้า
-      // - กะ 3 (01:00-10:00): ต้องนับเป็นวันก่อนหน้าทั้งหมด
-      
-      const hourInt = parseInt(startTime.split(':')[0])
-      
-      if (shift === '2' && hourInt < 1) {
-        // กะ 2 ในช่วง 00:00-00:59 (ข้ามวัน) → ลบ 1 วัน
-        const dateObj = new Date(sessionDate + 'T00:00:00')
-        dateObj.setDate(dateObj.getDate() - 1)
-        sessionDate = dateObj.toISOString().split('T')[0]
-      } else if (shift === '3') {
-        // กะ 3 ทั้งหมด (01:00-10:00) → ลบ 1 วัน
-        const dateObj = new Date(sessionDate + 'T00:00:00')
-        dateObj.setDate(dateObj.getDate() - 1)
-        sessionDate = dateObj.toISOString().split('T')[0]
-      }
+
+      const sessionDate = entryData.sessionDate
       
       // ถ้าไม่กรอกชื่อ ใช้ชื่อ default
       const customerName = entryData.customerName.trim() || 'ไม่ระบุชื่อ'
@@ -177,7 +158,7 @@ function ComputerZoneEntry({ user }) {
         transfer_amount: transferAmt,
         cash_amount: cashAmt,
         total_cost: totalCost,
-        session_date: sessionDate, // วันที่ที่ปรับแล้ว (กะ 3 จะถูกลบ 1 วัน)
+        session_date: sessionDate,
         shift: shift,
         start_time: startTime,
         description: entryData.description || `เพิ่มโดย ${user?.username || 'Unknown'}`,
@@ -257,7 +238,7 @@ function ComputerZoneEntry({ user }) {
             disabled={loading}
             className="w-full px-4 py-2 border-2 border-blue-300 rounded-lg focus:outline-none focus:border-blue-500 disabled:bg-gray-100"
           />
-          <p className="text-xs text-blue-600 mt-1 font-semibold">💡 กรอกวันที่ปัจจุบันตามปกติ (กะ 2-3 ที่ข้ามวันจะปรับอัตโนมัติ)</p>
+          <p className="text-xs text-blue-600 mt-1 font-semibold">💡 กรอกวันที่ตามต้องการ ระบบจะใช้วันที่นี้ตรงๆ หากกะ 3 ให้เลือกวันที่ก่อนหน้า</p>
         </div>
 
         {/* Description */}
