@@ -741,7 +741,7 @@ function DailySummaryView({ user, onLogout }) {
                       <td className="px-4 py-3 text-center">
                         {entry.shift ? (
                           <span className={`px-3 py-1 rounded-full font-bold text-xs ${shifts[entry.shift]?.color || 'bg-gray-100 text-gray-800'}`}>
-                            กะ {entry.shift}
+                            กะ {shifts[entry.shift]?.name || entry.shift}
                           </span>
                         ) : (
                           <span className="text-gray-400">-</span>
