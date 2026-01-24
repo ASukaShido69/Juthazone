@@ -129,6 +129,20 @@ function ComputerZoneManager({ isOpen, onClose, user }) {
         shift: shift
       })
 
+      // ลองตรวจสอบว่ารายการมีอยู่จริง
+      const { data: existingEntry } = await supabase
+        .from('computer_zone_history')
+        .select('*')
+        .eq('id', id)
+        .single()
+
+      console.log('Existing entry check:', existingEntry)
+
+      if (!existingEntry) {
+        alert('⚠️ ไม่พบรายการที่ต้องการแก้ไข กรุณาลองรีเฟรชหน้าใหม่')
+        return
+      }
+
       const { data, error } = await supabase
         .from('computer_zone_history')
         .update({
@@ -153,11 +167,7 @@ function ComputerZoneManager({ isOpen, onClose, user }) {
         return
       }
 
-      if (!data || data.length === 0) {
-        alert('⚠️ ไม่พบรายการที่ต้องการแก้ไข')
-        return
-      }
-
+      // ถ้า update สำเร็จแต่ไม่มี data ส่งกลับมา ให้ถือว่าสำเร็จ
       cancelEdit()
       await loadEntries() // โหลด entries ใหม่หลังแก้สำเร็จ
       alert('✅ แก้ไขสำเร็จ')
@@ -173,22 +183,30 @@ function ComputerZoneManager({ isOpen, onClose, user }) {
     try {
       console.log('Deleting entry with id:', id)
 
-      const { data, error } = await supabase
+      // ตรวจสอบว่ารายการมีอยู่จริง
+      const { data: existingEntry } = await supabase
+        .from('computer_zone_history')
+        .select('*')
+        .eq('id', id)
+        .single()
+
+      console.log('Existing entry before delete:', existingEntry)
+
+      if (!existingEntry) {
+        alert('⚠️ ไม่พบรายการที่ต้องการลบ กรุณาลองรีเฟรชหน้าใหม่')
+        return
+      }
+
+      const { error } = await supabase
         .from('computer_zone_history')
         .delete()
         .eq('id', id)
-        .select()
 
-      console.log('Delete result:', { data, error })
+      console.log('Delete result:', { error })
 
       if (error) {
         console.error('Delete error details:', error)
         alert('❌ ไม่สามารถลบได้: ' + error.message)
-        return
-      }
-
-      if (!data || data.length === 0) {
-        alert('⚠️ ไม่พบรายการที่ต้องการลบ')
         return
       }
 

@@ -75,47 +75,75 @@ function DailySummaryView({ user, onLogout }) {
       setLoading(true)
       setError(null)
 
-      // Date range for the selected day (Bangkok local time) to avoid cross-day drift
+      // Date range for the selected day (Bangkok local time)
       const dayStart = new Date(`${selectedDate}T00:00:00+07:00`).toISOString()
       const nextDay = new Date(`${selectedDate}T00:00:00+07:00`)
       nextDay.setDate(nextDay.getDate() + 1)
       const dayEnd = nextDay.toISOString()
 
-      // Load VIP entries (session_date preferred, fallback to start_time range)
+      // คำนวณวันถัดไปสำหรับดึงกะ 3
+      const nextDayDate = new Date(selectedDate)
+      nextDayDate.setDate(nextDayDate.getDate() + 1)
+      const nextDayString = nextDayDate.toISOString().split('T')[0]
+
+      // Load VIP entries
+      // รวม: session_date = วันที่เลือก + กะ 3 ของวันถัดไป (01:00-10:00)
       const { data: vipData, error: vipError } = await supabase
         .from('customers_history')
         .select('*')
-        .eq('session_date', selectedDate)
-        .or(`start_time.gte.${dayStart},start_time.lt.${dayEnd}`)
+        .or(
+          `session_date.eq.${selectedDate},and(session_date.eq.${nextDayString},start_time.gte.${nextDayString}T01:00:00,start_time.lt.${nextDayString}T10:00:00)`
+        )
         .neq('end_reason', 'in_progress')
         .order('start_time', { ascending: false })
 
       if (vipError) throw vipError
 
-      // Load Computer Zone entries: prefer session_date match; fallback to created_at range when session_date missing
+      // Load Computer Zone entries
+      // รวม: session_date = วันที่เลือก + กะ 3 ของวันถัดไป
       const { data: computerData, error: computerError } = await supabase
         .from('computer_zone_history')
         .select('*')
         .or(
-          `session_date.eq.${selectedDate},and(session_date.is.null,created_at.gte.${dayStart},created_at.lt.${dayEnd})`
+          `session_date.eq.${selectedDate},and(session_date.eq.${nextDayString},shift.eq.3)`
         )
         .order('created_at', { ascending: false })
 
       if (computerError) throw computerError
 
       // Add shift/session_date detection if missing
-      const processedVip = (vipData || []).map(entry => ({
-        ...entry,
-        shift: entry.shift || getShiftFromTime(entry.start_time)
-      }))
-
-      const processedComputer = (computerData || []).map(entry => {
-        const fallbackDate = entry.session_date
-          || toBangkokDateString(entry.created_at)
-          || selectedDate
+      const processedVip = (vipData || []).map(entry => {
+        let shift = entry.shift || getShiftFromTime(entry.start_time)
+        let adjustedSessionDate = entry.session_date
+        
+        // ถ้าเป็นกะ 3 ของวันถัดไป ให้นับเป็นของวันที่เลือก
+        if (shift === '3' && entry.session_date === nextDayString) {
+          adjustedSessionDate = selectedDate
+        }
+        
         return {
           ...entry,
-          shift: entry.shift || getShiftFromTime(entry.start_time || entry.created_at),
+          shift: shift,
+          session_date: adjustedSessionDate
+        }
+      })
+
+      const processedComputer = (computerData || []).map(entry => {
+        let shift = entry.shift || getShiftFromTime(entry.start_time || entry.created_at)
+        let adjustedSessionDate = entry.session_date
+        
+        // ถ้าเป็นกะ 3 ของวันถัดไป ให้นับเป็นของวันที่เลือก
+        if (shift === '3' && entry.session_date === nextDayString) {
+          adjustedSessionDate = selectedDate
+        }
+        
+        const fallbackDate = adjustedSessionDate
+          || toBangkokDateString(entry.created_at)
+          || selectedDate
+        
+        return {
+          ...entry,
+          shift: shift,
           session_date: fallbackDate
         }
       })
