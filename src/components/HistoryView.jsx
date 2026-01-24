@@ -187,7 +187,7 @@ function HistoryView() {
         shift: data.shift || original.shift || 'all',
         payment_method: data.payment_method || original.payment_method || 'transfer',
         created_by: original.created_by || original.added_by || null,  // เก็บผู้สร้างเดิม
-        last_updated_by: 'Admin',  // บันทึกผู้แก้ไขล่าสุด
+        last_updated_by: data.last_updated_by ?? original.last_updated_by ?? null,  // บันทึกผู้แก้ไขล่าสุด
         updated_at: new Date().toISOString()
       }
 
