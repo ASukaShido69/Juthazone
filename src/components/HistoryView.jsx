@@ -186,6 +186,8 @@ function HistoryView() {
         note: data.note ?? original.note ?? '',  // ใช้ ?? เพื่อเก็บ empty string และใช้ original เป็น fallback
         shift: data.shift || original.shift || 'all',
         payment_method: data.payment_method || original.payment_method || 'transfer',
+        created_by: original.created_by || original.added_by || null,  // เก็บผู้สร้างเดิม
+        last_updated_by: 'Admin',  // บันทึกผู้แก้ไขล่าสุด
         updated_at: new Date().toISOString()
       }
 
@@ -592,10 +594,12 @@ function HistoryView() {
                   <tr className="bg-gradient-to-r from-purple-600 to-pink-600 text-white">
                     <th className="px-2 md:px-4 py-2 md:py-3 text-left text-xs md:text-sm">ชื่อ</th>
                     <th className="px-2 md:px-4 py-2 md:py-3 text-left text-xs md:text-sm">ห้อง</th>
-                    <th className="px-2 md:px-4 py-2 md:py-3 text-left text-xs md:text-sm hidden sm:table-cell">👥 พนักงาน</th>
+                    <th className="px-2 md:px-4 py-2 md:py-3 text-left text-xs md:text-sm hidden sm:table-cell">👥 สร้างโดย</th>
+                    <th className="px-2 md:px-4 py-2 md:py-3 text-left text-xs md:text-sm hidden lg:table-cell">✏️ แก้ไขโดย</th>
                     <th className="px-2 md:px-4 py-2 md:py-3 text-center text-xs md:text-sm hidden sm:table-cell">🔄 กะ</th>
-                    <th className="px-2 md:px-4 py-2 md:py-3 text-center text-xs md:text-sm hidden md:table-cell">เริ่ม</th>
-                    <th className="px-2 md:px-4 py-2 md:py-3 text-center text-xs md:text-sm hidden md:table-cell">จบ</th>
+                    <th className="px-2 md:px-4 py-2 md:py-3 text-center text-xs md:text-sm hidden md:table-cell">📅 วันที่</th>
+                    <th className="px-2 md:px-4 py-2 md:py-3 text-center text-xs md:text-sm hidden md:table-cell">🕐 เริ่ม</th>
+                    <th className="px-2 md:px-4 py-2 md:py-3 text-center text-xs md:text-sm hidden md:table-cell">🕑 จบ</th>
                     <th className="px-2 md:px-4 py-2 md:py-3 text-center text-xs md:text-sm">ระยะเวลา</th>
                     <th className="px-2 md:px-4 py-2 md:py-3 text-center text-xs md:text-sm">ค่าใช้จ่าย</th>
                     <th className="px-2 md:px-4 py-2 md:py-3 text-center text-xs md:text-sm">สถานะจ่าย</th>
@@ -623,19 +627,14 @@ function HistoryView() {
                         </span>
                       </td>
                       <td className="px-2 md:px-4 py-2 md:py-3 text-xs font-semibold hidden sm:table-cell">
-                        {editingId === record.id ? (
-                          <input
-                            type="text"
-                            value={editData[record.id]?.added_by ?? record.added_by ?? ''}
-                            onChange={(e) => setEditData({...editData, [record.id]: {...editData[record.id], added_by: e.target.value}})}
-                            className="w-full px-2 py-1 border-2 border-orange-300 rounded text-xs"
-                            placeholder="พนักงาน"
-                          />
-                        ) : (
-                          <span className="inline-block bg-orange-100 text-orange-700 px-2 py-1 rounded text-xs">
-                            {record.added_by || '—'}
-                          </span>
-                        )}
+                        <span className="inline-block bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs">
+                          {record.created_by || record.added_by || '—'}
+                        </span>
+                      </td>
+                      <td className="px-2 md:px-4 py-2 md:py-3 text-xs font-semibold hidden lg:table-cell">
+                        <span className="inline-block bg-purple-100 text-purple-700 px-2 py-1 rounded text-xs">
+                          {record.last_updated_by || record.added_by || '—'}
+                        </span>
                       </td>
                       <td className="px-2 md:px-4 py-2 md:py-3 text-xs font-semibold hidden sm:table-cell">
                         {editingId === record.id ? (
@@ -661,7 +660,12 @@ function HistoryView() {
                         )}
                       </td>
                       <td className="px-2 md:px-4 py-2 md:py-3 text-center text-xs hidden md:table-cell">
-                        {formatDateTime(record.start_time)}
+                        {record.session_date || formatShort(record.start_time).split(' ')[0]}
+                      </td>
+                      <td className="px-2 md:px-4 py-2 md:py-3 text-center text-xs hidden md:table-cell">
+                        <div className="space-y-1">
+                          <div>{formatDateTime(record.start_time)}</div>
+                        </div>
                       </td>
                       <td className="px-2 md:px-4 py-2 md:py-3 text-center text-xs hidden md:table-cell">
                         <div className="space-y-1">
