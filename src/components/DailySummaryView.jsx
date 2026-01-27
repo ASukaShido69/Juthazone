@@ -86,7 +86,7 @@ function DailySummaryView({ user, onLogout }) {
         .from('customers_history')
         .select('*')
         .or(
-          `session_date.eq.${selectedDate},and(start_time.gte.${windowStart},start_time.lt.${windowEnd})`
+          `session_date.eq.${selectedDate}`
         )
         .neq('end_reason', 'in_progress')
         .order('start_time', { ascending: false })
@@ -98,7 +98,7 @@ function DailySummaryView({ user, onLogout }) {
         .from('computer_zone_history')
         .select('*')
         .or(
-          `session_date.eq.${selectedDate},and(created_at.gte.${windowStart},created_at.lt.${windowEnd})`
+          `session_date.eq.${selectedDate}`
         )
         .order('created_at', { ascending: false })
 
