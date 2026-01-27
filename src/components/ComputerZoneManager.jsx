@@ -109,6 +109,7 @@ function ComputerZoneManager({ isOpen, onClose, user }) {
     }
 
     try {
+      setLoading(true)
       const transferAmt = parseFloat(editFormData.transferAmount) || 0
       const cashAmt = parseFloat(editFormData.cashAmount) || 0
       const totalCost = transferAmt + cashAmt
@@ -119,61 +120,62 @@ function ComputerZoneManager({ isOpen, onClose, user }) {
 
       const customerName = editFormData.customerName.trim() || 'ไม่ระบุชื่อ'
 
-      console.log('Updating entry:', {
-        id,
+      const updateData = {
         customer_name: customerName,
         hours: hours,
         transfer_amount: transferAmt,
         cash_amount: cashAmt,
         total_cost: totalCost,
-        shift: shift
-      })
+        shift: shift,
+        start_time: editFormData.startTime || null,
+        description: editFormData.description || `${customerName} - ${hours} ชม.`,
+        updated_at: new Date().toISOString()
+      }
+
+      console.log('🔄 Updating entry with ID:', id)
+      console.log('📝 Update data:', updateData)
 
       // ลองตรวจสอบว่ารายการมีอยู่จริง
-      const { data: existingEntry } = await supabase
+      const { data: existingEntry, error: checkError } = await supabase
         .from('computer_zone_history')
         .select('*')
         .eq('id', id)
         .single()
 
-      console.log('Existing entry check:', existingEntry)
+      console.log('✔ Existing entry check:', existingEntry)
 
-      if (!existingEntry) {
+      if (checkError || !existingEntry) {
+        console.error('❌ Check error:', checkError)
         alert('⚠️ ไม่พบรายการที่ต้องการแก้ไข กรุณาลองรีเฟรชหน้าใหม่')
+        setLoading(false)
         return
       }
 
       const { data, error } = await supabase
         .from('computer_zone_history')
-        .update({
-          customer_name: customerName,
-          hours: hours,
-          transfer_amount: transferAmt,
-          cash_amount: cashAmt,
-          total_cost: totalCost,
-          shift: shift,
-          start_time: editFormData.startTime || null,
-          description: editFormData.description || `${customerName} - ${hours} ชม.`,
-          updated_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq('id', id)
         .select()
+        .single()
 
-      console.log('Update result:', { data, error })
+      console.log('✅ Update result:', { data, error })
 
       if (error) {
-        console.error('Update error details:', error)
+        console.error('❌ Update error details:', error)
         alert('❌ ไม่สามารถแก้ไขได้: ' + error.message)
+        setLoading(false)
         return
       }
 
-      // ถ้า update สำเร็จแต่ไม่มี data ส่งกลับมา ให้ถือว่าสำเร็จ
+      console.log('✅ Successfully updated entry:', data)
       cancelEdit()
       await loadEntries() // โหลด entries ใหม่หลังแก้สำเร็จ
       alert('✅ แก้ไขสำเร็จ')
     } catch (error) {
-      console.error('Error updating entry:', error)
+      console.error('❌ Error updating entry:', error)
       alert('เกิดข้อผิดพลาด: ' + error.message)
+    } finally {
+      setLoading(false)
     }
   }
 
