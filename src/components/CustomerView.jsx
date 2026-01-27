@@ -1,8 +1,34 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { formatTimeDisplay, getDurationText, calculateTimeRemaining } from '../utils/timeFormat'
 import { logActivity } from '../utils/authUtils'
 
 function CustomerView({ customers }) {
+  const [floorFilter, setFloorFilter] = useState('all')
+  const [roomFilter, setRoomFilter] = useState('all')
+
+  const extractFloor = (room = '') => {
+    // รองรับรูปแบบ: "ชั้น2", "ชั้น 3", "2F", "2-01", "2/01"
+    const thaiFloor = room.match(/ชั้น\s*(\d+)/i)
+    if (thaiFloor) return `ชั้น ${thaiFloor[1]}`
+    const numericLead = room.match(/^(\d+)/)
+    if (numericLead) return `ชั้น ${numericLead[1]}`
+    const fx = room.match(/(\d+)f/i)
+    if (fx) return `ชั้น ${fx[1]}`
+    return 'อื่นๆ'
+  }
+
+  const floorOptions = useMemo(() => {
+    const set = new Set()
+    customers.forEach((c) => set.add(extractFloor(c.room)))
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'th'))
+  }, [customers])
+
+  const roomOptions = useMemo(() => {
+    const set = new Set()
+    customers.forEach((c) => c.room && set.add(c.room))
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'th'))
+  }, [customers])
+
   // OPTIMIZATION: Calculate real-time remaining for each customer based on expectedEndTime
   const displayCustomers = useMemo(() => {
     return customers.map(customer => ({
@@ -12,6 +38,15 @@ function CustomerView({ customers }) {
         : customer.timeRemaining
     }))
   }, [customers])
+
+  const filteredCustomers = useMemo(() => {
+    return displayCustomers.filter((customer) => {
+      const floor = extractFloor(customer.room)
+      const byFloor = floorFilter === 'all' || floor === floorFilter
+      const byRoom = roomFilter === 'all' || customer.room === roomFilter
+      return byFloor && byRoom
+    })
+  }, [displayCustomers, floorFilter, roomFilter])
 
   const handleCallStaff = async (customer) => {
     const note = window.prompt('ระบุโน้ตสำหรับพนักงาน (เช่น สิ่งที่ต้องการให้ช่วย)', '')
@@ -47,8 +82,49 @@ function CustomerView({ customers }) {
             🎮 JUTHAZONE 🎮
           </h1>
           <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-white drop-shadow-lg font-semibold bg-white/20 backdrop-blur-sm inline-block px-4 py-2 md:px-6 md:py-2 rounded-full border-2 border-white/40">
-            รายการทั้งหมด: {customers.length} รายการ
+            รายการทั้งหมด: {customers.length} รายการ | แสดง {filteredCustomers.length}
           </p>
+        </div>
+
+        {/* Filters */}
+        <div className="bg-white/20 backdrop-blur-md border border-white/30 rounded-2xl md:rounded-3xl shadow-xl p-4 md:p-5 mb-4 md:mb-6">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-white font-semibold drop-shadow">ชั้น:</span>
+              <button
+                onClick={() => setFloorFilter('all')}
+                className={`px-3 py-1.5 rounded-full text-sm font-semibold border transition-all ${floorFilter === 'all' ? 'bg-white text-purple-700 shadow-lg' : 'bg-white/10 text-white border-white/40 hover:bg-white/20'}`}
+              >
+                ทั้งหมด ({customers.length})
+              </button>
+              {floorOptions.map((floor) => {
+                const count = customers.filter((c) => extractFloor(c.room) === floor).length
+                return (
+                  <button
+                    key={floor}
+                    onClick={() => setFloorFilter(floor)}
+                    className={`px-3 py-1.5 rounded-full text-sm font-semibold border transition-all ${floorFilter === floor ? 'bg-white text-purple-700 shadow-lg' : 'bg-white/10 text-white border-white/40 hover:bg-white/20'}`}
+                  >
+                    {floor} ({count})
+                  </button>
+                )
+              })}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-white font-semibold drop-shadow">ห้อง:</span>
+              <select
+                value={roomFilter}
+                onChange={(e) => setRoomFilter(e.target.value)}
+                className="bg-white text-purple-700 font-semibold px-3 py-2 rounded-xl shadow focus:outline-none border border-purple-200"
+              >
+                <option value="all">ทุกห้อง</option>
+                {roomOptions.map((room) => (
+                  <option key={room} value={room}>{room}</option>
+                ))}
+              </select>
+            </div>
+          </div>
         </div>
 
         {customers.length === 0 ? (
@@ -57,9 +133,15 @@ function CustomerView({ customers }) {
             <p className="text-2xl md:text-3xl text-gray-700 font-bold mb-2">ยังไม่มีรายการ</p>
             <p className="text-gray-500 text-base md:text-lg">รอลูกค้าเข้าใช้งาน</p>
           </div>
+        ) : filteredCustomers.length === 0 ? (
+          <div className="bg-white/95 backdrop-blur-sm rounded-2xl md:rounded-3xl shadow-2xl p-8 md:p-12 text-center border-4 border-white/50">
+            <div className="text-6xl md:text-8xl mb-4 md:mb-6">🔍</div>
+            <p className="text-2xl md:text-3xl text-gray-700 font-bold mb-2">ไม่พบรายการในตัวกรองนี้</p>
+            <p className="text-gray-500 text-base md:text-lg">ลองเลือกชั้นหรือห้องอื่น</p>
+          </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-            {displayCustomers.map((customer) => {
+            {filteredCustomers.map((customer) => {
               const isLowTime = customer.displayTimeRemaining < 300 // Less than 5 minutes
               const cardBgColor = isLowTime
                 ? 'bg-gradient-to-br from-red-100 via-red-50 to-orange-100 border-red-500'
