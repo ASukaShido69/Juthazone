@@ -5,6 +5,7 @@ import { logActivity } from '../utils/authUtils'
 function CustomerView({ customers }) {
   const [floorFilter, setFloorFilter] = useState('all')
   const [roomFilter, setRoomFilter] = useState('all')
+  const [showRoomPicker, setShowRoomPicker] = useState(true)
 
   const extractFloor = (room = '') => {
     // รองรับรูปแบบ: "ชั้น2", "ชั้น 3", "2F", "2-01", "2/01"
@@ -27,6 +28,24 @@ function CustomerView({ customers }) {
     const set = new Set()
     customers.forEach((c) => c.room && set.add(c.room))
     return Array.from(set).sort((a, b) => a.localeCompare(b, 'th'))
+  }, [customers])
+
+  const floorSections = useMemo(() => {
+    const map = new Map()
+    customers.forEach((c) => {
+      const floor = extractFloor(c.room)
+      if (!map.has(floor)) {
+        map.set(floor, { floor, rooms: new Map() })
+      }
+      const roomMap = map.get(floor).rooms
+      roomMap.set(c.room, (roomMap.get(c.room) || 0) + 1)
+    })
+    return Array.from(map.values())
+      .map((section) => ({
+        floor: section.floor,
+        rooms: Array.from(section.rooms.entries()).map(([room, count]) => ({ room, count }))
+      }))
+      .sort((a, b) => a.floor.localeCompare(b.floor, 'th'))
   }, [customers])
 
   // OPTIMIZATION: Calculate real-time remaining for each customer based on expectedEndTime
@@ -76,7 +95,79 @@ function CustomerView({ customers }) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 animate-gradient p-3 md:p-4 lg:p-6">
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-6xl mx-auto relative">
+        {showRoomPicker && customers.length > 0 && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+            <div className="absolute inset-0 bg-black/60 backdrop-blur" />
+            <div className="relative w-full max-w-5xl bg-white rounded-3xl shadow-2xl p-6 md:p-8 overflow-hidden">
+              <div className="absolute -top-24 -left-24 w-64 h-64 bg-purple-200 rounded-full blur-3xl opacity-60" />
+              <div className="absolute -bottom-20 -right-20 w-72 h-72 bg-pink-200 rounded-full blur-3xl opacity-60" />
+              <div className="relative">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                  <div>
+                    <p className="text-sm font-semibold text-purple-600">เลือกชั้น / ห้องก่อนเข้าดู</p>
+                    <h2 className="text-2xl md:text-3xl font-bold text-gray-900">Room Quick Picker</h2>
+                    <p className="text-gray-600 text-sm">แตะชั้นหรือห้องเพื่อกรองทันที</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => { setFloorFilter('all'); setRoomFilter('all'); setShowRoomPicker(false) }}
+                      className="px-4 py-2 rounded-xl bg-gray-900 text-white font-semibold shadow-lg hover:shadow-xl transition"
+                    >
+                      ดูทุกห้อง
+                    </button>
+                    <button
+                      onClick={() => setShowRoomPicker(false)}
+                      className="px-4 py-2 rounded-xl bg-white border border-gray-200 text-gray-700 font-semibold shadow-sm hover:shadow"
+                    >
+                      ปิด
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {floorSections.map((section) => (
+                    <div key={section.floor} className="border border-purple-100 rounded-2xl p-4 bg-gradient-to-br from-white to-purple-50 shadow-sm">
+                      <div className="flex items-center justify-between mb-3">
+                        <div>
+                          <p className="text-xs font-semibold text-purple-600">ชั้น</p>
+                          <h3 className="text-xl font-bold text-gray-900">{section.floor}</h3>
+                        </div>
+                        <span className="px-3 py-1 rounded-full bg-purple-100 text-purple-700 text-sm font-semibold">
+                          {section.rooms.reduce((acc, r) => acc + r.count, 0)} รายการ
+                        </span>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2">
+                        {section.rooms.map(({ room, count }) => (
+                          <button
+                            key={room}
+                            onClick={() => {
+                              setFloorFilter(section.floor)
+                              setRoomFilter(room)
+                              setShowRoomPicker(false)
+                            }}
+                            className="px-3 py-2 rounded-xl bg-white border border-purple-100 text-purple-700 font-semibold text-sm shadow hover:shadow-md transition"
+                          >
+                            {room}
+                            <span className="ml-2 text-xs text-gray-500">({count})</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {floorSections.length === 0 && (
+                  <div className="text-center text-gray-600 font-semibold py-8">
+                    ยังไม่มีข้อมูลห้องให้เลือก
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="text-center mb-6 md:mb-8 pt-2 md:pt-4">
           <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white drop-shadow-2xl mb-2 md:mb-3 animate-float">
             🎮 JUTHAZONE 🎮
@@ -84,6 +175,15 @@ function CustomerView({ customers }) {
           <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-white drop-shadow-lg font-semibold bg-white/20 backdrop-blur-sm inline-block px-4 py-2 md:px-6 md:py-2 rounded-full border-2 border-white/40">
             รายการทั้งหมด: {customers.length} รายการ | แสดง {filteredCustomers.length}
           </p>
+        </div>
+
+        <div className="flex justify-end mb-3 md:mb-4">
+          <button
+            onClick={() => setShowRoomPicker(true)}
+            className="px-4 py-2 rounded-xl bg-white/20 border border-white/40 text-white font-semibold shadow hover:bg-white/30 transition"
+          >
+            🔎 เลือกห้องด่วน
+          </button>
         </div>
 
         {/* Filters */}
@@ -102,7 +202,7 @@ function CustomerView({ customers }) {
                 return (
                   <button
                     key={floor}
-                    onClick={() => setFloorFilter(floor)}
+                    onClick={() => setFloorFilter((prev) => (prev === floor ? 'all' : floor))}
                     className={`px-3 py-1.5 rounded-full text-sm font-semibold border transition-all ${floorFilter === floor ? 'bg-white text-purple-700 shadow-lg' : 'bg-white/10 text-white border-white/40 hover:bg-white/20'}`}
                   >
                     {floor} ({count})
@@ -136,7 +236,11 @@ function CustomerView({ customers }) {
         ) : filteredCustomers.length === 0 ? (
           <div className="bg-white/95 backdrop-blur-sm rounded-2xl md:rounded-3xl shadow-2xl p-8 md:p-12 text-center border-4 border-white/50">
             <div className="text-6xl md:text-8xl mb-4 md:mb-6">🔍</div>
-            <p className="text-2xl md:text-3xl text-gray-700 font-bold mb-2">ไม่พบรายการในตัวกรองนี้</p>
+            <p className="text-2xl md:text-3xl text-gray-700 font-bold mb-2">
+              {floorFilter !== 'all'
+                ? `${floorFilter} ไม่มีลูกค้า`
+                : 'ไม่พบรายการในตัวกรองนี้'}
+            </p>
             <p className="text-gray-500 text-base md:text-lg">ลองเลือกชั้นหรือห้องอื่น</p>
           </div>
         ) : (
