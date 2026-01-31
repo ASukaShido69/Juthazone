@@ -1,654 +1,23 @@
-import { useMemo, useState, useEffect, useCallback } from 'react'
+
+import { useMemo, useState } from 'react'
 import { formatTimeDisplay, getDurationText, calculateTimeRemaining } from '../utils/timeFormat'
 import { logActivity } from '../utils/authUtils'
-
-// Constants
-const LOW_TIME_THRESHOLD = 300
-const CRITICAL_TIME_THRESHOLD = 60
-const UPDATE_INTERVAL = 1000
-
-// Helper
-const extractFloor = (room = '') => {
-  const thaiFloor = room.match(/ชั้น\s*(\d+)/i)
-  if (thaiFloor) return `ชั้น ${thaiFloor[1]}`
-  const numericLead = room.match(/^(\d+)/)
-  if (numericLead) return `ชั้น ${numericLead[1]}`
-  const fx = room.match(/(\d+)f/i)
-  if (fx) return `ชั้น ${fx[1]}`
-  return 'อื่นๆ'
-}
-
-// ============================================
-// 🎮 GAMING COMPONENTS
-// ============================================
-
-// Animated Background
-const GamingBackground = () => (
-  <div className="fixed inset-0 overflow-hidden pointer-events-none">
-    <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-900 to-slate-900" />
-    <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-purple-600/10 rounded-full blur-[120px]" />
-    <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-cyan-600/10 rounded-full blur-[120px]" />
-    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-blue-600/5 rounded-full blur-[150px]" />
-  </div>
-)
-
-// Gaming Button
-const GamingButton = ({ children, variant = 'primary', size = 'md', className = '', ...props }) => {
-  const variants = {
-    primary: 'bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white shadow-lg shadow-cyan-500/25 hover:shadow-cyan-400/40',
-    secondary: 'bg-slate-800 hover:bg-slate-700 text-gray-300 hover:text-white border border-slate-700 hover:border-cyan-500/50',
-    danger: 'bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-400 hover:to-pink-400 text-white shadow-lg shadow-red-500/25',
-    ghost: 'bg-transparent hover:bg-white/5 text-gray-400 hover:text-cyan-400',
-    glow: 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 text-white shadow-lg shadow-purple-500/25 hover:shadow-purple-400/40',
-  }
-  
-  const sizes = {
-    sm: 'px-3 py-1.5 text-xs',
-    md: 'px-4 py-2 text-sm',
-    lg: 'px-6 py-3 text-base',
-  }
-
-  return (
-    <button
-      className={`
-        ${variants[variant]} ${sizes[size]}
-        font-medium rounded-xl transition-all duration-200
-        focus:outline-none focus:ring-2 focus:ring-cyan-500/50
-        active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed
-        ${className}
-      `}
-      {...props}
-    >
-      {children}
-    </button>
-  )
-}
-
-// Status Badge with Glow
-const StatusBadge = ({ isPaid, isRunning }) => (
-  <div className="flex items-center gap-2">
-    <span className={`
-      inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium
-      ${isPaid 
-        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
-        : 'bg-red-500/20 text-red-400 border border-red-500/30'
-      }
-    `}>
-      <span className={`w-1.5 h-1.5 rounded-full ${isPaid ? 'bg-emerald-400' : 'bg-red-400 animate-pulse'}`} />
-      {isPaid ? 'PAID' : 'UNPAID'}
-    </span>
-    {isRunning !== undefined && (
-      <span className={`
-        inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium
-        ${isRunning 
-          ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30' 
-          : 'bg-gray-500/20 text-gray-400 border border-gray-500/30'
-        }
-      `}>
-        <span className={`w-1.5 h-1.5 rounded-full ${isRunning ? 'bg-cyan-400 animate-pulse' : 'bg-gray-400'}`} />
-        {isRunning ? 'LIVE' : 'PAUSED'}
-      </span>
-    )}
-  </div>
-)
-
-// Timer Display - Gaming Style
-const TimerDisplay = ({ seconds, isRunning }) => {
-  const isCritical = seconds < CRITICAL_TIME_THRESHOLD
-  const isLow = seconds < LOW_TIME_THRESHOLD
-
-  const formatTime = (s) => {
-    const h = Math.floor(s / 3600)
-    const m = Math.floor((s % 3600) / 60)
-    const sec = s % 60
-    return h > 0
-      ? `${h}:${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`
-      : `${m}:${sec.toString().padStart(2, '0')}`
-  }
-
-  const getColors = () => {
-    if (isCritical) return { bg: 'from-red-500/20 to-pink-500/20', border: 'border-red-500/50', text: 'text-red-400', glow: 'shadow-red-500/20' }
-    if (isLow) return { bg: 'from-amber-500/20 to-orange-500/20', border: 'border-amber-500/50', text: 'text-amber-400', glow: 'shadow-amber-500/20' }
-    return { bg: 'from-emerald-500/20 to-cyan-500/20', border: 'border-emerald-500/50', text: 'text-emerald-400', glow: 'shadow-emerald-500/20' }
-  }
-
-  const colors = getColors()
-
-  return (
-    <div className={`
-      relative overflow-hidden rounded-2xl p-5 text-center
-      bg-gradient-to-br ${colors.bg} border ${colors.border}
-      shadow-lg ${colors.glow}
-    `}>
-      {/* Scan line effect */}
-      <div className="absolute inset-0 bg-gradient-to-b from-white/5 via-transparent to-transparent opacity-50" />
-      
-      <p className={`text-xs font-bold uppercase tracking-widest mb-2 ${colors.text} opacity-80`}>
-        {isRunning ? '⏱ TIME REMAINING' : '⏸ PAUSED'}
-      </p>
-      <p className={`
-        font-mono text-4xl md:text-5xl font-black tabular-nums tracking-tight
-        ${colors.text} ${isCritical ? 'animate-pulse' : ''}
-      `}>
-        {formatTime(seconds)}
-      </p>
-      <p className={`text-xs mt-2 ${colors.text} opacity-60`}>
-        {getDurationText(seconds)}
-      </p>
-    </div>
-  )
-}
-
-// Timeline Progress - Gaming Style
-const TimelineProgress = ({ startTime, endTime, currentTime }) => {
-  const start = new Date(startTime).getTime()
-  const end = new Date(endTime).getTime()
-  const now = currentTime
-  
-  const total = end - start
-  const elapsed = Math.min(Math.max(now - start, 0), total)
-  const progress = total > 0 ? (elapsed / total) * 100 : 0
-  
-  const formatTime = (date) => {
-    if (!date) return '--:--'
-    const d = new Date(date)
-    return d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
-  }
-
-  const getProgressColor = () => {
-    if (progress > 90) return 'from-red-500 to-pink-500'
-    if (progress > 70) return 'from-amber-500 to-orange-500'
-    return 'from-cyan-500 to-emerald-500'
-  }
-
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between text-xs">
-        <span className="text-gray-500 font-medium">SESSION PROGRESS</span>
-        <span className={`font-mono font-bold ${progress > 90 ? 'text-red-400' : progress > 70 ? 'text-amber-400' : 'text-cyan-400'}`}>
-          {Math.round(progress)}%
-        </span>
-      </div>
-      
-      {/* Progress Bar */}
-      <div className="relative h-2 bg-slate-800 rounded-full overflow-hidden">
-        <div 
-          className={`absolute inset-y-0 left-0 bg-gradient-to-r ${getProgressColor()} rounded-full transition-all duration-1000`}
-          style={{ width: `${progress}%` }}
-        />
-        {/* Glow effect */}
-        <div 
-          className={`absolute inset-y-0 left-0 bg-gradient-to-r ${getProgressColor()} rounded-full blur-sm opacity-50 transition-all duration-1000`}
-          style={{ width: `${progress}%` }}
-        />
-      </div>
-      
-      {/* Time Labels */}
-      <div className="flex items-center justify-between text-xs">
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-cyan-500" />
-          <span className="font-mono font-medium text-gray-400">{formatTime(startTime)}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="font-mono font-medium text-gray-400">{formatTime(endTime)}</span>
-          <div className="w-2 h-2 rounded-full border-2 border-gray-500" />
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// Quick Stats - Gaming Style
-const QuickStats = ({ customer }) => {
-  const stats = [
-    { label: 'STATION', value: customer.room || '-', color: 'cyan' },
-    { label: 'TYPE', value: customer.type || 'Standard', color: 'purple' },
-    { label: 'STATUS', value: customer.isRunning ? 'Active' : 'Idle', color: customer.isRunning ? 'emerald' : 'gray' },
-  ]
-
-  const colorClasses = {
-    cyan: 'from-cyan-500/20 to-blue-500/20 border-cyan-500/30 text-cyan-400',
-    purple: 'from-purple-500/20 to-pink-500/20 border-purple-500/30 text-purple-400',
-    emerald: 'from-emerald-500/20 to-teal-500/20 border-emerald-500/30 text-emerald-400',
-    gray: 'from-gray-500/20 to-slate-500/20 border-gray-500/30 text-gray-400',
-  }
-
-  return (
-    <div className="grid grid-cols-3 gap-2">
-      {stats.map((stat, i) => (
-        <div 
-          key={i} 
-          className={`
-            text-center p-3 rounded-xl bg-gradient-to-br border
-            ${colorClasses[stat.color]}
-          `}
-        >
-          <p className="text-[10px] font-bold uppercase tracking-wider opacity-60">{stat.label}</p>
-          <p className="text-sm font-bold mt-0.5 truncate">{stat.value}</p>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-// Customer Card - Gaming Style
-const CustomerCard = ({ customer, onCallStaff, currentTime }) => {
-  const [expanded, setExpanded] = useState(false)
-  const isCritical = customer.displayTimeRemaining < CRITICAL_TIME_THRESHOLD
-  const isLow = customer.displayTimeRemaining < LOW_TIME_THRESHOLD
-
-  const sessionDuration = useMemo(() => {
-    if (!customer.startTime || !customer.expectedEndTime) return null
-    const start = new Date(customer.startTime)
-    const end = new Date(customer.expectedEndTime)
-    const diffMs = end - start
-    const hours = Math.floor(diffMs / (1000 * 60 * 60))
-    const mins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60))
-    return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`
-  }, [customer.startTime, customer.expectedEndTime])
-
-  const getBorderGlow = () => {
-    if (isCritical) return 'border-red-500/50 shadow-lg shadow-red-500/10'
-    if (isLow) return 'border-amber-500/50 shadow-lg shadow-amber-500/10'
-    return 'border-slate-700/50 hover:border-cyan-500/30 hover:shadow-lg hover:shadow-cyan-500/5'
-  }
-
-  return (
-    <div className={`
-      relative overflow-hidden rounded-2xl border bg-slate-800/50 backdrop-blur-sm
-      transition-all duration-300 ${getBorderGlow()}
-    `}>
-      {/* Top Glow Line */}
-      <div className={`absolute top-0 left-0 right-0 h-px bg-gradient-to-r 
-        ${isCritical ? 'from-transparent via-red-500 to-transparent' : 
-          isLow ? 'from-transparent via-amber-500 to-transparent' : 
-          'from-transparent via-cyan-500/50 to-transparent'}`} 
-      />
-      
-      <div className="p-5">
-        {/* Header */}
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <div className={`
-              relative w-12 h-12 rounded-xl flex items-center justify-center text-lg font-black
-              bg-gradient-to-br ${isCritical ? 'from-red-500 to-pink-500' : isLow ? 'from-amber-500 to-orange-500' : 'from-cyan-500 to-blue-500'}
-              shadow-lg ${isCritical ? 'shadow-red-500/30' : isLow ? 'shadow-amber-500/30' : 'shadow-cyan-500/30'}
-            `}>
-              <span className="text-white">{customer.name?.charAt(0)?.toUpperCase() || '?'}</span>
-              {customer.isRunning && (
-                <span className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-slate-800 animate-pulse" />
-              )}
-            </div>
-            <div>
-              <h3 className="text-base font-bold text-white leading-tight">{customer.name}</h3>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="text-xs text-gray-500 font-mono">{customer.room}</span>
-                {sessionDuration && (
-                  <>
-                    <span className="text-slate-600">•</span>
-                    <span className="text-xs text-cyan-500 font-medium">{sessionDuration}</span>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-          <StatusBadge isPaid={customer.isPaid} isRunning={customer.isRunning} />
-        </div>
-
-        {/* Quick Stats */}
-        <QuickStats customer={customer} />
-
-        {/* Timeline */}
-        <div className="mt-4 p-4 rounded-xl bg-slate-900/50 border border-slate-700/50">
-          <TimelineProgress 
-            startTime={customer.startTime}
-            endTime={customer.expectedEndTime}
-            currentTime={currentTime}
-          />
-        </div>
-
-        {/* Timer Display */}
-        <div className="mt-4">
-          <TimerDisplay 
-            seconds={customer.displayTimeRemaining} 
-            isRunning={customer.isRunning} 
-          />
-        </div>
-
-        {/* Expand Toggle */}
-        <button
-          onClick={() => setExpanded(!expanded)}
-          className="w-full mt-4 py-2 flex items-center justify-center gap-2 text-xs text-gray-500 hover:text-cyan-400 transition-colors rounded-lg hover:bg-slate-700/30"
-        >
-          <span>{expanded ? 'HIDE DETAILS' : 'VIEW DETAILS'}</span>
-          <svg 
-            className={`w-4 h-4 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`} 
-            fill="none" stroke="currentColor" viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
-        </button>
-
-        {/* Expanded Content */}
-        {expanded && (
-          <div className="mt-3 pt-4 border-t border-slate-700/50 space-y-3 animate-fadeIn">
-            {/* Note */}
-            {customer.note && (
-              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
-                <p className="text-xs font-bold text-amber-500 mb-1">📝 NOTE</p>
-                <p className="text-sm text-amber-200">{customer.note}</p>
-              </div>
-            )}
-
-            {/* Cost Breakdown */}
-            <div className="p-3 rounded-xl bg-slate-900/50 border border-slate-700/50">
-              <p className="text-xs font-bold text-gray-500 mb-2">💰 COST BREAKDOWN</p>
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-400">Service</span>
-                  <span className="font-mono font-medium text-white">฿{customer.cost?.toLocaleString() || 0}</span>
-                </div>
-                {customer.extraCost > 0 && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-400">Extra</span>
-                    <span className="font-mono font-medium text-white">฿{customer.extraCost?.toLocaleString()}</span>
-                  </div>
-                )}
-                <div className="pt-2 mt-2 border-t border-slate-700 flex justify-between">
-                  <span className="font-bold text-gray-300">TOTAL</span>
-                  <span className="font-mono font-black text-cyan-400">฿{((customer.cost || 0) + (customer.extraCost || 0)).toLocaleString()}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Session Times */}
-            <div className="grid grid-cols-2 gap-2">
-              <div className="p-3 rounded-xl bg-slate-900/50 border border-slate-700/50">
-                <p className="text-[10px] font-bold text-gray-500 uppercase">CHECK-IN</p>
-                <p className="text-sm font-mono font-bold text-white mt-1">{formatTimeDisplay(customer.startTime)}</p>
-              </div>
-              <div className="p-3 rounded-xl bg-slate-900/50 border border-slate-700/50">
-                <p className="text-[10px] font-bold text-gray-500 uppercase">CHECK-OUT</p>
-                <p className="text-sm font-mono font-bold text-white mt-1">{formatTimeDisplay(customer.expectedEndTime)}</p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Cost Display */}
-        <div className="mt-4 p-4 rounded-xl bg-gradient-to-r from-slate-900 to-slate-800 border border-slate-700/50">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-400">Total</span>
-              <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold ${
-                customer.isPaid 
-                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
-                  : 'bg-red-500/20 text-red-400 border border-red-500/30 animate-pulse'
-              }`}>
-                {customer.isPaid ? '✓ PAID' : '⚠ UNPAID'}
-              </span>
-            </div>
-            <span className="text-2xl font-black text-white font-mono tabular-nums">
-              ฿{customer.cost?.toLocaleString() || 0}
-            </span>
-          </div>
-        </div>
-
-        {/* Action Button */}
-        <GamingButton
-          onClick={() => onCallStaff(customer)}
-          variant="secondary"
-          className="w-full mt-4 flex items-center justify-center gap-2"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-          </svg>
-          CALL STAFF
-        </GamingButton>
-      </div>
-
-      <style>{`
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(-8px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fadeIn {
-          animation: fadeIn 0.2s ease-out;
-        }
-      `}</style>
-    </div>
-  )
-}
-
-// Room Modal - Gaming Style
-const RoomModal = ({ show, onClose, floorSections, customers, onSelectRoom, onSelectAll }) => {
-  if (!show) return null
-
-  return (
-    <div className="fixed inset-0 z-50">
-      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
-      
-      <div className="relative h-full flex items-center justify-center p-4">
-        <div className="w-full max-w-3xl max-h-[85vh] bg-slate-900 rounded-2xl border border-slate-700 shadow-2xl shadow-cyan-500/10 overflow-hidden">
-          {/* Top Glow */}
-          <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-cyan-500 to-transparent" />
-          
-          {/* Header */}
-          <div className="relative px-6 py-5 border-b border-slate-800 bg-gradient-to-b from-slate-800/50 to-transparent">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center shadow-lg shadow-cyan-500/30">
-                  <span className="text-2xl">🎮</span>
-                </div>
-                <div>
-                  <h2 className="text-xl font-black text-white">SELECT STATION</h2>
-                  <p className="text-sm text-gray-500">{customers.length} total sessions</p>
-                </div>
-              </div>
-              <button
-                onClick={onClose}
-                className="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-red-500/50 flex items-center justify-center text-gray-400 hover:text-red-400 transition-all"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-          </div>
-
-          {/* Content */}
-          <div className="p-6 overflow-y-auto max-h-[calc(85vh-100px)]">
-            {/* View All Button */}
-            <button
-              onClick={onSelectAll}
-              className="w-full p-4 rounded-xl border-2 border-dashed border-cyan-500/30 hover:border-cyan-500/60 bg-cyan-500/5 hover:bg-cyan-500/10 transition-all mb-6 text-left group"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <span className="text-white text-lg">👁</span>
-                  </div>
-                  <div>
-                    <p className="font-bold text-white">VIEW ALL STATIONS</p>
-                    <p className="text-sm text-gray-500">{customers.length} active sessions</p>
-                  </div>
-                </div>
-                <svg className="w-5 h-5 text-cyan-500 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </div>
-            </button>
-
-            {/* Floors */}
-            <div className="space-y-6">
-              {floorSections.map((section) => (
-                <div key={section.floor}>
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="px-3 py-1.5 rounded-lg bg-purple-500/20 border border-purple-500/30">
-                      <span className="text-sm font-bold text-purple-400">{section.floor}</span>
-                    </div>
-                    <div className="flex-1 h-px bg-gradient-to-r from-purple-500/30 to-transparent" />
-                  </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {section.rooms.map(({ room, count }) => (
-                      <button
-                        key={room}
-                        onClick={() => onSelectRoom(section.floor, room)}
-                        className="p-4 rounded-xl border border-slate-700 hover:border-cyan-500/50 bg-slate-800/50 hover:bg-slate-800 transition-all text-left group"
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-lg">🖥️</span>
-                          <span className="px-2 py-0.5 rounded-md bg-cyan-500/20 text-cyan-400 text-xs font-bold border border-cyan-500/30">
-                            {count}
-                          </span>
-                        </div>
-                        <p className="font-bold text-white text-sm group-hover:text-cyan-400 transition-colors">{room}</p>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {floorSections.length === 0 && (
-              <div className="text-center py-12">
-                <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center mx-auto mb-4">
-                  <span className="text-3xl">📭</span>
-                </div>
-                <p className="text-gray-500">No stations available</p>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// Filter Bar - Gaming Style
-const FilterBar = ({ floorFilter, roomFilter, floorOptions, roomOptions, floorCounts, totalCount, onFloorChange, onRoomChange, onOpenModal }) => (
-  <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-4 mb-6 backdrop-blur-sm">
-    <div className="flex flex-col lg:flex-row lg:items-center gap-4">
-      {/* Floor Filter */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">FLOOR:</span>
-        <div className="flex gap-1.5 flex-wrap">
-          <GamingButton
-            onClick={() => onFloorChange('all')}
-            variant={floorFilter === 'all' ? 'primary' : 'secondary'}
-            size="sm"
-          >
-            ALL ({totalCount})
-          </GamingButton>
-          {floorOptions.map((floor) => (
-            <GamingButton
-              key={floor}
-              onClick={() => onFloorChange(floor === floorFilter ? 'all' : floor)}
-              variant={floorFilter === floor ? 'primary' : 'secondary'}
-              size="sm"
-            >
-              {floor} ({floorCounts[floor] || 0})
-            </GamingButton>
-          ))}
-        </div>
-      </div>
-
-      {/* Divider */}
-      <div className="hidden lg:block w-px h-8 bg-slate-700" />
-
-      {/* Room Filter */}
-      <div className="flex items-center gap-2">
-        <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">STATION:</span>
-        <select
-          value={roomFilter}
-          onChange={(e) => onRoomChange(e.target.value)}
-          className="px-3 py-1.5 rounded-xl border border-slate-700 bg-slate-800 text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500"
-        >
-          <option value="all">All Stations</option>
-          {roomOptions.map((room) => (
-            <option key={room} value={room}>{room}</option>
-          ))}
-        </select>
-        <GamingButton onClick={onOpenModal} variant="glow" size="sm">
-          🎯 Quick Select
-        </GamingButton>
-      </div>
-    </div>
-  </div>
-)
-
-// Stats Bar
-const StatsBar = ({ total, filtered, activeCount }) => (
-  <div className="grid grid-cols-3 gap-4 mb-6">
-    <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 backdrop-blur-sm">
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center">
-          <span className="text-white text-lg">📊</span>
-        </div>
-        <div>
-          <p className="text-xs text-gray-500 font-medium">TOTAL</p>
-          <p className="text-2xl font-black text-white">{total}</p>
-        </div>
-      </div>
-    </div>
-    <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 backdrop-blur-sm">
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-          <span className="text-white text-lg">👁</span>
-        </div>
-        <div>
-          <p className="text-xs text-gray-500 font-medium">SHOWING</p>
-          <p className="text-2xl font-black text-white">{filtered}</p>
-        </div>
-      </div>
-    </div>
-    <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 backdrop-blur-sm">
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
-          <span className="text-white text-lg">🎮</span>
-        </div>
-        <div>
-          <p className="text-xs text-gray-500 font-medium">ACTIVE</p>
-          <p className="text-2xl font-black text-emerald-400">{activeCount}</p>
-        </div>
-      </div>
-    </div>
-  </div>
-)
-
-// Empty State
-const EmptyState = ({ title, subtitle }) => (
-  <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-12 text-center backdrop-blur-sm">
-    <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center mx-auto mb-4 border border-slate-600">
-      <span className="text-4xl">🎮</span>
-    </div>
-    <h3 className="text-xl font-bold text-white mb-2">{title}</h3>
-    <p className="text-gray-500">{subtitle}</p>
-  </div>
-)
-
-// ============================================
-// MAIN COMPONENT
-// ============================================
 
 function CustomerView({ customers }) {
   const [floorFilter, setFloorFilter] = useState('all')
   const [roomFilter, setRoomFilter] = useState('all')
-  const [showModal, setShowModal] = useState(false)
-  const [currentTime, setCurrentTime] = useState(Date.now())
+  const [showRoomPicker, setShowRoomPicker] = useState(true)
 
-  useEffect(() => {
-    const interval = setInterval(() => setCurrentTime(Date.now()), UPDATE_INTERVAL)
-    return () => clearInterval(interval)
-  }, [])
-
-  useEffect(() => {
-    const handleEsc = (e) => {
-      if (e.key === 'Escape' && showModal) setShowModal(false)
-    }
-    window.addEventListener('keydown', handleEsc)
-    return () => window.removeEventListener('keydown', handleEsc)
-  }, [showModal])
+  const extractFloor = (room = '') => {
+    // รองรับรูปแบบ: "ชั้น2", "ชั้น 3", "2F", "2-01", "2/01"
+    const thaiFloor = room.match(/ชั้น\s*(\d+)/i)
+    if (thaiFloor) return `ชั้น ${thaiFloor[1]}`
+    const numericLead = room.match(/^(\d+)/)
+    if (numericLead) return `ชั้น ${numericLead[1]}`
+    const fx = room.match(/(\d+)f/i)
+    if (fx) return `ชั้น ${fx[1]}`
+    return 'อื่นๆ'
+  }
 
   const floorOptions = useMemo(() => {
     const set = new Set()
@@ -662,137 +31,385 @@ function CustomerView({ customers }) {
     return Array.from(set).sort((a, b) => a.localeCompare(b, 'th'))
   }, [customers])
 
-  const floorCounts = useMemo(() => {
-    const counts = {}
-    customers.forEach(c => {
-      const floor = extractFloor(c.room)
-      counts[floor] = (counts[floor] || 0) + 1
-    })
-    return counts
-  }, [customers])
-
   const floorSections = useMemo(() => {
     const map = new Map()
     customers.forEach((c) => {
       const floor = extractFloor(c.room)
-      if (!map.has(floor)) map.set(floor, { floor, rooms: new Map() })
-      map.get(floor).rooms.set(c.room, (map.get(floor).rooms.get(c.room) || 0) + 1)
+      if (!map.has(floor)) {
+        map.set(floor, { floor, rooms: new Map() })
+      }
+      const roomMap = map.get(floor).rooms
+      roomMap.set(c.room, (roomMap.get(c.room) || 0) + 1)
     })
     return Array.from(map.values())
-      .map((s) => ({ floor: s.floor, rooms: Array.from(s.rooms.entries()).map(([room, count]) => ({ room, count })) }))
+      .map((section) => ({
+        floor: section.floor,
+        rooms: Array.from(section.rooms.entries()).map(([room, count]) => ({ room, count }))
+      }))
       .sort((a, b) => a.floor.localeCompare(b.floor, 'th'))
   }, [customers])
 
+  // OPTIMIZATION: Calculate real-time remaining for each customer based on expectedEndTime
   const displayCustomers = useMemo(() => {
     return customers.map(customer => ({
       ...customer,
-      displayTimeRemaining: customer.expectedEndTime
-        ? calculateTimeRemaining(customer.startTime, customer.expectedEndTime, currentTime)
+      displayTimeRemaining: customer.expectedEndTime 
+        ? calculateTimeRemaining(customer.startTime, customer.expectedEndTime)
         : customer.timeRemaining
     }))
-  }, [customers, currentTime])
+  }, [customers])
 
   const filteredCustomers = useMemo(() => {
     return displayCustomers.filter((customer) => {
       const floor = extractFloor(customer.room)
-      return (floorFilter === 'all' || floor === floorFilter) && (roomFilter === 'all' || customer.room === roomFilter)
+      const byFloor = floorFilter === 'all' || floor === floorFilter
+      const byRoom = roomFilter === 'all' || customer.room === roomFilter
+      return byFloor && byRoom
     })
   }, [displayCustomers, floorFilter, roomFilter])
 
-  const activeCount = useMemo(() => {
-    return customers.filter(c => c.isRunning).length
-  }, [customers])
-
-  const handleCallStaff = useCallback(async (customer) => {
-    const note = window.prompt('What do you need? (optional)', '')
+  const handleCallStaff = async (customer) => {
+    const note = window.prompt('ระบุโน้ตสำหรับพนักงาน (เช่น สิ่งที่ต้องการให้ช่วย)', '')
     if (note === null) return
     try {
-      await logActivity(customer.name || 'customer', 'CALL_STAFF', `Staff called: ${customer.name || ''}`, { note: note || '-', room: customer.room })
-      alert('Staff has been notified! ✓')
+      await logActivity(
+        customer.name || 'customer',
+        'CALL_STAFF',
+        `เรียกพนักงานจากหน้าลูกค้า: ${customer.name || ''}`,
+        { note: note || '-', room: customer.room }
+      )
+      alert('เรียกพนักงานแล้ว')
     } catch (error) {
       console.error('Call staff error:', error)
-      alert('Error: Please try again')
+      alert('ไม่สามารถบันทึกการเรียกพนักงานได้')
     }
-  }, [])
+  }
+  const formatTime = (seconds) => {
+    const hours = Math.floor(seconds / 3600)
+    const minutes = Math.floor((seconds % 3600) / 60)
+    const secs = seconds % 60
+    if (hours > 0) {
+      return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+    }
+    return `${minutes}:${secs.toString().padStart(2, '0')}`
+  }
 
   return (
-    <div className="min-h-screen bg-slate-950 relative">
-      {/* Background */}
-      <GamingBackground />
-      
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Modal */}
-        <RoomModal
-          show={showModal}
-          onClose={() => setShowModal(false)}
-          floorSections={floorSections}
-          customers={customers}
-          onSelectRoom={(floor, room) => { setFloorFilter(floor); setRoomFilter(room); setShowModal(false) }}
-          onSelectAll={() => { setFloorFilter('all'); setRoomFilter('all'); setShowModal(false) }}
-        />
+    <div className="min-h-screen bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 animate-gradient p-3 md:p-4 lg:p-6">
+      <div className="max-w-6xl mx-auto relative">
+        {showRoomPicker && customers.length > 0 && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6">
+            <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowRoomPicker(false)} />
+            <div className="relative w-full h-[90vh] max-w-6xl bg-gradient-to-br from-blue-50 via-white to-purple-50 rounded-3xl shadow-2xl overflow-hidden flex flex-col">
+              {/* Header */}
+              <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 md:px-10 py-6 md:py-8 flex items-center justify-between">
+                <div>
+                  <p className="text-blue-100 text-sm font-semibold">🎮 เลือกห้องเพื่อดูรายการ</p>
+                  <h2 className="text-3xl md:text-4xl font-bold text-white">Room Selector</h2>
+                </div>
+                <button
+                  onClick={() => setShowRoomPicker(false)}
+                  className="bg-white/20 hover:bg-white/30 text-white p-3 rounded-full transition"
+                >
+                  ✕
+                </button>
+              </div>
 
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-4 mb-2">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center shadow-lg shadow-cyan-500/30">
-              <span className="text-2xl">🎮</span>
+              {/* Content */}
+              <div className="flex-1 overflow-y-auto p-6 md:p-8">
+                {/* Show All Rooms Button */}
+                <div className="mb-8">
+                  <button
+                    onClick={() => { setFloorFilter('all'); setRoomFilter('all'); setShowRoomPicker(false) }}
+                    className="w-full group relative overflow-hidden bg-gradient-to-br from-emerald-400 to-teal-500 hover:from-emerald-500 hover:to-teal-600 text-white rounded-2xl p-6 shadow-lg transition transform hover:scale-[1.02]"
+                  >
+                    <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition" />
+                    <div className="relative flex items-center justify-between">
+                      <div className="text-left">
+                        <p className="text-sm font-semibold opacity-90">ดูทั้งหมด</p>
+                        <p className="text-2xl md:text-3xl font-bold">📊 ทุกห้องในระบบ</p>
+                      </div>
+                      <div className="text-5xl">👁️</div>
+                    </div>
+                    <p className="text-sm mt-2 opacity-90">รวม {customers.length} รายการ</p>
+                  </button>
+                </div>
+
+                {/* Rooms Grid */}
+                <div className="mb-4">
+                  <h3 className="text-lg font-bold text-gray-800 mb-4">แบ่งตามชั้น</h3>
+                  <div className="space-y-6">
+                    {floorSections.map((section) => (
+                      <div key={section.floor}>
+                        {/* Floor Header */}
+                        <div className="flex items-center gap-3 mb-3">
+                          <h4 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                            {section.floor}
+                          </h4>
+                          <span className="px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-sm font-bold">
+                            {section.rooms.length} ห้อง • {section.rooms.reduce((acc, r) => acc + r.count, 0)} รายการ
+                          </span>
+                        </div>
+
+                        {/* Rooms Grid for Floor */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {section.rooms.map(({ room, count }) => (
+                            <button
+                              key={room}
+                              onClick={() => {
+                                setFloorFilter(section.floor)
+                                setRoomFilter(room)
+                                setShowRoomPicker(false)
+                              }}
+                              className="group relative overflow-hidden bg-white border-2 border-gray-200 hover:border-purple-400 rounded-2xl p-5 shadow-md hover:shadow-xl transition transform hover:scale-[1.02] text-left"
+                            >
+                              <div className="absolute inset-0 bg-gradient-to-br from-purple-50 to-pink-50 opacity-0 group-hover:opacity-100 transition" />
+                              <div className="relative">
+                                <div className="flex items-start justify-between mb-2">
+                                  <div>
+                                    <p className="text-2xl font-bold text-gray-900">{room}</p>
+                                  </div>
+                                  <span className="bg-gradient-to-br from-purple-100 to-pink-100 text-purple-700 px-3 py-1 rounded-full text-sm font-bold">
+                                    {count}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2 text-sm text-gray-600 mt-3 pt-3 border-t border-gray-100">
+                                  <span className="animate-pulse">👉</span>
+                                  <span className="font-semibold">กดเพื่อดู</span>
+                                </div>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {floorSections.length === 0 && (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <div className="text-6xl mb-4">📭</div>
+                    <p className="text-gray-600 font-semibold">ยังไม่มีข้อมูลห้องให้เลือก</p>
+                  </div>
+                )}
+              </div>
             </div>
-            <div>
-              <h1 className="text-3xl font-black text-white">CUSTOMER VIEW</h1>
-              <p className="text-gray-500 text-sm">
-                Real-time session monitoring
-                {floorFilter !== 'all' && <span className="text-cyan-400"> • {floorFilter}</span>}
-                {roomFilter !== 'all' && <span className="text-purple-400"> • {roomFilter}</span>}
-              </p>
+          </div>
+        )}
+
+        <div className="text-center mb-6 md:mb-8 pt-2 md:pt-4">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white drop-shadow-2xl mb-2 md:mb-3 animate-float">
+            🎮 JUTHAZONE 🎮
+          </h1>
+          <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-white drop-shadow-lg font-semibold bg-white/20 backdrop-blur-sm inline-block px-4 py-2 md:px-6 md:py-2 rounded-full border-2 border-white/40">
+            รายการทั้งหมด: {customers.length} รายการ | แสดง {filteredCustomers.length}
+          </p>
+        </div>
+
+        <div className="flex justify-end mb-3 md:mb-4">
+          <button
+            onClick={() => setShowRoomPicker(true)}
+            className="px-4 py-2 rounded-xl bg-white/20 border border-white/40 text-white font-semibold shadow hover:bg-white/30 transition"
+          >
+            🔎 เลือกห้องด่วน
+          </button>
+        </div>
+
+        {/* Filters */}
+        <div className="bg-white/20 backdrop-blur-md border border-white/30 rounded-2xl md:rounded-3xl shadow-xl p-4 md:p-5 mb-4 md:mb-6">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-white font-semibold drop-shadow">ชั้น:</span>
+              <button
+                onClick={() => setFloorFilter('all')}
+                className={`px-3 py-1.5 rounded-full text-sm font-semibold border transition-all ${floorFilter === 'all' ? 'bg-white text-purple-700 shadow-lg' : 'bg-white/10 text-white border-white/40 hover:bg-white/20'}`}
+              >
+                ทั้งหมด ({customers.length})
+              </button>
+              {floorOptions.map((floor) => {
+                const count = customers.filter((c) => extractFloor(c.room) === floor).length
+                return (
+                  <button
+                    key={floor}
+                    onClick={() => setFloorFilter((prev) => (prev === floor ? 'all' : floor))}
+                    className={`px-3 py-1.5 rounded-full text-sm font-semibold border transition-all ${floorFilter === floor ? 'bg-white text-purple-700 shadow-lg' : 'bg-white/10 text-white border-white/40 hover:bg-white/20'}`}
+                  >
+                    {floor} ({count})
+                  </button>
+                )
+              })}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-white font-semibold drop-shadow">ห้อง:</span>
+              <select
+                value={roomFilter}
+                onChange={(e) => setRoomFilter(e.target.value)}
+                className="bg-white text-purple-700 font-semibold px-3 py-2 rounded-xl shadow focus:outline-none border border-purple-200"
+              >
+                <option value="all">ทุกห้อง</option>
+                {roomOptions.map((room) => (
+                  <option key={room} value={room}>{room}</option>
+                ))}
+              </select>
             </div>
           </div>
         </div>
 
-        {/* Stats */}
-        <StatsBar total={customers.length} filtered={filteredCustomers.length} activeCount={activeCount} />
-
-        {/* Filter */}
-        {customers.length > 0 && (
-          <FilterBar
-            floorFilter={floorFilter}
-            roomFilter={roomFilter}
-            floorOptions={floorOptions}
-            roomOptions={roomOptions}
-            floorCounts={floorCounts}
-            totalCount={customers.length}
-            onFloorChange={setFloorFilter}
-            onRoomChange={setRoomFilter}
-            onOpenModal={() => setShowModal(true)}
-          />
-        )}
-
-        {/* Content */}
         {customers.length === 0 ? (
-          <EmptyState title="NO ACTIVE SESSIONS" subtitle="Waiting for customers..." />
+          <div className="bg-white/95 backdrop-blur-sm rounded-2xl md:rounded-3xl shadow-2xl p-8 md:p-12 text-center border-4 border-white/50">
+            <div className="text-6xl md:text-8xl mb-4 md:mb-6 animate-bounce-slow">🎯</div>
+            <p className="text-2xl md:text-3xl text-gray-700 font-bold mb-2">ยังไม่มีรายการ</p>
+            <p className="text-gray-500 text-base md:text-lg">รอลูกค้าเข้าใช้งาน</p>
+          </div>
         ) : filteredCustomers.length === 0 ? (
-          <EmptyState 
-            title="NO RESULTS" 
-            subtitle={`No customers in ${floorFilter !== 'all' ? floorFilter : ''} ${roomFilter !== 'all' ? roomFilter : ''}`} 
-          />
+          <div className="bg-white/95 backdrop-blur-sm rounded-2xl md:rounded-3xl shadow-2xl p-8 md:p-12 text-center border-4 border-white/50">
+            <div className="text-6xl md:text-8xl mb-4 md:mb-6">🔍</div>
+            <p className="text-2xl md:text-3xl text-gray-700 font-bold mb-2">
+              {floorFilter !== 'all'
+                ? `${floorFilter} ไม่มีลูกค้า`
+                : 'ไม่พบรายการในตัวกรองนี้'}
+            </p>
+            <p className="text-gray-500 text-base md:text-lg">ลองเลือกชั้นหรือห้องอื่น</p>
+          </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {filteredCustomers.map((customer) => (
-              <CustomerCard
-                key={customer.id}
-                customer={customer}
-                onCallStaff={handleCallStaff}
-                currentTime={currentTime}
-              />
-            ))}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+            {filteredCustomers.map((customer) => {
+              const isLowTime = customer.displayTimeRemaining < 300 // Less than 5 minutes
+              const cardBgColor = isLowTime
+                ? 'bg-gradient-to-br from-red-100 via-red-50 to-orange-100 border-red-500'
+                : 'bg-gradient-to-br from-white via-purple-50 to-pink-50 border-purple-400'
+
+              return (
+                <div
+                  key={customer.id}
+                  className={`${cardBgColor} rounded-2xl md:rounded-3xl shadow-2xl p-4 md:p-6 border-3 md:border-4 transform transition-all duration-300 hover:shadow-purple-500/50 active:scale-95`}
+                >
+                  {/* Customer Name */}
+                  <div className="mb-3 md:mb-4">
+                    <h2 className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-purple-700 to-pink-600 bg-clip-text text-transparent mb-2">
+                      👤 {customer.name}
+                    </h2>
+                    <div className="inline-block bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-3 py-1.5 md:px-4 md:py-2 rounded-full text-xs sm:text-sm font-bold shadow-lg">
+                      📍 {customer.room}
+                    </div>
+                  </div>
+
+                  {/* Note Section */}
+                  {customer.note && (
+                    <div className="mb-3 md:mb-4">
+                      <div className="bg-yellow-100 border-2 border-yellow-400 rounded-lg p-2 md:p-3">
+                        <p className="text-xs sm:text-sm text-gray-700 font-semibold mb-1">📝 Note</p>
+                        <p className="text-sm md:text-base text-gray-800 break-words">{customer.note}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Countdown Timer */}
+                  <div className={`mb-3 md:mb-4 ${isLowTime ? 'countdown-alert' : ''}`}>
+                    <p className="text-xs sm:text-sm text-gray-600 mb-1 font-semibold">⏰ เวลาที่เหลือ</p>
+                    <div
+                      className={`text-4xl sm:text-5xl md:text-6xl font-bold text-center py-4 md:py-6 rounded-xl md:rounded-2xl shadow-inner ${
+                        isLowTime
+                          ? 'bg-gradient-to-br from-red-300 to-red-200 text-red-800 animate-pulse border-3 md:border-4 border-red-400'
+                          : 'bg-gradient-to-br from-green-200 to-emerald-200 text-green-800 border-3 md:border-4 border-green-400'
+                      }`}
+                    >
+                      {formatTime(customer.displayTimeRemaining)}
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 md:gap-3 mt-2 md:mt-3">
+                      <div className="bg-blue-100 border-2 border-blue-400 rounded-lg p-2 text-center">
+                        <p className="text-xs text-gray-600 font-semibold">🕐 เริ่ม</p>
+                        <p className="text-sm md:text-base font-bold text-blue-700">
+                          {formatTimeDisplay(customer.startTime)}
+                        </p>
+                      </div>
+                      <div className="bg-orange-100 border-2 border-orange-400 rounded-lg p-2 text-center">
+                        <p className="text-xs text-gray-600 font-semibold">🕑 จบ</p>
+                        <p className="text-sm md:text-base font-bold text-orange-700">
+                          {formatTimeDisplay(customer.expectedEndTime)}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="mt-2 md:mt-3 text-center text-xs md:text-sm text-gray-600 font-semibold">
+                      ⏱️ เหลือ: {getDurationText(customer.displayTimeRemaining)}
+                    </div>
+                    {isLowTime && (
+                      <p className="text-red-700 text-center mt-2 md:mt-3 font-bold animate-pulse text-sm md:text-lg bg-red-200 py-1.5 md:py-2 rounded-lg md:rounded-xl">
+                        ⚠️ เวลาใกล้หมดแล้ว!
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Cost */}
+                  <div className="mb-3 md:mb-4">
+                    <div className="bg-gradient-to-br from-yellow-200 to-orange-200 border-3 md:border-4 border-yellow-500 rounded-xl md:rounded-2xl p-3 md:p-4 shadow-lg">
+                      <p className="text-xs sm:text-sm text-gray-700 font-semibold">💰 ค่าใช้จ่าย</p>
+                      <p className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-yellow-700 to-orange-700 bg-clip-text text-transparent">
+                        ฿{customer.cost}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Status Section */}
+                  <div className="mb-3 md:mb-4 grid grid-cols-2 gap-2">
+                    <div
+                      className={`rounded-lg p-2 md:p-3 text-center border-2 ${
+                        customer.isPaid
+                          ? 'bg-green-100 border-green-500'
+                          : 'bg-red-100 border-red-500'
+                      }`}
+                    >
+                      <p className="text-xs text-gray-600 font-semibold">💰 สถานะการจ่าย</p>
+                      <p className={`text-sm md:text-base font-bold ${
+                        customer.isPaid
+                          ? 'text-green-700'
+                          : 'text-red-700'
+                      }`}>
+                        {customer.isPaid ? '✅ จ่ายแล้ว' : '❌ ยังไม่จ่าย'}
+                      </p>
+                    </div>
+                    <div className="bg-purple-100 border-2 border-purple-400 rounded-lg p-2 md:p-3 text-center">
+                      <p className="text-xs text-gray-600 font-semibold">🎯 สถานะ</p>
+                      <p className="text-sm md:text-base font-bold text-purple-700">
+                        {customer.isRunning ? '⏳ กำลังจับเวลา' : '⏸️ หยุดแล้ว'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Payment Status (old) */}
+                  <div className="flex justify-center">
+                    <span
+                      className={`inline-block px-4 py-2 md:px-6 md:py-3 rounded-xl md:rounded-2xl text-base sm:text-lg md:text-xl font-bold shadow-xl transform active:scale-95 transition-all duration-300 ${
+                        customer.isPaid
+                          ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white'
+                          : 'bg-gradient-to-r from-red-500 to-pink-500 text-white animate-pulse'
+                      }`}
+                    >
+                      {customer.isPaid ? '✅ จ่ายเงินแล้ว' : '❌ ยังไม่ได้จ่าย'}
+                    </span>
+                  </div>
+
+                  {/* Call staff button */}
+                  <div className="mt-3">
+                    <button
+                      onClick={() => handleCallStaff(customer)}
+                      className="w-full bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600 text-white font-bold py-2.5 md:py-3 px-4 rounded-xl md:rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-[1.01] active:scale-95 transition-all duration-300"
+                    >
+                      📞 เรียกพนักงาน
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
           </div>
         )}
 
-        {/* Footer */}
-        <div className="mt-8 text-center">
-          <div className="inline-flex items-center gap-3 px-4 py-2 rounded-full bg-slate-800/50 border border-slate-700/50">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-xs text-gray-500 font-medium">LIVE • Auto-refresh every second</span>
-          </div>
+        {/* Auto-refresh indicator */}
+        <div className="mt-6 md:mt-8 text-center">
+          <p className="text-white text-sm sm:text-base md:text-lg drop-shadow-lg bg-white/20 backdrop-blur-sm inline-block px-4 py-2 md:px-6 md:py-3 rounded-full border-2 border-white/40 font-semibold animate-pulse">
+            🔄 อัพเดทอัตโนมัติทุกวินาที
+          </p>
         </div>
       </div>
     </div>
