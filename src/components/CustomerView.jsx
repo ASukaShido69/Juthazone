@@ -1,12 +1,23 @@
 import { useMemo, useState, useEffect } from 'react'
 import { formatTimeDisplay, getDurationText, calculateTimeRemaining } from '../utils/timeFormat'
-import { extractFloor } from '../utils/roomUtils'
 import { logActivity } from '../utils/authUtils'
 
 // Constants
 const LOW_TIME_THRESHOLD = 300 // 5 minutes
 const CRITICAL_TIME_THRESHOLD = 60 // 1 minute
 const UPDATE_INTERVAL = 1000 // 1 second
+
+// Helper function
+const extractFloor = (room = '') => {
+  // รองรับรูปแบบ: "ชั้น2", "ชั้น 3", "2F", "2-01", "2/01"
+  const thaiFloor = room.match(/ชั้น\s*(\d+)/i)
+  if (thaiFloor) return `ชั้น ${thaiFloor[1]}`
+  const numericLead = room.match(/^(\d+)/)
+  if (numericLead) return `ชั้น ${numericLead[1]}`
+  const fx = room.match(/(\d+)f/i)
+  if (fx) return `ชั้น ${fx[1]}`
+  return 'อื่นๆ'
+}
 
 // Sub-components
 const TimeCard = ({ label, time, icon, colorClass }) => (
