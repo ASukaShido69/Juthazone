@@ -298,11 +298,11 @@ export const exportToPDF = async (data, userName = 'Admin') => {
 }
 
 /**
- * Print Receipt (58 x 210 mm) - Compact Thai Design
+ * Print Receipt for POS-58 Thermal Printer (58mm width)
+ * Supports both Red Zone (fixed time) and Blue Zone (pro-rated)
+ * Auto-cut support, no blank white space at bottom
  */
-export const printReceipt = async (customer) => {
-  await initializeImports()
-
+export const printReceipt = async (customer, zone = 'red') => {
   if (!customer) {
     alert('⚠️ ไม่มีข้อมูลลูกค้า')
     return
@@ -310,104 +310,157 @@ export const printReceipt = async (customer) => {
 
   try {
     const now = new Date()
-    const receiptNo = `RCP-${now.getTime().toString().slice(-6)}`
-    const startTime = new Date(customer.startTime)
-    const endTime = new Date(customer.expectedEndTime)
-    const duration = (endTime - startTime) / (1000 * 60)
+    const receiptNo = `RCP-${now.getTime().toString().slice(-8)}`
 
-    // Fallback to HTML print if html2canvas missing
-    if (!html2canvas) {
-      alert('⚠️ ระบบพิมพ์รูปภาพไม่พร้อม ใช้โหมดพิมพ์ปกติแทน')
-      const receiptHTML = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>@page{size:58mm auto;margin:0}html,body{margin:0;padding:0}img{width:100%}</style></head><body>
-        <div style="width:384px;padding:12px;font-family:Arial;color:#000">
-          <div style="text-align:center;border-bottom:1px solid #000;padding-bottom:6px;margin-bottom:8px">
-            <div style="font-size:18px;font-weight:bold">JUTHAZONE</div>
-            <div style="font-size:12px">ใบเสร็จ</div>
-          </div>
-          <div style="display:flex;justify-content:space-between;margin:4px 0"><b>เลขที่:</b><span>${receiptNo}</span></div>
-          <div style="display:flex;justify-content:space-between;margin:4px 0"><b>วันที่:</b><span>${now.toLocaleDateString('th-TH')}</span></div>
-          <div style="display:flex;justify-content:space-between;margin:4px 0"><b>เวลา:</b><span>${now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}</span></div>
-          <div style="border-bottom:1px solid #000;margin:8px 0"></div>
-          <div style="background:#f9f9f9;padding:6px;border-radius:4px">
-            <div style="font-weight:bold;margin-bottom:4px">ข้อมูลลูกค้า</div>
-            <div style="display:flex;justify-content:space-between;margin:4px 0"><b>ชื่อ:</b><span>${customer.name}</span></div>
-            <div style="display:flex;justify-content:space-between;margin:4px 0"><b>ห้อง:</b><span style="background:#0066cc;color:#fff;padding:2px 6px;border-radius:3px">${customer.room}</span></div>
-            ${customer.note && customer.note !== '-' ? `<div style="display:flex;justify-content:space-between;margin:4px 0"><b>หมายเหตุ:</b><span>${customer.note.substring(0,25)}</span></div>` : ''}
-          </div>
-          <div style="border-bottom:1px solid #000;margin:8px 0"></div>
-          <div style="font-weight:bold;margin-bottom:4px">รายละเอียด</div>
-          <div style="display:flex;justify-content:space-between;margin:4px 0"><b>เวลา:</b><span>${startTime.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})} - ${endTime.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})}</span></div>
-          <div style="display:flex;justify-content:space-between;margin:4px 0"><b>ระยะเวลา:</b><span>${Math.round(duration)} นาที</span></div>
-          <div style="text-align:center;color:#444;margin-top:8px">ขอบคุณที่ใช้บริการ JUTHAZONE</div>
-        </div>
-      </body></html>`
-      const w = window.open('', 'PRINT', 'width=400,height=800')
-      w.document.write(receiptHTML)
-      w.document.close()
-      w.focus()
-      w.onload = () => { w.print(); w.close() }
-      return
+    // Calculate duration and cost based on zone type
+    let startTime, endTime, durationText, costDisplay, rateInfo
+
+    if (zone === 'blue') {
+      startTime = customer.start_time ? new Date(customer.start_time) : null
+      endTime = customer.end_time ? new Date(customer.end_time) : now
+      const durationMs = startTime ? (endTime - startTime) : 0
+      const durationMins = customer.duration_minutes || Math.round(durationMs / 60000)
+      const hours = Math.floor(durationMins / 60)
+      const mins = Math.round(durationMins % 60)
+      durationText = hours > 0 ? `${hours} ชม. ${mins} นาที` : `${mins} นาที`
+      costDisplay = (customer.final_cost || 0).toFixed(2)
+      rateInfo = `${customer.hourly_rate || 0} บาท/ชม.`
+    } else {
+      startTime = customer.startTime ? new Date(customer.startTime) : (customer.start_time ? new Date(customer.start_time) : null)
+      endTime = customer.expectedEndTime ? new Date(customer.expectedEndTime) : (customer.end_time ? new Date(customer.end_time) : null)
+      const durationMs = startTime && endTime ? (endTime - startTime) : 0
+      const durationMins = customer.duration_minutes || Math.round(durationMs / 60000)
+      const hours = Math.floor(durationMins / 60)
+      const mins = Math.round(durationMins % 60)
+      durationText = hours > 0 ? `${hours} ชม. ${mins} นาที` : `${mins} นาที`
+      costDisplay = (customer.cost || customer.final_cost || 0).toFixed(2)
+      rateInfo = null
     }
 
-    // Create offscreen container for html2canvas rendering
-    const container = document.createElement('div')
-    container.style.position = 'fixed'
-    container.style.left = '-10000px'
-    container.style.top = '0'
-    container.style.width = '384px' // Typical width for 58mm printers (384 dots)
-    container.style.background = '#fff'
-    container.style.color = '#000'
-    container.style.padding = '0'
-    container.style.margin = '0'
-    container.style.zIndex = '-1'
+    const startTimeStr = startTime ? startTime.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : '-'
+    const endTimeStr = endTime ? endTime.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : '-'
+    const dateStr = (startTime || now).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    const isPaid = customer.isPaid ?? customer.is_paid ?? false
+    const noteTxt = customer.note && customer.note !== '-' ? customer.note : ''
+    const zoneName = zone === 'blue' ? 'BLUE ZONE' : 'RED ZONE'
+    const zoneColor = zone === 'blue' ? '#1d4ed8' : '#dc2626'
 
-    // Build receipt DOM (pixel-based for printer compatibility)
-    container.innerHTML = `
-      <div style="width:384px;padding:12px;font-family:Arial,sans-serif">
-        <div style="text-align:center;border-bottom:1px solid #000;padding-bottom:6px;margin-bottom:8px">
-          <div style="font-size:18px;font-weight:bold">JUTHAZONE</div>
-          <div style="font-size:12px">ใบเสร็จ</div>
-        </div>
-        <div style="display:flex;justify-content:space-between;margin:4px 0"><b>เลขที่:</b><span>${receiptNo}</span></div>
-        <div style="display:flex;justify-content:space-between;margin:4px 0"><b>วันที่:</b><span>${now.toLocaleDateString('th-TH')}</span></div>
-        <div style="display:flex;justify-content:space-between;margin:4px 0"><b>เวลา:</b><span>${now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}</span></div>
-        <div style="border-bottom:1px solid #000;margin:8px 0"></div>
-        <div style="background:#f9f9f9;padding:6px;border-radius:4px">
-          <div style="font-weight:bold;margin-bottom:4px">ข้อมูลลูกค้า</div>
-          <div style="display:flex;justify-content:space-between;margin:4px 0"><b>ชื่อ:</b><span>${customer.name}</span></div>
-          <div style="display:flex;justify-content:space-between;margin:4px 0"><b>ห้อง:</b><span style="background:#0066cc;color:#fff;padding:2px 6px;border-radius:3px">${customer.room}</span></div>
-          ${customer.note && customer.note !== '-' ? `<div style="display:flex;justify-content:space-between;margin:4px 0"><b>หมายเหตุ:</b><span>${customer.note.substring(0,25)}</span></div>` : ''}
-        </div>
-        <div style="border-bottom:1px solid #000;margin:8px 0"></div>
-        <div style="font-weight:bold;margin-bottom:4px">รายละเอียด</div>
-        <div style="display:flex;justify-content:space-between;margin:4px 0"><b>เวลา:</b><span>${startTime.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})} - ${endTime.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})}</span></div>
-        <div style="display:flex;justify-content:space-between;margin:4px 0"><b>ระยะเวลา:</b><span>${Math.round(duration)} นาที</span></div>
-        <div style="text-align:center;color:#444;margin-top:8px">ขอบคุณที่ใช้บริการ JUTHAZONE</div>
-      </div>
-    `
+    const receiptHTML = `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Receipt</title>
+<style>
+  @page { size: 58mm auto; margin: 0 !important; padding: 0 !important; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 58mm; margin: 0; padding: 0;
+    font-family: 'Courier New', 'Lucida Console', monospace;
+    font-size: 11px; line-height: 1.4; color: #000; background: #fff;
+  }
+  .receipt { width: 58mm; padding: 3mm 2mm 1mm 2mm; }
+  .center { text-align: center; }
+  .bold { font-weight: bold; }
+  .big { font-size: 16px; font-weight: bold; }
+  .med { font-size: 13px; font-weight: bold; }
+  .small { font-size: 9px; color: #555; }
+  .line { border-top: 1px dashed #000; margin: 3px 0; }
+  .dbl-line { border-top: 2px solid #000; margin: 4px 0; }
+  .row { display: flex; justify-content: space-between; padding: 1px 0; }
+  .row-label { font-weight: bold; }
+  .zone-badge {
+    display: inline-block; background: ${zoneColor}; color: #fff;
+    padding: 2px 10px; border-radius: 3px; font-size: 10px; font-weight: bold;
+    letter-spacing: 1px; margin: 3px 0;
+  }
+  .total-box {
+    border: 2px solid #000; border-radius: 4px; padding: 4px 6px; margin: 4px 0;
+    text-align: center;
+  }
+  .total-amount { font-size: 20px; font-weight: bold; }
+  .paid-badge {
+    display: inline-block; padding: 2px 12px; border-radius: 3px;
+    font-weight: bold; font-size: 11px; margin: 3px 0;
+    ${isPaid ? 'background: #000; color: #fff;' : 'border: 2px solid #000; color: #000;'}
+  }
+  .cut-line { border-top: 1px dashed #aaa; margin-top: 6px; }
+  @media print { html, body { width: 58mm; } }
+</style>
+</head><body>
+<div class="receipt">
+  <div class="center">
+    <div class="big">JUTHAZONE</div>
+    <div class="zone-badge">${zoneName}</div>
+    <div class="small">ระบบจัดการเวลาเล่น</div>
+  </div>
+  <div class="dbl-line"></div>
+  <div class="row"><span class="row-label">เลขที่:</span><span>${receiptNo}</span></div>
+  <div class="row"><span class="row-label">วันที่:</span><span>${dateStr}</span></div>
+  <div class="row"><span class="row-label">เวลาพิมพ์:</span><span>${now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}</span></div>
+  <div class="line"></div>
+  <div class="center med" style="margin:3px 0">ข้อมูลลูกค้า</div>
+  <div class="row"><span class="row-label">ชื่อ:</span><span>${customer.name || '-'}</span></div>
+  <div class="row"><span class="row-label">ห้อง:</span><span>${customer.room || '-'}</span></div>
+  ${noteTxt ? `<div class="row"><span class="row-label">Note:</span><span>${noteTxt.substring(0, 20)}</span></div>` : ''}
+  <div class="line"></div>
+  <div class="center med" style="margin:3px 0">รายละเอียดบริการ</div>
+  <div class="row"><span class="row-label">เริ่ม:</span><span>${startTimeStr}</span></div>
+  <div class="row"><span class="row-label">สิ้นสุด:</span><span>${endTimeStr}</span></div>
+  <div class="row"><span class="row-label">ระยะเวลา:</span><span>${durationText}</span></div>
+  ${rateInfo ? `<div class="row"><span class="row-label">อัตรา:</span><span>${rateInfo}</span></div>` : ''}
+  <div class="dbl-line"></div>
+  <div class="total-box">
+    <div class="small">ยอดรวมทั้งสิ้น</div>
+    <div class="total-amount">฿${costDisplay}</div>
+  </div>
+  <div class="center">
+    <div class="paid-badge">${isPaid ? '■ ชำระเงินแล้ว' : '□ ยังไม่ชำระเงิน'}</div>
+  </div>
+  <div class="line"></div>
+  <div class="center small" style="margin-top:4px">
+    <div>ขอบคุณที่ใช้บริการ</div>
+    <div style="font-weight:bold">JUTHAZONE</div>
+    <div style="margin-top:2px">${dateStr}</div>
+  </div>
+  <div class="cut-line"></div>
+</div>
+<script>
+  window.onload = function() {
+    setTimeout(function() { window.print(); }, 200);
+    window.onafterprint = function() { window.close(); };
+    setTimeout(function() { window.close(); }, 8000);
+  };
+</script>
+</body></html>`
 
-    document.body.appendChild(container)
-
-    // Render to canvas with higher scale for print clarity
-    const canvas = await html2canvas(container, { backgroundColor: '#ffffff', scale: 2, useCORS: true })
-    const imgData = canvas.toDataURL('image/png')
-
-    // Cleanup offscreen container
-    document.body.removeChild(container)
-
-    // Open a lightweight print window with only the image
-    const printWindow = window.open('', 'PRINT', 'width=400,height=800')
-    printWindow.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Print</title>
-      <style>@page{size:auto;margin:0}html,body{margin:0;padding:0;background:#fff}img{width:100%;display:block}</style>
-    </head><body>
-      <img id="receiptImage" src="${imgData}" alt="receipt" />
-      <script>const img=document.getElementById('receiptImage');img.onload=function(){window.print();window.close();};</script>
-    </body></html>`)
+    const printWindow = window.open('', 'RECEIPT', 'width=250,height=600')
+    if (!printWindow) {
+      alert('❌ ไม่สามารถเปิดหน้าต่างพิมพ์ได้ กรุณาอนุญาต Popup')
+      return
+    }
+    printWindow.document.write(receiptHTML)
     printWindow.document.close()
-    printWindow.focus()
 
   } catch (error) {
-    console.error('Print error:', error)
-    alert('❌ เกิดข้อผิดพลาดในการพิมพ์: ' + error.message)
+    console.error('Print receipt error:', error)
+    alert('❌ เกิดข้อผิดพลาดในการพิมพ์ใบเสร็จ: ' + error.message)
   }
+}
+
+/**
+ * Quick print receipt from history record (convenience wrapper)
+ */
+export const printHistoryReceipt = (record, zone = 'red') => {
+  return printReceipt({
+    name: record.name,
+    room: record.room,
+    note: record.note,
+    start_time: record.start_time,
+    end_time: record.end_time,
+    startTime: record.start_time,
+    expectedEndTime: record.end_time,
+    duration_minutes: record.duration_minutes,
+    hourly_rate: record.hourly_rate,
+    cost: record.final_cost,
+    final_cost: record.final_cost,
+    is_paid: record.is_paid,
+    isPaid: record.is_paid
+  }, zone)
 }
