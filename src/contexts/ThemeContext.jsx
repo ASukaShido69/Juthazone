@@ -34,6 +34,9 @@ export const THEME_PALETTES = {
       badgeText: '#b91c1c',
       inputBorder: '#fca5a5',
       inputFocus: '#ef4444',
+      bgFrom: '#1a0505',
+      bgVia: '#2d1010',
+      bgTo: '#1a0808',
     }
   },
   rose: {
@@ -61,6 +64,9 @@ export const THEME_PALETTES = {
       badgeText: '#9f1239',
       inputBorder: '#fda4af',
       inputFocus: '#e11d48',
+      bgFrom: '#1a0508',
+      bgVia: '#2d0e14',
+      bgTo: '#1a070a',
     }
   },
   orange: {
@@ -88,6 +94,9 @@ export const THEME_PALETTES = {
       badgeText: '#9a3412',
       inputBorder: '#fdba74',
       inputFocus: '#ea580c',
+      bgFrom: '#1a0c02',
+      bgVia: '#2d1608',
+      bgTo: '#1a0f05',
     }
   },
   amber: {
@@ -115,6 +124,9 @@ export const THEME_PALETTES = {
       badgeText: '#92400e',
       inputBorder: '#fcd34d',
       inputFocus: '#d97706',
+      bgFrom: '#1a1002',
+      bgVia: '#2d1c06',
+      bgTo: '#1a1305',
     }
   },
   emerald: {
@@ -142,6 +154,9 @@ export const THEME_PALETTES = {
       badgeText: '#065f46',
       inputBorder: '#6ee7b7',
       inputFocus: '#059669',
+      bgFrom: '#021a10',
+      bgVia: '#082d1a',
+      bgTo: '#051a12',
     }
   },
   purple: {
@@ -198,6 +213,9 @@ export const THEME_PALETTES = {
       badgeText: '#1e40af',
       inputBorder: '#93c5fd',
       inputFocus: '#2563eb',
+      bgFrom: '#020a1a',
+      bgVia: '#0a152d',
+      bgTo: '#050d1a',
     }
   },
   cyan: {
@@ -225,6 +243,9 @@ export const THEME_PALETTES = {
       badgeText: '#155e75',
       inputBorder: '#67e8f9',
       inputFocus: '#0891b2',
+      bgFrom: '#021518',
+      bgVia: '#08232d',
+      bgTo: '#05181a',
     }
   },
   teal: {
@@ -252,6 +273,9 @@ export const THEME_PALETTES = {
       badgeText: '#115e59',
       inputBorder: '#5eead4',
       inputFocus: '#0d9488',
+      bgFrom: '#021a16',
+      bgVia: '#082d24',
+      bgTo: '#051a18',
     }
   },
   indigo: {
@@ -279,6 +303,9 @@ export const THEME_PALETTES = {
       badgeText: '#3730a3',
       inputBorder: '#a5b4fc',
       inputFocus: '#4f46e5',
+      bgFrom: '#08051a',
+      bgVia: '#110e2d',
+      bgTo: '#0a071a',
     }
   },
   sky: {
@@ -306,6 +333,9 @@ export const THEME_PALETTES = {
       badgeText: '#075985',
       inputBorder: '#7dd3fc',
       inputFocus: '#0284c7',
+      bgFrom: '#020e1a',
+      bgVia: '#081c2d',
+      bgTo: '#05111a',
     }
   },
   violet: {
@@ -333,6 +363,9 @@ export const THEME_PALETTES = {
       badgeText: '#5b21b6',
       inputBorder: '#c4b5fd',
       inputFocus: '#7c3aed',
+      bgFrom: '#0f051a',
+      bgVia: '#1a0e2d',
+      bgTo: '#0d071a',
     }
   },
 }
@@ -364,6 +397,9 @@ const applyThemeVars = (colors) => {
   root.setProperty('--jz-badge-text', colors.badgeText)
   root.setProperty('--jz-input-border', colors.inputBorder)
   root.setProperty('--jz-input-focus', colors.inputFocus)
+  root.setProperty('--jz-bg-from', colors.bgFrom)
+  root.setProperty('--jz-bg-via', colors.bgVia)
+  root.setProperty('--jz-bg-to', colors.bgTo)
 }
 
 // Context

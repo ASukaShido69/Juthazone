@@ -125,9 +125,18 @@ export default function ThemePicker({ zone = 'red' }) {
 
                       {/* Gradient Preview Bar */}
                       <div
-                        className="h-1.5 rounded-full mb-2"
+                        className="h-1.5 rounded-full mb-1.5"
                         style={{
                           background: `linear-gradient(to right, ${palette.colors.gradient1}, ${palette.colors.gradient2}, ${palette.colors.gradient3})`,
+                        }}
+                      />
+
+                      {/* Background Preview */}
+                      <div
+                        className="h-1.5 rounded-full mb-2"
+                        style={{
+                          background: `linear-gradient(to right, ${palette.colors.bgFrom}, ${palette.colors.bgVia}, ${palette.colors.bgTo})`,
+                          border: '1px solid rgba(255,255,255,0.15)',
                         }}
                       />
 

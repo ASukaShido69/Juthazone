@@ -477,7 +477,7 @@ function AdminDashboard({
   const customerViewUrl = `${window.location.origin}/customer`
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-800 to-gray-900 p-3 md:p-6 lg:p-8">
+    <div className="min-h-screen jz-bg p-3 md:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
         {/* Header with animation */}
         <div className="text-center mb-6 md:mb-8 animate-float relative">

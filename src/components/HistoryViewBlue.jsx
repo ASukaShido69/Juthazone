@@ -317,7 +317,7 @@ function HistoryViewBlue() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-800 to-gray-900 flex items-center justify-center">
+      <div className="min-h-screen jz-bg flex items-center justify-center">
         <div className="text-center fade-in">
           <div className="text-6xl mb-4 animate-spin">⏳</div>
           <p className="text-white text-xl font-bold">กำลังโหลดประวัติ...</p>
@@ -327,7 +327,7 @@ function HistoryViewBlue() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-800 to-gray-900 p-4 md:p-6 lg:p-8">
+    <div className="min-h-screen jz-bg p-4 md:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="text-center mb-6 slide-up">

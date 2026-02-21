@@ -29,6 +29,9 @@
   --jz-badge-text: #b91c1c;
   --jz-input-border: #fca5a5;
   --jz-input-focus: #ef4444;
+  --jz-bg-from: #1a0505;
+  --jz-bg-via: #2d1010;
+  --jz-bg-to: #1a0808;
 }
 
 /* ── Base Reset & Typography ── */
@@ -186,6 +189,11 @@ input:focus, select:focus, textarea:focus {
   }
   .jz-gradient-135 {
     background: linear-gradient(135deg, var(--jz-gradient1), var(--jz-gradient2), var(--jz-gradient3));
+  }
+
+  /* ── Themed Page Background ── */
+  .jz-bg {
+    background: linear-gradient(to bottom right, var(--jz-bg-from), var(--jz-bg-via), var(--jz-bg-to));
   }
 
   /* ── Themed Table Header ── */
