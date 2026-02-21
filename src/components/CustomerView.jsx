@@ -95,31 +95,7 @@ function CustomerView({ customers }) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-700 via-pink-600 to-orange-500 animate-gradient p-3 md:p-4 lg:p-6">
-      <style>{`
-        @keyframes shimmer {
-          0% { background-position: -200% 0; }
-          100% { background-position: 200% 0; }
-        }
-        @keyframes glow-pulse {
-          0%, 100% { box-shadow: 0 0 5px rgba(139,92,246,0.3); }
-          50% { box-shadow: 0 0 20px rgba(139,92,246,0.6), 0 0 40px rgba(139,92,246,0.2); }
-        }
-        @keyframes urgent-glow {
-          0%, 100% { box-shadow: 0 0 5px rgba(239,68,68,0.3); }
-          50% { box-shadow: 0 0 25px rgba(239,68,68,0.7), 0 0 50px rgba(239,68,68,0.3); }
-        }
-        .card-glow { animation: glow-pulse 3s ease-in-out infinite; }
-        .card-urgent { animation: urgent-glow 1.5s ease-in-out infinite; }
-        .shimmer-bg {
-          background: linear-gradient(90deg, transparent 25%, rgba(255,255,255,0.3) 50%, transparent 75%);
-          background-size: 200% 100%;
-          animation: shimmer 2s infinite;
-        }
-        .progress-bar-inner {
-          transition: width 1s linear;
-        }
-      `}</style>
+    <div className="min-h-screen bg-gradient-to-br from-rose-600 via-red-500 to-orange-500 animate-gradient p-3 md:p-6">
 
       <div className="max-w-6xl mx-auto relative">
         {showRoomPicker && customers.length > 0 && (
@@ -222,12 +198,12 @@ function CustomerView({ customers }) {
           </div>
         )}
 
-        <div className="text-center mb-6 md:mb-8 pt-2 md:pt-4">
+        <div className="text-center mb-6 md:mb-8 pt-2 md:pt-4 slide-up">
           <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white drop-shadow-2xl mb-2 md:mb-3 animate-float">
-            🎮 JUTHAZONE 🎮
+            🔴 JUTHAZONE RED 🔴
           </h1>
-          <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-white drop-shadow-lg font-semibold bg-white/20 backdrop-blur-sm inline-block px-4 py-2 md:px-6 md:py-2 rounded-full border-2 border-white/40">
-            รายการทั้งหมด: {customers.length} รายการ | แสดง {filteredCustomers.length}
+          <p className="text-sm sm:text-base md:text-lg text-white/90 font-semibold glass-light inline-block px-4 py-2 md:px-6 md:py-2 rounded-full">
+            รายการทั้งหมด: {customers.length} | แสดง: {filteredCustomers.length}
           </p>
         </div>
 
@@ -241,7 +217,7 @@ function CustomerView({ customers }) {
         </div>
 
         {/* Filters */}
-        <div className="bg-white/20 backdrop-blur-md border border-white/30 rounded-2xl md:rounded-3xl shadow-xl p-4 md:p-5 mb-4 md:mb-6">
+        <div className="glass-light rounded-2xl md:rounded-3xl shadow-xl p-4 md:p-5 mb-4 md:mb-6 slide-up-1">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-4">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-white font-semibold drop-shadow">ชั้น:</span>
@@ -300,7 +276,7 @@ function CustomerView({ customers }) {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
             {filteredCustomers.map((customer) => {
-              const isLowTime = customer.displayTimeRemaining < 300 // Less than 5 minutes
+              const isLowTime = customer.displayTimeRemaining < 300
               const totalDuration = customer.expectedEndTime && customer.startTime
                 ? (new Date(customer.expectedEndTime) - new Date(customer.startTime)) / 1000
                 : 1
@@ -310,21 +286,21 @@ function CustomerView({ customers }) {
               return (
                 <div
                   key={customer.id}
-                  className={`relative overflow-hidden rounded-2xl md:rounded-3xl shadow-2xl p-4 md:p-6 border-2 transform transition-all duration-300 active:scale-95 ${
+                  className={`relative overflow-hidden rounded-2xl md:rounded-3xl shadow-card p-4 md:p-6 border transform transition-all duration-200 active:scale-[0.98] fade-in ${
                     isLowTime
-                      ? 'bg-gradient-to-br from-red-50 via-red-100 to-orange-50 border-red-400 card-urgent'
-                      : 'bg-gradient-to-br from-white via-purple-50 to-indigo-50 border-purple-300/60 card-glow hover:border-purple-400'
+                      ? 'bg-gradient-to-br from-red-50 via-red-100 to-orange-50 border-red-300 glow-red-urgent'
+                      : 'bg-white/95 backdrop-blur-sm border-red-200/60 glow-red hover:shadow-card-hover hover:border-red-300'
                   }`}
                 >
-                  {/* Top shimmer accent */}
-                  <div className={`absolute top-0 left-0 right-0 h-1 ${isLowTime ? 'bg-gradient-to-r from-red-500 via-orange-400 to-red-500' : 'bg-gradient-to-r from-purple-500 via-pink-400 to-purple-500'} shimmer-bg`} />
+                  {/* Top accent */}
+                  <div className={`absolute top-0 left-0 right-0 h-1 shimmer ${isLowTime ? 'bg-gradient-to-r from-red-500 via-orange-400 to-red-500' : 'bg-gradient-to-r from-red-500 via-rose-400 to-red-500'}`} />
 
                   {/* Customer Name */}
                   <div className="mb-3 md:mb-4">
-                    <h2 className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-purple-700 to-pink-600 bg-clip-text text-transparent mb-2">
+                    <h2 className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-red-700 to-rose-600 bg-clip-text text-transparent mb-2">
                       👤 {customer.name}
                     </h2>
-                    <div className="inline-flex items-center gap-1.5 bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-3 py-1.5 md:px-4 md:py-2 rounded-full text-xs sm:text-sm font-bold shadow-lg">
+                    <div className="inline-flex items-center gap-1.5 bg-gradient-to-r from-red-500 to-rose-500 text-white px-3 py-1.5 md:px-4 md:py-2 rounded-full text-xs sm:text-sm font-bold shadow-lg">
                       <span>📍</span> {customer.room}
                     </div>
                   </div>
@@ -353,12 +329,12 @@ function CustomerView({ customers }) {
                     </div>
 
                     {/* Progress Bar */}
-                    <div className="mt-2.5 bg-gray-200 rounded-full h-2.5 overflow-hidden shadow-inner">
+                    <div className="mt-2.5 bg-gray-200 rounded-full h-2 overflow-hidden shadow-inner">
                       <div
-                        className={`progress-bar-inner h-full rounded-full ${
+                        className={`progress-smooth h-full rounded-full ${
                           isLowTime
                             ? 'bg-gradient-to-r from-red-500 to-orange-500'
-                            : 'bg-gradient-to-r from-purple-500 via-pink-500 to-purple-500'
+                            : 'bg-gradient-to-r from-red-500 via-rose-500 to-red-500'
                         }`}
                         style={{ width: `${progressPercent}%` }}
                       />
@@ -423,7 +399,7 @@ function CustomerView({ customers }) {
                   <div className="mt-3">
                     <button
                       onClick={() => handleCallStaff(customer)}
-                      className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-2.5 md:py-3 px-4 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-[1.01] active:scale-95 transition-all duration-200"
+                      className="w-full bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white font-bold py-2.5 md:py-3 px-4 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-[1.01] active:scale-[0.98] transition-all duration-200"
                     >
                       📞 เรียกพนักงาน
                     </button>
@@ -435,8 +411,8 @@ function CustomerView({ customers }) {
         )}
 
         {/* Auto-refresh indicator */}
-        <div className="mt-6 md:mt-8 text-center">
-          <p className="text-white text-sm sm:text-base md:text-lg drop-shadow-lg bg-white/20 backdrop-blur-sm inline-block px-4 py-2 md:px-6 md:py-3 rounded-full border-2 border-white/40 font-semibold animate-pulse">
+        <div className="mt-6 md:mt-8 text-center slide-up-2">
+          <p className="text-white/90 text-sm sm:text-base font-semibold glass-light inline-block px-4 py-2 md:px-6 md:py-3 rounded-full">
             🔄 อัพเดทอัตโนมัติทุกวินาที
           </p>
         </div>

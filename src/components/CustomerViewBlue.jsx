@@ -55,65 +55,21 @@ function CustomerViewBlue({ customers }) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-700 via-cyan-600 to-teal-500 animate-gradient p-3 md:p-4 lg:p-6">
-      <style>{`
-        @keyframes gradient {
-          0%, 100% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-        }
-        .animate-gradient {
-          background-size: 200% 200%;
-          animation: gradient 15s ease infinite;
-        }
-        @keyframes float {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-20px); }
-        }
-        .animate-float {
-          animation: float 3s ease-in-out infinite;
-        }
-        @keyframes bounce-slow {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-10px); }
-        }
-        .animate-bounce-slow {
-          animation: bounce-slow 2s ease-in-out infinite;
-        }
-        @keyframes cost-tick {
-          0% { transform: scale(1); }
-          50% { transform: scale(1.03); }
-          100% { transform: scale(1); }
-        }
-        .cost-animate { animation: cost-tick 2s ease-in-out infinite; }
-        @keyframes shimmer-blue {
-          0% { background-position: -200% 0; }
-          100% { background-position: 200% 0; }
-        }
-        .shimmer-blue {
-          background: linear-gradient(90deg, transparent 25%, rgba(255,255,255,0.2) 50%, transparent 75%);
-          background-size: 200% 100%;
-          animation: shimmer-blue 2.5s infinite;
-        }
-        @keyframes glow-blue {
-          0%, 100% { box-shadow: 0 0 5px rgba(6,182,212,0.2); }
-          50% { box-shadow: 0 0 20px rgba(6,182,212,0.5), 0 0 40px rgba(6,182,212,0.15); }
-        }
-        .card-glow-blue { animation: glow-blue 3s ease-in-out infinite; }
-      `}</style>
+    <div className="min-h-screen bg-gradient-to-br from-blue-700 via-cyan-600 to-teal-500 animate-gradient p-3 md:p-6">
 
       <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-6 md:mb-8 pt-2 md:pt-4">
+        <div className="text-center mb-6 md:mb-8 pt-2 md:pt-4 slide-up">
           <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white drop-shadow-2xl mb-2 md:mb-3 animate-float">
             🔵 JUTHAZONE BLUE 🔵
           </h1>
-          <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-white drop-shadow-lg font-semibold bg-white/20 backdrop-blur-sm inline-block px-4 py-2 md:px-6 md:py-2 rounded-full border border-white/40">
-            ระบบคำนวณราคาตามเวลาจริง | รายการทั้งหมด: {customers.length} | แสดง: {filteredCustomers.length}
+          <p className="text-sm sm:text-base md:text-lg text-white/90 font-semibold glass-light inline-block px-4 py-2 md:px-6 md:py-2 rounded-full">
+            ระบบคำนวณราคาตามเวลาจริง | รายการ: {customers.length} | แสดง: {filteredCustomers.length}
           </p>
         </div>
 
         {/* Room Filter */}
         {customers.length > 0 && (
-          <div className="bg-white/15 backdrop-blur-md border border-white/25 rounded-2xl shadow-xl p-4 mb-4 md:mb-6">
+          <div className="glass-light rounded-2xl shadow-xl p-4 mb-4 md:mb-6 slide-up-1">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-white font-semibold drop-shadow text-sm">🏠 ห้อง:</span>
               <button
@@ -150,10 +106,10 @@ function CustomerViewBlue({ customers }) {
               return (
                 <div
                   key={customer.id}
-                  className="relative overflow-hidden bg-gradient-to-br from-white via-blue-50 to-cyan-50 rounded-2xl md:rounded-3xl shadow-2xl p-4 md:p-6 border-2 border-blue-300/50 transform transition-all duration-300 active:scale-95 card-glow-blue"
+                  className="relative overflow-hidden bg-white/95 backdrop-blur-sm rounded-2xl md:rounded-3xl shadow-card p-4 md:p-6 border border-blue-200/60 transform transition-all duration-200 active:scale-[0.98] glow-blue hover:shadow-card-hover hover:border-blue-300 fade-in"
                 >
                   {/* Top accent bar */}
-                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-cyan-400 to-teal-500 shimmer-blue" />
+                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-cyan-400 to-teal-500 shimmer" />
 
                   {/* Customer Name */}
                   <div className="mb-3 md:mb-4">
@@ -184,7 +140,7 @@ function CustomerViewBlue({ customers }) {
                   </div>
 
                   {/* Current Cost (Pro-rated) - Enhanced */}
-                  <div className="mb-3 md:mb-4 cost-animate">
+                  <div className="mb-3 md:mb-4 cost-tick">
                     <div className="bg-gradient-to-r from-emerald-50 to-green-50 border border-emerald-300 rounded-2xl p-3 md:p-4 text-center shadow-sm">
                       <p className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider">💰 ราคาปัจจุบัน</p>
                       <p className="text-4xl sm:text-5xl md:text-6xl font-extrabold bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">
@@ -240,8 +196,8 @@ function CustomerViewBlue({ customers }) {
         )}
 
         {/* Auto-refresh indicator */}
-        <div className="mt-6 md:mt-8 text-center">
-          <p className="text-white text-sm sm:text-base drop-shadow-lg bg-white/15 backdrop-blur-sm inline-block px-4 py-2 md:px-6 md:py-3 rounded-full border border-white/30 font-semibold animate-pulse">
+        <div className="mt-6 md:mt-8 text-center slide-up-2">
+          <p className="text-white/90 text-sm sm:text-base font-semibold glass-light inline-block px-4 py-2 md:px-6 md:py-3 rounded-full">
             🔄 อัพเดทราคาตามเวลาจริง
           </p>
         </div>

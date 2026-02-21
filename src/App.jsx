@@ -1,16 +1,30 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import supabase from './firebase'
 import LoginPage from './components/LoginPage'
 import ZoneSelection from './components/ZoneSelection'
 import ProtectedRoute from './components/ProtectedRoute'
-import AdminDashboard from './components/AdminDashboard'
-import CustomerView from './components/CustomerView'
-import HistoryView from './components/HistoryView'
-import AnalyticsView from './components/AnalyticsView'
-import DailySummaryView from './components/DailySummaryView'
-import AppBlue from './AppBlue'
 import { logLogout, logActivity } from './utils/authUtils'
+
+// Lazy load heavy route components
+const AdminDashboard = lazy(() => import('./components/AdminDashboard'))
+const CustomerView = lazy(() => import('./components/CustomerView'))
+const HistoryView = lazy(() => import('./components/HistoryView'))
+const AnalyticsView = lazy(() => import('./components/AnalyticsView'))
+const DailySummaryView = lazy(() => import('./components/DailySummaryView'))
+const AppBlue = lazy(() => import('./AppBlue'))
+
+// Shared loading fallback
+const PageLoader = () => (
+  <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center">
+    <div className="text-center slide-up">
+      <div className="relative inline-block mb-6">
+        <div className="w-16 h-16 border-4 border-white/20 border-t-white rounded-full animate-spin" />
+      </div>
+      <p className="text-white/80 text-lg font-semibold">กำลังโหลด...</p>
+    </div>
+  </div>
+)
 
 function App() {
   const [customers, setCustomers] = useState([])
@@ -724,16 +738,12 @@ function App() {
   return (
     <BrowserRouter>
       {isLoading ? (
-        <div className="min-h-screen bg-gradient-to-br from-purple-600 via-pink-500 to-orange-500 flex items-center justify-center">
-          <div className="text-center">
-            <div className="text-6xl mb-4 animate-spin">⏳</div>
-            <p className="text-white text-xl font-bold">กำลังโหลด...</p>
-          </div>
-        </div>
+        <PageLoader />
       ) : (
-        <Routes>
-          {/* Zone Selection */}
-          <Route path="/" element={<ZoneSelection />} />
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            {/* Zone Selection */}
+            <Route path="/" element={<ZoneSelection />} />
           
           {/* Login */}
           <Route path="/login" element={<LoginPage onLogin={handleLogin} />} />
@@ -792,7 +802,8 @@ function App() {
             path="/blue/*"
             element={<AppBlue user={user} onLogout={handleLogout} />}
           />
-        </Routes>
+          </Routes>
+        </Suspense>
       )}
     </BrowserRouter>
   )

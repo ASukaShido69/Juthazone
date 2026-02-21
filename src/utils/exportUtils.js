@@ -298,8 +298,9 @@ export const exportToPDF = async (data, userName = 'Admin') => {
 }
 
 /**
- * Print Receipt for POS-58 Thermal Printer (58mm / ~48mm printable)
- * Uses hidden iframe approach — no blank pages, no infinite feed
+ * Print Receipt for POS-58 Thermal Printer
+ * Simple window.open approach — no iframe, no @page size
+ * Works reliably with thermal printers
  */
 export const printReceipt = async (customer, zone = 'red') => {
   if (!customer) {
@@ -309,7 +310,7 @@ export const printReceipt = async (customer, zone = 'red') => {
 
   try {
     const now = new Date()
-    const receiptNo = `RCP-${now.getTime().toString().slice(-8)}`
+    const receiptNo = 'RCP-' + now.getTime().toString().slice(-8)
 
     let startTime, endTime, durationText, costDisplay, rateInfo
 
@@ -320,9 +321,9 @@ export const printReceipt = async (customer, zone = 'red') => {
       const durationMins = customer.duration_minutes || Math.round(durationMs / 60000)
       const hours = Math.floor(durationMins / 60)
       const mins = Math.round(durationMins % 60)
-      durationText = hours > 0 ? `${hours} ชม. ${mins} นาที` : `${mins} นาที`
+      durationText = hours > 0 ? hours + ' ชม. ' + mins + ' นาที' : mins + ' นาที'
       costDisplay = (customer.final_cost || 0).toFixed(2)
-      rateInfo = `${customer.hourly_rate || 0} บาท/ชม.`
+      rateInfo = (customer.hourly_rate || 0) + ' บาท/ชม.'
     } else {
       startTime = customer.startTime ? new Date(customer.startTime) : (customer.start_time ? new Date(customer.start_time) : null)
       endTime = customer.expectedEndTime ? new Date(customer.expectedEndTime) : (customer.end_time ? new Date(customer.end_time) : null)
@@ -330,97 +331,93 @@ export const printReceipt = async (customer, zone = 'red') => {
       const durationMins = customer.duration_minutes || Math.round(durationMs / 60000)
       const hours = Math.floor(durationMins / 60)
       const mins = Math.round(durationMins % 60)
-      durationText = hours > 0 ? `${hours} ชม. ${mins} นาที` : `${mins} นาที`
+      durationText = hours > 0 ? hours + ' ชม. ' + mins + ' นาที' : mins + ' นาที'
       costDisplay = (customer.cost || customer.final_cost || 0).toFixed(2)
-      rateInfo = null
+      rateInfo = ''
     }
 
-    const startTimeStr = startTime ? startTime.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : '-'
-    const endTimeStr = endTime ? endTime.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : '-'
+    const fmtTime = (d) => d ? d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : '-'
     const dateStr = (startTime || now).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' })
     const noteTxt = customer.note && customer.note !== '-' ? customer.note : ''
     const zoneName = zone === 'blue' ? 'BLUE ZONE' : 'RED ZONE'
-    const zoneColor = zone === 'blue' ? '#1d4ed8' : '#dc2626'
+    const zColor = zone === 'blue' ? '#1d4ed8' : '#dc2626'
 
-    // ===== Build receipt HTML (pure inline styles — no flexbox, table-based) =====
-    const receiptHTML = `<!DOCTYPE html>
-<html><head><meta charset="UTF-8"><title>Receipt</title>
-<style>
-@page{margin:0!important;padding:0!important;size:48mm auto}
-*{margin:0;padding:0;box-sizing:border-box}
-html,body{width:48mm;margin:0;padding:0;overflow:hidden!important;background:#fff;color:#000}
-body{font-family:'Courier New',Courier,monospace;font-size:11px;line-height:1.3}
-.r{width:48mm;padding:2mm 1.5mm 0mm 1.5mm;overflow:hidden}
-.c{text-align:center}
-.b{font-weight:bold}
-.s{font-size:9px;color:#333}
-table{width:100%;border-collapse:collapse}
-td{padding:1px 0;vertical-align:top;font-size:11px}
-td.lbl{font-weight:bold;white-space:nowrap;padding-right:4px}
-td.val{text-align:right}
-.dash{border:none;border-top:1px dashed #000;margin:3px 0}
-.dbl{border:none;border-top:2px solid #000;margin:4px 0}
-.total{border:2px solid #000;border-radius:3px;padding:3px 4px;margin:4px 0;text-align:center}
-.total .amt{font-size:18px;font-weight:bold}
-.badge{display:inline-block;background:${zoneColor};color:#fff;padding:1px 8px;border-radius:3px;font-size:9px;font-weight:bold;letter-spacing:1px}
-</style>
-</head><body>
-<div class="r">
-<div class="c"><div style="font-size:15px;font-weight:bold">JUTHAZONE</div><div class="badge">${zoneName}</div><div class="s">ระบบจัดการเวลาเล่น</div></div>
-<hr class="dbl">
-<table>
-<tr><td class="lbl">เลขที่:</td><td class="val">${receiptNo}</td></tr>
-<tr><td class="lbl">วันที่:</td><td class="val">${dateStr}</td></tr>
-<tr><td class="lbl">พิมพ์:</td><td class="val">${now.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})}</td></tr>
-</table>
-<hr class="dash">
-<div class="c b" style="font-size:12px;margin:2px 0">ข้อมูลลูกค้า</div>
-<table>
-<tr><td class="lbl">ชื่อ:</td><td class="val">${customer.name||'-'}</td></tr>
-<tr><td class="lbl">ห้อง:</td><td class="val">${customer.room||'-'}</td></tr>
-${noteTxt?`<tr><td class="lbl">Note:</td><td class="val">${noteTxt.substring(0,16)}</td></tr>`:''}
-</table>
-<hr class="dash">
-<div class="c b" style="font-size:12px;margin:2px 0">รายละเอียดบริการ</div>
-<table>
-<tr><td class="lbl">เริ่ม:</td><td class="val">${startTimeStr}</td></tr>
-<tr><td class="lbl">สิ้นสุด:</td><td class="val">${endTimeStr}</td></tr>
-<tr><td class="lbl">เวลา:</td><td class="val">${durationText}</td></tr>
-${rateInfo?`<tr><td class="lbl">อัตรา:</td><td class="val">${rateInfo}</td></tr>`:''}
-</table>
-<hr class="dbl">
-<div class="total"><div class="s">ยอดรวมทั้งสิ้น</div><div class="amt">฿${costDisplay}</div></div>
-<hr class="dash">
-<div class="c s" style="padding:2px 0 0">ขอบคุณที่ใช้บริการ<br><b>JUTHAZONE</b></div>
-</div>
-</body></html>`
+    // Build plain text-style receipt — all px units, no mm, no @page size
+    const lines = []
+    lines.push('<div style="text-align:center;font-size:16px;font-weight:bold">JUTHAZONE</div>')
+    lines.push('<div style="text-align:center"><span style="background:' + zColor + ';color:#fff;padding:1px 8px;border-radius:3px;font-size:10px;font-weight:bold">' + zoneName + '</span></div>')
+    lines.push('<div style="text-align:center;font-size:9px;color:#555">ระบบจัดการเวลาเล่น</div>')
+    lines.push('<div style="border-top:2px solid #000;margin:4px 0"></div>')
+    lines.push('<div><b>เลขที่:</b> ' + receiptNo + '</div>')
+    lines.push('<div><b>วันที่:</b> ' + dateStr + '</div>')
+    lines.push('<div><b>พิมพ์:</b> ' + fmtTime(now) + '</div>')
+    lines.push('<div style="border-top:1px dashed #000;margin:3px 0"></div>')
+    lines.push('<div style="text-align:center;font-weight:bold;font-size:12px">ข้อมูลลูกค้า</div>')
+    lines.push('<div><b>ชื่อ:</b> ' + (customer.name || '-') + '</div>')
+    lines.push('<div><b>ห้อง:</b> ' + (customer.room || '-') + '</div>')
+    if (noteTxt) lines.push('<div><b>Note:</b> ' + noteTxt.substring(0, 16) + '</div>')
+    lines.push('<div style="border-top:1px dashed #000;margin:3px 0"></div>')
+    lines.push('<div style="text-align:center;font-weight:bold;font-size:12px">รายละเอียดบริการ</div>')
+    lines.push('<div><b>เริ่ม:</b> ' + fmtTime(startTime) + '</div>')
+    lines.push('<div><b>สิ้นสุด:</b> ' + fmtTime(endTime) + '</div>')
+    lines.push('<div><b>เวลา:</b> ' + durationText + '</div>')
+    if (rateInfo) lines.push('<div><b>อัตรา:</b> ' + rateInfo + '</div>')
+    lines.push('<div style="border-top:2px solid #000;margin:4px 0"></div>')
+    lines.push('<div style="border:2px solid #000;border-radius:4px;padding:4px;margin:4px 0;text-align:center"><div style="font-size:9px;color:#333">ยอดรวมทั้งสิ้น</div><div style="font-size:20px;font-weight:bold">฿' + costDisplay + '</div></div>')
+    lines.push('<div style="border-top:1px dashed #000;margin:3px 0"></div>')
+    lines.push('<div style="text-align:center;font-size:9px;color:#555">ขอบคุณที่ใช้บริการ<br><b>JUTHAZONE</b></div>')
 
-    // ===== Print via hidden iframe (prevents blank pages & infinite feed) =====
-    // Remove any leftover print iframe
-    const oldFrame = document.getElementById('__receipt_frame')
-    if (oldFrame) oldFrame.remove()
+    const bodyContent = lines.join('\n')
 
-    const iframe = document.createElement('iframe')
-    iframe.id = '__receipt_frame'
-    iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:0;height:0;border:none;visibility:hidden'
-    document.body.appendChild(iframe)
+    const html = [
+      '<!DOCTYPE html>',
+      '<html><head><meta charset="UTF-8"><title>Receipt</title>',
+      '<style>',
+      '@page { margin: 0 }',
+      '@media print { html, body { margin: 0; padding: 0; } }',
+      'html, body { margin: 0; padding: 0; width: 220px; background: #fff; }',
+      'body { font-family: monospace; font-size: 11px; line-height: 1.3; color: #000; width: 220px; padding: 4px 6px; }',
+      '</style>',
+      '</head><body>',
+      bodyContent,
+      '</body></html>'
+    ].join('\n')
 
-    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document
-    iframeDoc.open()
-    iframeDoc.write(receiptHTML)
-    iframeDoc.close()
+    // Open popup window — unique name each time to avoid stale cache
+    const winName = 'RCT_' + Date.now()
+    const w = window.open('', winName, 'width=260,height=500,scrollbars=no,menubar=no,toolbar=no,location=no')
 
-    // Wait for content to render, then print exactly once
-    setTimeout(() => {
+    if (!w) {
+      alert('❌ ป๊อปอัพถูกบล็อก กรุณาอนุญาต Popup แล้วลองใหม่')
+      return
+    }
+
+    w.document.open()
+    w.document.write(html)
+    w.document.close()
+
+    // Wait for content to render then print ONCE and close
+    const doPrint = () => {
       try {
-        iframe.contentWindow.focus()
-        iframe.contentWindow.print()
+        w.focus()
+        w.print()
       } catch (e) {
-        console.error('iframe print error:', e)
+        console.error('Print failed:', e)
       }
-      // Cleanup after printing
-      setTimeout(() => { iframe.remove() }, 3000)
-    }, 400)
+      // Close the window after a small delay
+      setTimeout(() => {
+        try { w.close() } catch (e) { /* ignore */ }
+      }, 1500)
+    }
+
+    // Use onload if possible, fallback to timeout
+    if (w.document.readyState === 'complete') {
+      setTimeout(doPrint, 300)
+    } else {
+      w.onload = () => setTimeout(doPrint, 300)
+      // Safety fallback
+      setTimeout(doPrint, 1500)
+    }
 
   } catch (error) {
     console.error('Print receipt error:', error)

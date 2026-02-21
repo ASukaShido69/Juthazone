@@ -52,35 +52,18 @@ function LoginPage({ onLogin }) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-600 via-pink-500 to-orange-500 animate-gradient flex items-center justify-center p-4">
-      <style>{`
-        @keyframes gradient {
-          0%, 100% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-        }
-        .animate-gradient {
-          background-size: 200% 200%;
-          animation: gradient 15s ease infinite;
-        }
-        @keyframes float {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-20px); }
-        }
-        .animate-float {
-          animation: float 3s ease-in-out infinite;
-        }
-      `}</style>
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-800 to-gray-900 flex items-center justify-center p-4">
 
       <div className="w-full max-w-md">
         {/* Logo */}
-        <div className="text-center mb-8 animate-float">
+        <div className="text-center mb-8 animate-float slide-up">
           <h1 className="text-6xl mb-3">🎮</h1>
           <h2 className="text-5xl font-bold text-white drop-shadow-2xl mb-2">JUTHAZONE</h2>
-          <p className="text-white/90 text-lg drop-shadow-lg font-semibold">ระบบจัดการเวลาเล่น</p>
+          <p className="text-white/60 text-lg font-semibold">ระบบจัดการเวลาเล่น</p>
         </div>
 
         {/* Login Card */}
-        <div className="bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl p-8 border-4 border-white/50">
+        <div className="bg-white/95 backdrop-blur-sm rounded-3xl shadow-card p-8 border border-white/50 slide-up-1">
           <h3 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-6 text-center">
             🔐 เข้าสู่ระบบ
           </h3>
@@ -201,12 +184,12 @@ function LoginPage({ onLogin }) {
                 <button
                   type="submit"
                   disabled={loading || !username || !password}
-                  className={`w-full py-3 px-6 rounded-xl font-bold text-white text-lg transform transition-all duration-300 ${
+                  className={`w-full py-3 px-6 rounded-xl font-bold text-white text-lg transform transition-all duration-200 ${
                     loading || !username || !password
                       ? 'bg-gray-400 cursor-not-allowed'
                       : selectedZone === 'red'
-                      ? 'bg-gradient-to-r from-red-600 to-red-500 hover:shadow-lg hover:scale-105 active:scale-95'
-                      : 'bg-gradient-to-r from-blue-600 to-blue-500 hover:shadow-lg hover:scale-105 active:scale-95'
+                      ? 'bg-gradient-to-r from-red-600 to-red-500 hover:shadow-glow-red hover:scale-[1.02] active:scale-[0.98]'
+                      : 'bg-gradient-to-r from-blue-600 to-blue-500 hover:shadow-glow-blue hover:scale-[1.02] active:scale-[0.98]'
                   }`}
                 >
                   {loading ? '⏳ กำลังเข้าสู่ระบบ...' : '🚀 เข้าสู่ระบบ'}
@@ -237,7 +220,7 @@ function LoginPage({ onLogin }) {
         </div>
 
         {/* Footer */}
-        <div className="text-center mt-6 text-white/90 font-semibold drop-shadow-lg">
+        <div className="text-center mt-6 text-white/50 font-semibold">
           <p>© 2026 Juthazone - ระบบจัดการเวลาเล่น</p>
         </div>
       </div>
