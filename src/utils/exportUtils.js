@@ -298,9 +298,8 @@ export const exportToPDF = async (data, userName = 'Admin') => {
 }
 
 /**
- * Print Receipt for POS-58 Thermal Printer (58mm width)
- * Supports both Red Zone (fixed time) and Blue Zone (pro-rated)
- * Auto-cut support, no blank white space at bottom
+ * Print Receipt for POS-58 Thermal Printer (58mm / ~48mm printable)
+ * Uses hidden iframe approach — no blank pages, no infinite feed
  */
 export const printReceipt = async (customer, zone = 'red') => {
   if (!customer) {
@@ -312,7 +311,6 @@ export const printReceipt = async (customer, zone = 'red') => {
     const now = new Date()
     const receiptNo = `RCP-${now.getTime().toString().slice(-8)}`
 
-    // Calculate duration and cost based on zone type
     let startTime, endTime, durationText, costDisplay, rateInfo
 
     if (zone === 'blue') {
@@ -344,90 +342,85 @@ export const printReceipt = async (customer, zone = 'red') => {
     const zoneName = zone === 'blue' ? 'BLUE ZONE' : 'RED ZONE'
     const zoneColor = zone === 'blue' ? '#1d4ed8' : '#dc2626'
 
+    // ===== Build receipt HTML (pure inline styles — no flexbox, table-based) =====
     const receiptHTML = `<!DOCTYPE html>
 <html><head><meta charset="UTF-8"><title>Receipt</title>
 <style>
-  @page { size: 58mm auto; margin: 0 !important; padding: 0 !important; }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body {
-    width: 58mm; margin: 0; padding: 0;
-    font-family: 'Courier New', 'Lucida Console', monospace;
-    font-size: 11px; line-height: 1.4; color: #000; background: #fff;
-  }
-  .receipt { width: 58mm; padding: 3mm 2mm 1mm 2mm; }
-  .center { text-align: center; }
-  .bold { font-weight: bold; }
-  .big { font-size: 16px; font-weight: bold; }
-  .med { font-size: 13px; font-weight: bold; }
-  .small { font-size: 9px; color: #555; }
-  .line { border-top: 1px dashed #000; margin: 3px 0; }
-  .dbl-line { border-top: 2px solid #000; margin: 4px 0; }
-  .row { display: flex; justify-content: space-between; padding: 1px 0; }
-  .row-label { font-weight: bold; }
-  .zone-badge {
-    display: inline-block; background: ${zoneColor}; color: #fff;
-    padding: 2px 10px; border-radius: 3px; font-size: 10px; font-weight: bold;
-    letter-spacing: 1px; margin: 3px 0;
-  }
-  .total-box {
-    border: 2px solid #000; border-radius: 4px; padding: 4px 6px; margin: 4px 0;
-    text-align: center;
-  }
-  .total-amount { font-size: 20px; font-weight: bold; }
-  .cut-line { border-top: 1px dashed #aaa; margin-top: 6px; }
-  @media print { html, body { width: 58mm; } }
+@page{margin:0!important;padding:0!important;size:48mm auto}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:48mm;margin:0;padding:0;overflow:hidden!important;background:#fff;color:#000}
+body{font-family:'Courier New',Courier,monospace;font-size:11px;line-height:1.3}
+.r{width:48mm;padding:2mm 1.5mm 0mm 1.5mm;overflow:hidden}
+.c{text-align:center}
+.b{font-weight:bold}
+.s{font-size:9px;color:#333}
+table{width:100%;border-collapse:collapse}
+td{padding:1px 0;vertical-align:top;font-size:11px}
+td.lbl{font-weight:bold;white-space:nowrap;padding-right:4px}
+td.val{text-align:right}
+.dash{border:none;border-top:1px dashed #000;margin:3px 0}
+.dbl{border:none;border-top:2px solid #000;margin:4px 0}
+.total{border:2px solid #000;border-radius:3px;padding:3px 4px;margin:4px 0;text-align:center}
+.total .amt{font-size:18px;font-weight:bold}
+.badge{display:inline-block;background:${zoneColor};color:#fff;padding:1px 8px;border-radius:3px;font-size:9px;font-weight:bold;letter-spacing:1px}
 </style>
 </head><body>
-<div class="receipt">
-  <div class="center">
-    <div class="big">JUTHAZONE</div>
-    <div class="zone-badge">${zoneName}</div>
-    <div class="small">ระบบจัดการเวลาเล่น</div>
-  </div>
-  <div class="dbl-line"></div>
-  <div class="row"><span class="row-label">เลขที่:</span><span>${receiptNo}</span></div>
-  <div class="row"><span class="row-label">วันที่:</span><span>${dateStr}</span></div>
-  <div class="row"><span class="row-label">เวลาพิมพ์:</span><span>${now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}</span></div>
-  <div class="line"></div>
-  <div class="center med" style="margin:3px 0">ข้อมูลลูกค้า</div>
-  <div class="row"><span class="row-label">ชื่อ:</span><span>${customer.name || '-'}</span></div>
-  <div class="row"><span class="row-label">ห้อง:</span><span>${customer.room || '-'}</span></div>
-  ${noteTxt ? `<div class="row"><span class="row-label">Note:</span><span>${noteTxt.substring(0, 20)}</span></div>` : ''}
-  <div class="line"></div>
-  <div class="center med" style="margin:3px 0">รายละเอียดบริการ</div>
-  <div class="row"><span class="row-label">เริ่ม:</span><span>${startTimeStr}</span></div>
-  <div class="row"><span class="row-label">สิ้นสุด:</span><span>${endTimeStr}</span></div>
-  <div class="row"><span class="row-label">ระยะเวลา:</span><span>${durationText}</span></div>
-  ${rateInfo ? `<div class="row"><span class="row-label">อัตรา:</span><span>${rateInfo}</span></div>` : ''}
-  <div class="dbl-line"></div>
-  <div class="total-box">
-    <div class="small">ยอดรวมทั้งสิ้น</div>
-    <div class="total-amount">฿${costDisplay}</div>
-  </div>
-  <div class="line"></div>
-  <div class="center small" style="margin-top:4px">
-    <div>ขอบคุณที่ใช้บริการ</div>
-    <div style="font-weight:bold">JUTHAZONE</div>
-    <div style="margin-top:2px">${dateStr}</div>
-  </div>
-  <div class="cut-line"></div>
+<div class="r">
+<div class="c"><div style="font-size:15px;font-weight:bold">JUTHAZONE</div><div class="badge">${zoneName}</div><div class="s">ระบบจัดการเวลาเล่น</div></div>
+<hr class="dbl">
+<table>
+<tr><td class="lbl">เลขที่:</td><td class="val">${receiptNo}</td></tr>
+<tr><td class="lbl">วันที่:</td><td class="val">${dateStr}</td></tr>
+<tr><td class="lbl">พิมพ์:</td><td class="val">${now.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})}</td></tr>
+</table>
+<hr class="dash">
+<div class="c b" style="font-size:12px;margin:2px 0">ข้อมูลลูกค้า</div>
+<table>
+<tr><td class="lbl">ชื่อ:</td><td class="val">${customer.name||'-'}</td></tr>
+<tr><td class="lbl">ห้อง:</td><td class="val">${customer.room||'-'}</td></tr>
+${noteTxt?`<tr><td class="lbl">Note:</td><td class="val">${noteTxt.substring(0,16)}</td></tr>`:''}
+</table>
+<hr class="dash">
+<div class="c b" style="font-size:12px;margin:2px 0">รายละเอียดบริการ</div>
+<table>
+<tr><td class="lbl">เริ่ม:</td><td class="val">${startTimeStr}</td></tr>
+<tr><td class="lbl">สิ้นสุด:</td><td class="val">${endTimeStr}</td></tr>
+<tr><td class="lbl">เวลา:</td><td class="val">${durationText}</td></tr>
+${rateInfo?`<tr><td class="lbl">อัตรา:</td><td class="val">${rateInfo}</td></tr>`:''}
+</table>
+<hr class="dbl">
+<div class="total"><div class="s">ยอดรวมทั้งสิ้น</div><div class="amt">฿${costDisplay}</div></div>
+<hr class="dash">
+<div class="c s" style="padding:2px 0 0">ขอบคุณที่ใช้บริการ<br><b>JUTHAZONE</b></div>
 </div>
-<script>
-  window.onload = function() {
-    setTimeout(function() { window.print(); }, 200);
-    window.onafterprint = function() { window.close(); };
-    setTimeout(function() { window.close(); }, 8000);
-  };
-</script>
 </body></html>`
 
-    const printWindow = window.open('', 'RECEIPT', 'width=250,height=600')
-    if (!printWindow) {
-      alert('❌ ไม่สามารถเปิดหน้าต่างพิมพ์ได้ กรุณาอนุญาต Popup')
-      return
-    }
-    printWindow.document.write(receiptHTML)
-    printWindow.document.close()
+    // ===== Print via hidden iframe (prevents blank pages & infinite feed) =====
+    // Remove any leftover print iframe
+    const oldFrame = document.getElementById('__receipt_frame')
+    if (oldFrame) oldFrame.remove()
+
+    const iframe = document.createElement('iframe')
+    iframe.id = '__receipt_frame'
+    iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:0;height:0;border:none;visibility:hidden'
+    document.body.appendChild(iframe)
+
+    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document
+    iframeDoc.open()
+    iframeDoc.write(receiptHTML)
+    iframeDoc.close()
+
+    // Wait for content to render, then print exactly once
+    setTimeout(() => {
+      try {
+        iframe.contentWindow.focus()
+        iframe.contentWindow.print()
+      } catch (e) {
+        console.error('iframe print error:', e)
+      }
+      // Cleanup after printing
+      setTimeout(() => { iframe.remove() }, 3000)
+    }, 400)
 
   } catch (error) {
     console.error('Print receipt error:', error)
