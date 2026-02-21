@@ -340,7 +340,6 @@ export const printReceipt = async (customer, zone = 'red') => {
     const startTimeStr = startTime ? startTime.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : '-'
     const endTimeStr = endTime ? endTime.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : '-'
     const dateStr = (startTime || now).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' })
-    const isPaid = customer.isPaid ?? customer.is_paid ?? false
     const noteTxt = customer.note && customer.note !== '-' ? customer.note : ''
     const zoneName = zone === 'blue' ? 'BLUE ZONE' : 'RED ZONE'
     const zoneColor = zone === 'blue' ? '#1d4ed8' : '#dc2626'
@@ -375,11 +374,6 @@ export const printReceipt = async (customer, zone = 'red') => {
     text-align: center;
   }
   .total-amount { font-size: 20px; font-weight: bold; }
-  .paid-badge {
-    display: inline-block; padding: 2px 12px; border-radius: 3px;
-    font-weight: bold; font-size: 11px; margin: 3px 0;
-    ${isPaid ? 'background: #000; color: #fff;' : 'border: 2px solid #000; color: #000;'}
-  }
   .cut-line { border-top: 1px dashed #aaa; margin-top: 6px; }
   @media print { html, body { width: 58mm; } }
 </style>
@@ -409,9 +403,6 @@ export const printReceipt = async (customer, zone = 'red') => {
   <div class="total-box">
     <div class="small">ยอดรวมทั้งสิ้น</div>
     <div class="total-amount">฿${costDisplay}</div>
-  </div>
-  <div class="center">
-    <div class="paid-badge">${isPaid ? '■ ชำระเงินแล้ว' : '□ ยังไม่ชำระเงิน'}</div>
   </div>
   <div class="line"></div>
   <div class="center small" style="margin-top:4px">
@@ -459,8 +450,6 @@ export const printHistoryReceipt = (record, zone = 'red') => {
     duration_minutes: record.duration_minutes,
     hourly_rate: record.hourly_rate,
     cost: record.final_cost,
-    final_cost: record.final_cost,
-    is_paid: record.is_paid,
-    isPaid: record.is_paid
+    final_cost: record.final_cost
   }, zone)
 }
