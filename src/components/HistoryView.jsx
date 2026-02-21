@@ -416,30 +416,10 @@ function HistoryView() {
   const stats = getTotalStats()
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-700 via-pink-600 to-orange-500 animate-gradient p-3 md:p-6 lg:p-8">
-      <style>{`
-        @keyframes gradient {
-          0%, 100% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-        }
-        .animate-gradient {
-          background-size: 200% 200%;
-          animation: gradient 15s ease infinite;
-        }
-        @keyframes stat-in {
-          from { opacity: 0; transform: translateY(15px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .stat-animate { animation: stat-in 0.4s ease-out both; }
-        @keyframes table-row-in {
-          from { opacity: 0; transform: translateX(-8px); }
-          to { opacity: 1; transform: translateX(0); }
-        }
-        .table-row-animate { animation: table-row-in 0.25s ease-out; }
-      `}</style>
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-800 to-gray-900 p-3 md:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-center mb-6 md:mb-8 gap-4 animate-float">
+        <div className="flex flex-col sm:flex-row justify-between items-center mb-6 md:mb-8 gap-4 slide-up">
           <div className="text-center sm:text-left">
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white drop-shadow-2xl mb-2">
               📊 ประวัติการใช้งาน
@@ -457,7 +437,7 @@ function HistoryView() {
             </button>
             <Link
               to="/admin"
-              className="bg-white/90 hover:bg-white text-purple-600 font-bold py-2 px-6 rounded-xl shadow-lg hover:shadow-2xl transform hover:scale-105 active:scale-95 transition-all duration-300"
+              className="bg-white/10 hover:bg-white/20 text-white font-bold py-2 px-6 rounded-xl shadow-lg hover:shadow-glow-red transform hover:scale-105 active:scale-95 transition-all duration-300 border border-white/20"
             >
               ← กลับแอดมิน
             </Link>
@@ -466,15 +446,15 @@ function HistoryView() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6">
-          <div className="stat-animate bg-white/95 backdrop-blur-sm rounded-2xl p-4 md:p-5 shadow-xl border border-purple-200 hover:shadow-2xl transition-shadow" style={{animationDelay: '0s'}}>
+          <div className="slide-up bg-white/95 backdrop-blur-sm rounded-2xl p-4 md:p-5 shadow-card border border-red-200/30 hover:shadow-glow-red transition-shadow" style={{animationDelay: '0s'}}>
             <div className="flex items-center justify-between mb-1">
               <span className="text-2xl">📊</span>
-              <span className="text-[10px] font-bold text-purple-400 uppercase tracking-wider">ทั้งหมด</span>
+              <span className="text-[10px] font-bold text-red-400 uppercase tracking-wider">ทั้งหมด</span>
             </div>
-            <div className="text-3xl md:text-4xl font-extrabold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">{stats.count}</div>
+            <div className="text-3xl md:text-4xl font-extrabold bg-gradient-to-r from-red-600 to-rose-600 bg-clip-text text-transparent">{stats.count}</div>
             <div className="text-xs text-gray-500 font-medium mt-1">รายการ</div>
           </div>
-          <div className="stat-animate bg-white/95 backdrop-blur-sm rounded-2xl p-4 md:p-5 shadow-xl border border-green-200 hover:shadow-2xl transition-shadow" style={{animationDelay: '0.1s'}}>
+          <div className="slide-up bg-white/95 backdrop-blur-sm rounded-2xl p-4 md:p-5 shadow-card border border-green-200/30 hover:shadow-card-hover transition-shadow" style={{animationDelay: '0.1s'}}>
             <div className="flex items-center justify-between mb-1">
               <span className="text-2xl">💰</span>
               <span className="text-[10px] font-bold text-green-400 uppercase tracking-wider">รายได้</span>
@@ -482,7 +462,7 @@ function HistoryView() {
             <div className="text-2xl md:text-3xl font-extrabold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">฿{stats.revenue.toFixed(0)}</div>
             <div className="text-xs text-gray-500 font-medium mt-1">บาท</div>
           </div>
-          <div className="stat-animate bg-white/95 backdrop-blur-sm rounded-2xl p-4 md:p-5 shadow-xl border border-blue-200 hover:shadow-2xl transition-shadow" style={{animationDelay: '0.2s'}}>
+          <div className="slide-up bg-white/95 backdrop-blur-sm rounded-2xl p-4 md:p-5 shadow-card border border-blue-200/30 hover:shadow-card-hover transition-shadow" style={{animationDelay: '0.2s'}}>
             <div className="flex items-center justify-between mb-1">
               <span className="text-2xl">⏱️</span>
               <span className="text-[10px] font-bold text-blue-400 uppercase tracking-wider">เวลารวม</span>
@@ -490,7 +470,7 @@ function HistoryView() {
             <div className="text-2xl md:text-3xl font-extrabold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">{formatDuration(stats.duration)}</div>
             <div className="text-xs text-gray-500 font-medium mt-1">ชั่วโมง</div>
           </div>
-          <div className="stat-animate bg-white/95 backdrop-blur-sm rounded-2xl p-4 md:p-5 shadow-xl border border-orange-200 hover:shadow-2xl transition-shadow" style={{animationDelay: '0.3s'}}>
+          <div className="slide-up bg-white/95 backdrop-blur-sm rounded-2xl p-4 md:p-5 shadow-card border border-orange-200/30 hover:shadow-card-hover transition-shadow" style={{animationDelay: '0.3s'}}>
             <div className="flex items-center justify-between mb-1">
               <span className="text-2xl">✅</span>
               <span className="text-[10px] font-bold text-orange-400 uppercase tracking-wider">จ่ายแล้ว</span>
@@ -501,8 +481,8 @@ function HistoryView() {
         </div>
 
         {/* Filters */}
-        <div className="bg-white/95 backdrop-blur-sm rounded-xl md:rounded-2xl shadow-2xl p-4 md:p-6 mb-6 border-3 border-pink-300 transform hover:scale-[1.01] transition-all duration-300">
-          <h2 className="text-lg md:text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-4">🔍 ค้นหาและกรอง</h2>
+        <div className="bg-white/95 backdrop-blur-sm rounded-xl md:rounded-2xl shadow-card p-4 md:p-6 mb-6 border border-red-200/30 transform hover:scale-[1.01] transition-all duration-300">
+          <h2 className="text-lg md:text-2xl font-bold bg-gradient-to-r from-red-600 to-rose-500 bg-clip-text text-transparent mb-4">🔍 ค้นหาและกรอง</h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
             <div>
@@ -581,9 +561,9 @@ function HistoryView() {
         </div>
 
         {/* History Table */}
-        <div className="bg-white/95 backdrop-blur-sm rounded-xl md:rounded-2xl shadow-2xl p-4 md:p-6 border-3 border-orange-300">
+        <div className="bg-white/95 backdrop-blur-sm rounded-xl md:rounded-2xl shadow-card p-4 md:p-6 border border-red-200/30">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
-            <h2 className="text-lg md:text-2xl font-bold bg-gradient-to-r from-purple-600 to-orange-600 bg-clip-text text-transparent">
+            <h2 className="text-lg md:text-2xl font-bold bg-gradient-to-r from-red-500 to-rose-500 bg-clip-text text-transparent">
               📋 รายการทั้งหมด ({filteredHistory.length})
             </h2>
             <div className="flex flex-wrap gap-2">
@@ -617,7 +597,7 @@ function HistoryView() {
             <div className="overflow-x-auto -mx-4 md:mx-0">
               <table className="min-w-full">
                 <thead>
-                  <tr className="bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 text-white shadow-lg">
+                  <tr className="bg-gradient-to-r from-red-600 via-rose-600 to-red-700 text-white shadow-lg">
                     <th className="px-2 md:px-4 py-2.5 md:py-3.5 text-left text-xs md:text-sm font-bold tracking-wide">ชื่อ</th>
                     <th className="px-2 md:px-4 py-2.5 md:py-3.5 text-left text-xs md:text-sm font-bold tracking-wide">ห้อง</th>
                     <th className="px-2 md:px-4 py-2.5 md:py-3.5 text-left text-xs md:text-sm font-bold tracking-wide hidden sm:table-cell">👥 สร้าง</th>
@@ -637,9 +617,9 @@ function HistoryView() {
                   {filteredHistory.map((record, index) => (
                     <tr
                       key={record.id}
-                      className={`table-row-animate border-b border-gray-100 ${
-                        index % 2 === 0 ? 'bg-purple-50/50' : 'bg-white'
-                      } hover:bg-purple-100/70 transition-all duration-200`}
+                      className={`fade-in border-b border-gray-100 ${
+                        index % 2 === 0 ? 'bg-red-50/50' : 'bg-white'
+                      } hover:bg-red-100/70 transition-all duration-200`}
                       style={{ animationDelay: `${index * 0.03}s` }}
                     >
                       <td className="px-2 md:px-4 py-2 md:py-3 font-semibold text-xs md:text-sm">
@@ -776,10 +756,10 @@ function HistoryView() {
         {/* Shift Management Modal */}
         {showShiftModal && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 overflow-y-auto">
-            <div className="bg-white rounded-2xl shadow-2xl p-6 md:p-8 max-w-6xl w-full border-4 border-blue-500 my-auto max-h-[90vh] overflow-y-auto">
+            <div className="bg-white rounded-2xl shadow-2xl p-6 md:p-8 max-w-6xl w-full border-4 border-red-500 my-auto max-h-[90vh] overflow-y-auto modal-in">
               {/* Header */}
-              <div className="flex justify-between items-center mb-6 pb-4 border-b-2 border-blue-300">
-                <h2 className="text-2xl md:text-3xl font-bold text-blue-700">🔄 สถิติและจัดการตามกะ</h2>
+              <div className="flex justify-between items-center mb-6 pb-4 border-b-2 border-red-300">
+                <h2 className="text-2xl md:text-3xl font-bold text-red-700">🔄 สถิติและจัดการตามกะ</h2>
                 <button
                   onClick={() => setShowShiftModal(false)}
                   className="text-2xl text-gray-500 hover:text-gray-700 font-bold"
@@ -910,10 +890,10 @@ function HistoryView() {
         {/* Edit Modal Dialog */}
         {showEditModal && editingId && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 overflow-y-auto">
-            <div className="bg-white rounded-2xl shadow-2xl p-6 md:p-8 max-w-4xl w-full border-4 border-purple-500 my-auto">
+            <div className="bg-white rounded-2xl shadow-2xl p-6 md:p-8 max-w-4xl w-full border-4 border-red-500 my-auto modal-in">
               {/* Header */}
-              <div className="flex justify-between items-center mb-6 pb-4 border-b-2 border-purple-300">
-                <h2 className="text-2xl md:text-3xl font-bold text-purple-700">✏️ แก้ไขข้อมูลประวัติ</h2>
+              <div className="flex justify-between items-center mb-6 pb-4 border-b-2 border-red-300">
+                <h2 className="text-2xl md:text-3xl font-bold text-red-700">✏️ แก้ไขข้อมูลประวัติ</h2>
                 <button
                   onClick={() => {
                     setShowEditModal(false)
@@ -1157,7 +1137,7 @@ function HistoryView() {
               </div>
 
               {/* Buttons */}
-              <div className="flex gap-3 justify-center pt-6 border-t-2 border-purple-300">
+              <div className="flex gap-3 justify-center pt-6 border-t-2 border-red-300">
                 <button
                   onClick={() => updateHistoryItem(editingId)}
                   disabled={rowStatus[editingId]?.saving}

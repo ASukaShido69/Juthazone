@@ -293,8 +293,8 @@ function HistoryViewBlue() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-600 via-cyan-500 to-teal-500 flex items-center justify-center">
-        <div className="text-center">
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-800 to-gray-900 flex items-center justify-center">
+        <div className="text-center fade-in">
           <div className="text-6xl mb-4 animate-spin">⏳</div>
           <p className="text-white text-xl font-bold">กำลังโหลดประวัติ...</p>
         </div>
@@ -303,22 +303,10 @@ function HistoryViewBlue() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-700 via-cyan-600 to-teal-500 p-4 md:p-6 lg:p-8">
-      <style>{`
-        @keyframes stat-in {
-          from { opacity: 0; transform: translateY(15px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .stat-animate { animation: stat-in 0.4s ease-out both; }
-        @keyframes table-row-in {
-          from { opacity: 0; transform: translateX(-8px); }
-          to { opacity: 1; transform: translateX(0); }
-        }
-        .table-row-animate { animation: table-row-in 0.25s ease-out; }
-      `}</style>
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-800 to-gray-900 p-4 md:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-6">
+        <div className="text-center mb-6 slide-up">
           <h1 className="text-4xl md:text-5xl font-bold text-white drop-shadow-2xl mb-2">
             📊 ประวัติการใช้งาน - Blue Zone
           </h1>
@@ -328,13 +316,13 @@ function HistoryViewBlue() {
           <div className="mt-4 flex flex-wrap justify-center gap-3">
             <Link
               to="/blue/admin"
-              className="inline-block bg-white/90 hover:bg-white text-blue-600 font-bold py-2 px-6 rounded-xl shadow-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-300"
+              className="inline-block bg-white/10 hover:bg-white/20 text-white font-bold py-2 px-6 rounded-xl shadow-lg hover:shadow-glow-blue transform hover:scale-105 transition-all duration-300 border border-white/20"
             >
               ← กลับหน้าแอดมิน
             </Link>
             <Link
               to="/"
-              className="inline-block bg-white/90 hover:bg-white text-purple-600 font-bold py-2 px-6 rounded-xl shadow-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-300"
+              className="inline-block bg-white/10 hover:bg-white/20 text-white font-bold py-2 px-6 rounded-xl shadow-lg hover:shadow-glow-blue transform hover:scale-105 transition-all duration-300 border border-white/20"
             >
               🏠 กลับหน้าหลัก
             </Link>
@@ -342,7 +330,7 @@ function HistoryViewBlue() {
         </div>
 
         {/* Filters */}
-        <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl p-4 md:p-6 mb-6 border-4 border-blue-300">
+        <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-card p-4 md:p-6 mb-6 border border-blue-200/30 slide-up-1">
           <h2 className="text-xl md:text-2xl font-bold text-blue-700 mb-4">🔍 ค้นหาและกรอง</h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -428,7 +416,7 @@ function HistoryViewBlue() {
 
         {/* Summary */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="stat-animate bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl p-4 border border-blue-200 hover:shadow-2xl transition-shadow" style={{animationDelay: '0s'}}>
+          <div className="slide-up bg-white/95 backdrop-blur-sm rounded-2xl shadow-card p-4 border border-blue-200/30 hover:shadow-glow-blue transition-shadow" style={{animationDelay: '0s'}}>
             <div className="flex items-center justify-between mb-1">
               <span className="text-2xl">📊</span>
               <span className="text-[10px] font-bold text-blue-400 uppercase tracking-wider">จำนวน</span>
@@ -436,7 +424,7 @@ function HistoryViewBlue() {
             <p className="text-3xl font-extrabold text-blue-600">{filteredHistory.length}</p>
             <p className="text-xs text-gray-500 font-medium mt-1">รายการ</p>
           </div>
-          <div className="stat-animate bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl p-4 border border-green-200 hover:shadow-2xl transition-shadow" style={{animationDelay: '0.1s'}}>
+          <div className="slide-up bg-white/95 backdrop-blur-sm rounded-2xl shadow-card p-4 border border-green-200/30 hover:shadow-card-hover transition-shadow" style={{animationDelay: '0.1s'}}>
             <div className="flex items-center justify-between mb-1">
               <span className="text-2xl">💰</span>
               <span className="text-[10px] font-bold text-green-400 uppercase tracking-wider">รายได้รวม</span>
@@ -444,7 +432,7 @@ function HistoryViewBlue() {
             <p className="text-3xl font-extrabold text-green-600">฿{calculateTotalRevenue().toFixed(0)}</p>
             <p className="text-xs text-gray-500 font-medium mt-1">บาท</p>
           </div>
-          <div className="stat-animate bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl p-4 border border-cyan-200 hover:shadow-2xl transition-shadow" style={{animationDelay: '0.2s'}}>
+          <div className="slide-up bg-white/95 backdrop-blur-sm rounded-2xl shadow-card p-4 border border-cyan-200/30 hover:shadow-card-hover transition-shadow" style={{animationDelay: '0.2s'}}>
             <div className="flex items-center justify-between mb-1">
               <span className="text-2xl">📈</span>
               <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider">เฉลี่ย</span>
@@ -457,7 +445,7 @@ function HistoryViewBlue() {
         </div>
 
         {/* History Table */}
-        <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl p-4 md:p-6 border-4 border-teal-300">
+        <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-card p-4 md:p-6 border border-blue-200/30">
           <h2 className="text-xl md:text-2xl font-bold text-teal-700 mb-4">📋 รายการทั้งหมด</h2>
           
           {filteredHistory.length === 0 ? (
@@ -488,7 +476,7 @@ function HistoryViewBlue() {
                   {filteredHistory.map((record, index) => (
                     <tr
                       key={record.id}
-                      className={`table-row-animate border-b border-gray-100 ${
+                      className={`fade-in border-b border-gray-100 ${
                         index % 2 === 0 ? 'bg-blue-50/50' : 'bg-white'
                       } hover:bg-cyan-100/50 transition-all duration-200`}
                       style={{ animationDelay: `${index * 0.03}s` }}
@@ -579,7 +567,7 @@ function HistoryViewBlue() {
         {/* Edit Modal Dialog */}
         {showEditModal && editingId && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 overflow-y-auto">
-            <div className="bg-white rounded-2xl shadow-2xl p-6 md:p-8 max-w-4xl w-full border-4 border-blue-500 my-auto">
+            <div className="bg-white rounded-2xl shadow-2xl p-6 md:p-8 max-w-4xl w-full border-4 border-blue-500 my-auto modal-in">
               {/* Header */}
               <div className="flex justify-between items-center mb-6 pb-4 border-b-2 border-blue-300">
                 <h2 className="text-2xl md:text-3xl font-bold text-blue-700">✏️ แก้ไขข้อมูลประวัติ - Blue Zone</h2>

@@ -239,39 +239,11 @@ function AdminDashboardBlue({
   const customerViewUrl = `${window.location.origin}/blue/customer`
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-700 via-cyan-600 to-teal-500 animate-gradient p-3 md:p-6 lg:p-8">
-      <style>{`
-        @keyframes gradient {
-          0%, 100% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-        }
-        .animate-gradient {
-          background-size: 200% 200%;
-          animation: gradient 15s ease infinite;
-        }
-        @keyframes float {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-20px); }
-        }
-        .animate-float {
-          animation: float 3s ease-in-out infinite;
-        }
-        @keyframes table-row-in {
-          from { opacity: 0; transform: translateX(-10px); }
-          to { opacity: 1; transform: translateX(0); }
-        }
-        .table-row-animate { animation: table-row-in 0.3s ease-out; }
-        .glass-card {
-          background: rgba(255,255,255,0.95);
-          backdrop-filter: blur(10px);
-          border: 1px solid rgba(255,255,255,0.3);
-        }
-      `}</style>
-
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-800 to-gray-900 p-3 md:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="text-center mb-6 md:mb-8 animate-float relative">
-          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white drop-shadow-2xl mb-2">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white drop-shadow-2xl mb-2 slide-up">
             🔵 JUTHAZONE BLUE 🔵
           </h1>
           <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-white/90 drop-shadow-lg font-semibold">
@@ -279,7 +251,7 @@ function AdminDashboardBlue({
           </p>
           {user && (
             <div className="absolute top-0 right-0 flex items-center gap-3">
-              <div className="bg-white/90 text-blue-600 font-bold px-4 py-2 rounded-xl text-xs md:text-sm shadow-lg">
+              <div className="bg-white/10 text-white font-bold px-4 py-2 rounded-xl text-xs md:text-sm shadow-lg border border-white/20">
                 👤 {user.displayName}
               </div>
               <button
@@ -305,19 +277,19 @@ function AdminDashboardBlue({
           <div className="mt-4 flex flex-col sm:flex-row justify-center gap-3">
             <a
               href="/blue/history"
-              className="inline-block bg-white/90 hover:bg-white text-blue-600 font-bold py-2 px-6 rounded-xl shadow-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-300"
+              className="inline-block bg-white/10 hover:bg-white/20 text-white font-bold py-2 px-6 rounded-xl shadow-lg hover:shadow-glow-blue transform hover:scale-105 transition-all duration-300 border border-white/20"
             >
               📊 ดูประวัติการใช้งาน
             </a>
             <a
               href="/blue/analytics"
-              className="inline-block bg-white/90 hover:bg-white text-blue-600 font-bold py-2 px-6 rounded-xl shadow-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-300"
+              className="inline-block bg-white/10 hover:bg-white/20 text-white font-bold py-2 px-6 rounded-xl shadow-lg hover:shadow-glow-blue transform hover:scale-105 transition-all duration-300 border border-white/20"
             >
               📈 Analytics
             </a>
             <a
               href="/"
-              className="inline-block bg-white/90 hover:bg-white text-purple-600 font-bold py-2 px-6 rounded-xl shadow-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-300"
+              className="inline-block bg-white/10 hover:bg-white/20 text-white font-bold py-2 px-6 rounded-xl shadow-lg hover:shadow-glow-blue transform hover:scale-105 transition-all duration-300 border border-white/20"
             >
               🏠 กลับหน้าหลัก
             </a>
@@ -371,7 +343,7 @@ function AdminDashboardBlue({
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
           {/* Add Customer Form */}
-          <div className="lg:col-span-2 bg-white/95 backdrop-blur-sm rounded-xl md:rounded-2xl shadow-2xl p-4 md:p-6 transform hover:scale-[1.01] transition-all duration-300 border-3 md:border-4 border-blue-300">
+          <div className="lg:col-span-2 bg-white/95 backdrop-blur-sm rounded-xl md:rounded-2xl shadow-card p-4 md:p-6 transform hover:scale-[1.01] transition-all duration-300 border border-blue-200/30 slide-up">
             <h2 className="text-lg md:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent mb-3 md:mb-4">
               ➕
             </h2>
@@ -439,7 +411,7 @@ function AdminDashboardBlue({
           </div>
 
           {/* QR Code Section */}
-          <div className="bg-white/95 backdrop-blur-sm rounded-xl md:rounded-2xl shadow-2xl p-4 md:p-6 flex flex-col items-center justify-center border-3 md:border-4 border-cyan-300 transform hover:scale-105 transition-all duration-300">
+          <div className="bg-white/95 backdrop-blur-sm rounded-xl md:rounded-2xl shadow-card p-4 md:p-6 flex flex-col items-center justify-center border border-blue-200/30 transform hover:scale-105 hover:shadow-glow-blue transition-all duration-300 slide-up-1">
             <h2 className="text-lg md:text-xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent mb-3 md:mb-4 animate-bounce-slow text-center">
               📱 QR Code สำหรับลูกค้า
             </h2>
@@ -451,7 +423,7 @@ function AdminDashboardBlue({
         </div>
 
         {/* Customer List */}
-        <div className="glass-card rounded-xl md:rounded-2xl shadow-2xl p-4 md:p-6 border-2 border-teal-200">
+        <div className="bg-white/95 backdrop-blur-sm rounded-xl md:rounded-2xl shadow-card p-4 md:p-6 border border-blue-200/30 slide-up-2">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-3 md:mb-4">
             <h2 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-blue-600 to-teal-600 bg-clip-text text-transparent flex items-center gap-2">
               📋 รายการลูกค้าทั้งหมด
@@ -486,9 +458,9 @@ function AdminDashboardBlue({
                       {displayCustomers.map((customer, index) => (
                         <tr
                           key={customer.id}
-                          className={`table-row-animate rounded-lg ${
-                            index % 2 === 0 ? 'bg-blue-50/70' : 'bg-white'
-                          } hover:bg-gradient-to-r hover:from-blue-100 hover:to-cyan-50 transition-all duration-200`}
+                          className={`fade-in rounded-lg ${
+                            index % 2 === 0 ? 'bg-blue-50/50' : 'bg-white'
+                          } hover:bg-gradient-to-r hover:from-blue-50 hover:to-cyan-50 transition-all duration-200`}
                           style={{ animationDelay: `${index * 0.05}s` }}
                         >
                           <td className="px-2 md:px-4 py-2 md:py-3 font-semibold text-xs md:text-base">{customer.name}</td>

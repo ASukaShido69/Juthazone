@@ -471,32 +471,19 @@ function AdminDashboard({
   const customerViewUrl = `${window.location.origin}/customer`
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-700 via-pink-600 to-orange-500 animate-gradient p-3 md:p-6 lg:p-8">
-      <style>{`
-        @keyframes table-row-in {
-          from { opacity: 0; transform: translateX(-10px); }
-          to { opacity: 1; transform: translateX(0); }
-        }
-        .table-row-animate { animation: table-row-in 0.3s ease-out; }
-        .glass-card {
-          background: rgba(255,255,255,0.95);
-          backdrop-filter: blur(10px);
-          border: 1px solid rgba(255,255,255,0.3);
-        }
-      `}</style>
-
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-800 to-gray-900 p-3 md:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
         {/* Header with animation */}
         <div className="text-center mb-6 md:mb-8 animate-float relative">
-          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white drop-shadow-2xl mb-2">
-            🎮 JUTHAZONE 🎮
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white drop-shadow-2xl mb-2 slide-up">
+            🔴 JUTHAZONE RED 🔴
           </h1>
           <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-white/90 drop-shadow-lg font-semibold">
             ระบบจัดการเวลาลูกค้า
           </p>
           {user && (
             <div className="absolute top-0 right-0 flex items-center gap-3">
-              <div className="bg-white/90 text-purple-600 font-bold px-4 py-2 rounded-xl text-xs md:text-sm shadow-lg">
+              <div className="bg-white/10 text-white font-bold px-4 py-2 rounded-xl text-xs md:text-sm shadow-lg border border-white/20">
                 👤 {user.displayName}
               </div>
               <button
@@ -522,19 +509,19 @@ function AdminDashboard({
           <div className="mt-4 flex flex-col sm:flex-row justify-center gap-3">
             <a
               href="/history"
-              className="inline-block bg-white/90 hover:bg-white text-purple-600 font-bold py-2 px-6 rounded-xl shadow-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-300"
+              className="inline-block bg-white/10 hover:bg-white/20 text-white font-bold py-2 px-6 rounded-xl shadow-lg hover:shadow-glow-red transform hover:scale-105 transition-all duration-300 border border-white/20"
             >
               📊 ดูประวัติการใช้งาน
             </a>
             <a
               href="/analytics"
-              className="inline-block bg-white/90 hover:bg-white text-purple-600 font-bold py-2 px-6 rounded-xl shadow-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-300"
+              className="inline-block bg-white/10 hover:bg-white/20 text-white font-bold py-2 px-6 rounded-xl shadow-lg hover:shadow-glow-red transform hover:scale-105 transition-all duration-300 border border-white/20"
             >
               📈 Analytics
             </a>
             <a
               href="/daily-summary"
-              className="inline-block bg-white/90 hover:bg-white text-purple-600 font-bold py-2 px-6 rounded-xl shadow-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-300"
+              className="inline-block bg-white/10 hover:bg-white/20 text-white font-bold py-2 px-6 rounded-xl shadow-lg hover:shadow-glow-red transform hover:scale-105 transition-all duration-300 border border-white/20"
             >
               💰 สรุปยอดรายวัน
             </a>
@@ -589,7 +576,7 @@ function AdminDashboard({
         {/* Completion Confirmation Modal */}
         {completionConfirm && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-3 z-50">
-            <div className="bg-white rounded-2xl shadow-2xl p-6 md:p-8 max-w-md w-full border-4 border-blue-500 animate-scale-in">
+            <div className="bg-white rounded-2xl shadow-2xl p-6 md:p-8 max-w-md w-full border-4 border-red-500 modal-in">
               {/* Header */}
               <div className="text-center mb-6">
                 <div className="text-5xl mb-4">🎯</div>
@@ -664,8 +651,8 @@ function AdminDashboard({
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
           {/* Add Customer Form */}
-          <div className="lg:col-span-2 bg-white/95 backdrop-blur-sm rounded-xl md:rounded-2xl shadow-2xl p-4 md:p-6 transform hover:scale-[1.01] transition-all duration-300 border-3 md:border-4 border-purple-300">
-            <h2 className="text-lg md:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-3 md:mb-4">
+          <div className="lg:col-span-2 bg-white/95 backdrop-blur-sm rounded-xl md:rounded-2xl shadow-card p-4 md:p-6 transform hover:scale-[1.01] transition-all duration-300 border border-red-200/30 slide-up">
+            <h2 className="text-lg md:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-red-600 to-rose-500 bg-clip-text text-transparent mb-3 md:mb-4">
               ➕ เพิ่มลูกค้าใหม่
             </h2>
             <form onSubmit={handleSubmit} className="space-y-3 md:space-y-4">
@@ -760,7 +747,7 @@ function AdminDashboard({
 
               <button
                 type="submit"
-                className="w-full bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 text-white font-bold py-3 md:py-4 px-6 rounded-xl hover:from-purple-700 hover:via-pink-700 hover:to-orange-600 transform hover:scale-105 active:scale-95 transition-all duration-300 shadow-2xl hover:shadow-purple-500/50 animate-gradient text-sm md:text-base"
+                className="w-full bg-gradient-to-r from-red-600 via-rose-600 to-red-500 text-white font-bold py-3 md:py-4 px-6 rounded-xl hover:from-red-700 hover:via-rose-700 hover:to-red-600 transform hover:scale-105 active:scale-95 transition-all duration-300 shadow-2xl hover:shadow-glow-red text-sm md:text-base"
               >
                 เพิ่มลูกค้า 🎯
               </button>
@@ -768,11 +755,11 @@ function AdminDashboard({
           </div>
 
           {/* QR Code Section */}
-          <div className="bg-white/95 backdrop-blur-sm rounded-xl md:rounded-2xl shadow-2xl p-4 md:p-6 flex flex-col items-center justify-center border-3 md:border-4 border-pink-300 transform hover:scale-105 transition-all duration-300">
-            <h2 className="text-lg md:text-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-3 md:mb-4 animate-bounce-slow text-center">
+          <div className="bg-white/95 backdrop-blur-sm rounded-xl md:rounded-2xl shadow-card p-4 md:p-6 flex flex-col items-center justify-center border border-red-200/30 transform hover:scale-105 hover:shadow-glow-red transition-all duration-300 slide-up-1">
+            <h2 className="text-lg md:text-xl font-bold bg-gradient-to-r from-red-600 to-rose-500 bg-clip-text text-transparent mb-3 md:mb-4 animate-bounce-slow text-center">
               📱 QR Code สำหรับลูกค้า
             </h2>
-            <div className="bg-white p-3 md:p-4 rounded-xl border-3 md:border-4 border-purple-400 shadow-lg hover:shadow-2xl hover:border-pink-400 transition-all duration-300">
+            <div className="bg-white p-3 md:p-4 rounded-xl border-2 border-red-400 shadow-lg hover:shadow-2xl hover:border-rose-400 transition-all duration-300">
               <QRCodeSVG value={customerViewUrl} size={150} level="H" className="md:w-[180px] md:h-[180px]" />
             </div>
             <p className="text-xs md:text-sm text-gray-600 mt-3 md:mt-4 text-center font-semibold">สแกนเพื่อดูข้อมูลเวลา</p>
@@ -780,11 +767,11 @@ function AdminDashboard({
         </div>
 
         {/* 🎮 รายการลูกค้าห้อง VIP ทั้งหมด */}
-        <div className="glass-card rounded-xl md:rounded-2xl shadow-2xl p-4 md:p-6 border-2 border-orange-200 mb-6">
+        <div className="bg-white/95 backdrop-blur-sm rounded-xl md:rounded-2xl shadow-card p-4 md:p-6 border border-red-200/30 mb-6 slide-up-2">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-3 md:mb-4">
-            <h2 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-purple-600 to-orange-600 bg-clip-text text-transparent flex items-center gap-2">
+            <h2 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-red-500 to-rose-500 bg-clip-text text-transparent flex items-center gap-2">
               🎮 รายการลูกค้าทั้งหมด
-              <span className="inline-flex items-center justify-center bg-purple-100 text-purple-700 text-sm font-bold px-2.5 py-0.5 rounded-full">{customers.length}</span>
+              <span className="inline-flex items-center justify-center bg-red-100 text-red-700 text-sm font-bold px-2.5 py-0.5 rounded-full">{customers.length}</span>
             </h2>
           </div>
           
@@ -800,7 +787,7 @@ function AdminDashboard({
                 <div className="overflow-hidden">
                   <table className="min-w-full border-separate border-spacing-y-1">
                     <thead>
-                      <tr className="bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 text-white shadow-lg">
+                      <tr className="bg-gradient-to-r from-red-600 via-rose-600 to-red-700 text-white shadow-lg">
                         <th className="px-2 md:px-4 py-2.5 md:py-3.5 text-left rounded-tl-xl text-xs md:text-sm font-bold tracking-wide">ชื่อ</th>
                         <th className="px-2 md:px-4 py-2.5 md:py-3.5 text-left text-xs md:text-sm font-bold tracking-wide">ห้อง</th>
                         <th className="px-2 md:px-4 py-2.5 md:py-3.5 text-center text-xs md:text-sm font-bold tracking-wide hidden md:table-cell">🕐 เริ่ม</th>
@@ -816,9 +803,9 @@ function AdminDashboard({
                       {displayCustomers.map((customer, index) => (
                         <tr
                           key={customer.id}
-                          className={`table-row-animate rounded-lg ${
-                            index % 2 === 0 ? 'bg-purple-50/70' : 'bg-white'
-                          } hover:bg-gradient-to-r hover:from-purple-100 hover:to-pink-50 transition-all duration-200`}
+                          className={`fade-in rounded-lg ${
+                            index % 2 === 0 ? 'bg-red-50/50' : 'bg-white'
+                          } hover:bg-gradient-to-r hover:from-red-50 hover:to-rose-50 transition-all duration-200`}
                           style={{ animationDelay: `${index * 0.05}s` }}
                         >
                           <td className="px-2 md:px-4 py-2 md:py-3 font-semibold text-xs md:text-base">{customer.name}</td>
@@ -1012,7 +999,7 @@ function AdminDashboard({
         </div>
 
         {/* 💻 รายการลูกค้าคอมพิวเตอร์วันนี้ */}
-        <div className="bg-white rounded-2xl shadow-2xl p-6 md:p-8 mb-6">
+        <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-card p-6 md:p-8 mb-6 border border-slate-200/50">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div className="flex items-center gap-3 flex-1">
               <h2 className="text-2xl md:text-3xl font-bold text-gray-800">
@@ -1153,7 +1140,7 @@ function AdminDashboard({
         </div>
 
         {/* 🎮 รายการห้อง VIP วันนี้ */}
-        <div className="bg-white rounded-2xl shadow-2xl p-6 md:p-8 mb-6">
+        <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-card p-6 md:p-8 mb-6 border border-slate-200/50">
           <div className="flex items-center gap-3">
             <h2 className="text-2xl md:text-3xl font-bold text-gray-800">
               🎮 รายการห้อง VIP วันนี้
