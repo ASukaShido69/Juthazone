@@ -351,6 +351,14 @@ function AppBlue({ user, onLogout }) {
         await saveToHistory(customerToComplete, 'completed')
       }
 
+      if (supabase && isSupabaseReady) {
+        const { error } = await supabase
+          .from('juthazoneb_customers')
+          .delete()
+          .eq('id', id)
+        if (error) throw error
+      }
+
       const newCustomers = customers.filter(customer => customer.id !== id)
       setCustomers(newCustomers)
       await updateFirebase(newCustomers)
@@ -381,6 +389,14 @@ function AppBlue({ user, onLogout }) {
         
         // Save to history
         await saveToHistory(customerToDelete, 'deleted')
+      }
+
+      if (supabase && isSupabaseReady) {
+        const { error } = await supabase
+          .from('juthazoneb_customers')
+          .delete()
+          .eq('id', id)
+        if (error) throw error
       }
 
       const newCustomers = customers.filter(customer => customer.id !== id)
