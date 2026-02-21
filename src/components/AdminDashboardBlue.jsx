@@ -24,6 +24,13 @@ function AdminDashboardBlue({
   const [notifications, setNotifications] = useState([])
   const [notifOpen, setNotifOpen] = useState(false)
   const audioRef = useRef(null)
+  const alarmTimeoutRef = useRef(null)
+  const notificationsRef = useRef([])
+
+  // Keep notifications ref in sync
+  useEffect(() => {
+    notificationsRef.current = notifications
+  }, [notifications])
 
   // Force re-render every 500ms for real-time cost calculation
   useEffect(() => {
@@ -39,6 +46,7 @@ function AdminDashboardBlue({
         audioRef.current = new Audio('/Voice.mp3')
         audioRef.current.volume = 1.0
       }
+      // Stop any current playback and restart
       audioRef.current.currentTime = 0
       const playPromise = audioRef.current.play()
       if (playPromise !== undefined) {
@@ -47,6 +55,24 @@ function AdminDashboardBlue({
     } catch (err) {
       console.warn('Audio play failed', err)
     }
+  }, [])
+
+  // Pre-load audio on first user interaction
+  useEffect(() => {
+    const preloadAudio = () => {
+      try {
+        if (!audioRef.current) {
+          audioRef.current = new Audio('/Voice.mp3')
+          audioRef.current.volume = 1.0
+          audioRef.current.load()
+        }
+      } catch (err) {
+        console.warn('Audio preload failed', err)
+      }
+    }
+
+    window.addEventListener('click', preloadAudio, { once: true })
+    return () => window.removeEventListener('click', preloadAudio)
   }, [])
 
   // Fetch CALL_STAFF notifications
@@ -106,6 +132,50 @@ function AdminDashboardBlue({
       if (channel) channel.unsubscribe()
     }
   }, [playBeep])
+
+  // Keep alarm sounding while there are pending notifications
+  useEffect(() => {
+    if (notifications.length === 0) {
+      // Stop audio when no notifications
+      if (audioRef.current) {
+        audioRef.current.pause()
+        audioRef.current.currentTime = 0
+      }
+      if (alarmTimeoutRef.current) {
+        clearTimeout(alarmTimeoutRef.current)
+        alarmTimeoutRef.current = null
+      }
+      return
+    }
+
+    const scheduleNextBeep = () => {
+      if (!audioRef.current) {
+        playBeep()
+        return
+      }
+
+      const duration = audioRef.current.duration || 2
+      const delay = (duration + 2.5) * 1000 // Wait for sound to finish + 2.5s
+
+      alarmTimeoutRef.current = setTimeout(() => {
+        // Use ref to check current notifications state
+        if (notificationsRef.current.length > 0) {
+          playBeep()
+          scheduleNextBeep()
+        }
+      }, delay)
+    }
+
+    playBeep()
+    scheduleNextBeep()
+
+    return () => {
+      if (alarmTimeoutRef.current) {
+        clearTimeout(alarmTimeoutRef.current)
+        alarmTimeoutRef.current = null
+      }
+    }
+  }, [notifications.length, playBeep])
 
   const handleResolveNotification = async (notif) => {
     try {
