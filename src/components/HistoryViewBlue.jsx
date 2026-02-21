@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import supabase from '../firebase'
 import { exportToExcel, printReceipt, printHistoryReceipt } from '../utils/exportUtils'
@@ -6,7 +6,6 @@ import { formatDateTimeThai } from '../utils/timeFormat'
 
 function HistoryViewBlue() {
   const [history, setHistory] = useState([])
-  const [filteredHistory, setFilteredHistory] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
   const [filterRoom, setFilterRoom] = useState('all')
   const [filterPaid, setFilterPaid] = useState('all')
@@ -18,15 +17,25 @@ function HistoryViewBlue() {
   const [editData, setEditData] = useState({})
   const [originalSnapshot, setOriginalSnapshot] = useState({})
   const [showEditModal, setShowEditModal] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const ITEMS_PER_PAGE = 50
+  const debounceRef = useRef(null)
+
+  // Debounce search input — ลด re-render จากการพิมพ์
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => {
+      setDebouncedSearch(searchTerm)
+      setCurrentPage(1)
+    }, 300)
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
+  }, [searchTerm])
 
   useEffect(() => {
     fetchUsers()
     fetchHistory()
   }, [])
-
-  useEffect(() => {
-    applyFilters()
-  }, [history, searchTerm, filterRoom, filterPaid, dateFrom, dateTo])
 
   const fetchUsers = async () => {
     if (!supabase) return
@@ -67,13 +76,13 @@ function HistoryViewBlue() {
     }
   }
 
-  const applyFilters = () => {
-    let filtered = [...history]
+  // ═══ useMemo: คำนวณ filteredHistory เฉพาะเมื่อ dependencies เปลี่ยน ═══
+  const filteredHistory = useMemo(() => {
+    let filtered = history
 
-    if (searchTerm) {
-      filtered = filtered.filter(h =>
-        h.name.toLowerCase().includes(searchTerm.toLowerCase())
-      )
+    if (debouncedSearch) {
+      const term = debouncedSearch.toLowerCase()
+      filtered = filtered.filter(h => h.name.toLowerCase().includes(term))
     }
 
     if (filterRoom !== 'all') {
@@ -85,7 +94,8 @@ function HistoryViewBlue() {
     }
 
     if (dateFrom) {
-      filtered = filtered.filter(h => new Date(h.start_time) >= new Date(dateFrom))
+      const fromDate = new Date(dateFrom)
+      filtered = filtered.filter(h => new Date(h.start_time) >= fromDate)
     }
     if (dateTo) {
       const endDate = new Date(dateTo)
@@ -93,8 +103,18 @@ function HistoryViewBlue() {
       filtered = filtered.filter(h => new Date(h.start_time) <= endDate)
     }
 
-    setFilteredHistory(filtered)
-  }
+    return filtered
+  }, [history, debouncedSearch, filterRoom, filterPaid, dateFrom, dateTo])
+
+  // Reset page when filters change
+  useEffect(() => { setCurrentPage(1) }, [filterRoom, filterPaid, dateFrom, dateTo])
+
+  // ═══ Pagination: แสดงเฉพาะ rows ของหน้าปัจจุบัน ═══
+  const totalPages = Math.ceil(filteredHistory.length / ITEMS_PER_PAGE)
+  const paginatedHistory = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE
+    return filteredHistory.slice(start, start + ITEMS_PER_PAGE)
+  }, [filteredHistory, currentPage])
 
   const formatDuration = (minutes) => {
     const hours = Math.floor(minutes / 60)
@@ -105,9 +125,9 @@ function HistoryViewBlue() {
     return `${mins} นาที`
   }
 
-  const calculateTotalRevenue = () => {
+  const totalRevenue = useMemo(() => {
     return filteredHistory.reduce((sum, h) => sum + (h.final_cost || 0), 0)
-  }
+  }, [filteredHistory])
 
   const handleExport = () => {
     const exportData = filteredHistory.map(h => ({
@@ -429,7 +449,7 @@ function HistoryViewBlue() {
               <span className="text-2xl">💰</span>
               <span className="text-[10px] font-bold text-green-400 uppercase tracking-wider">รายได้รวม</span>
             </div>
-            <p className="text-3xl font-extrabold text-green-600">฿{calculateTotalRevenue().toFixed(0)}</p>
+            <p className="text-3xl font-extrabold text-green-600">฿{totalRevenue.toFixed(0)}</p>
             <p className="text-xs text-gray-500 font-medium mt-1">บาท</p>
           </div>
           <div className="slide-up bg-white/95 backdrop-blur-sm rounded-2xl shadow-card p-4 border border-cyan-200/30 hover:shadow-card-hover transition-shadow" style={{animationDelay: '0.2s'}}>
@@ -438,7 +458,7 @@ function HistoryViewBlue() {
               <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider">เฉลี่ย</span>
             </div>
             <p className="text-3xl font-extrabold text-cyan-600">
-              ฿{filteredHistory.length > 0 ? (calculateTotalRevenue() / filteredHistory.length).toFixed(0) : '0'}
+              ฿{filteredHistory.length > 0 ? (totalRevenue / filteredHistory.length).toFixed(0) : '0'}
             </p>
             <p className="text-xs text-gray-500 font-medium mt-1">บาท/รายการ</p>
           </div>
@@ -473,13 +493,12 @@ function HistoryViewBlue() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredHistory.map((record, index) => (
+                  {paginatedHistory.map((record, index) => (
                     <tr
                       key={record.id}
-                      className={`fade-in border-b border-gray-100 ${
+                      className={`border-b border-gray-100 ${
                         index % 2 === 0 ? 'bg-blue-50/50' : 'bg-white'
-                      } hover:bg-cyan-100/50 transition-all duration-200`}
-                      style={{ animationDelay: `${index * 0.03}s` }}
+                      } hover:bg-cyan-100/50 transition-colors duration-150`}
                     >
                       <td className="px-4 py-3 font-semibold text-sm">{record.name}</td>
                       <td className="px-4 py-3 text-sm">
@@ -560,6 +579,78 @@ function HistoryViewBlue() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4 pt-4 border-t border-gray-200">
+              <div className="text-sm text-gray-600 font-medium">
+                แสดง {((currentPage - 1) * ITEMS_PER_PAGE) + 1}-{Math.min(currentPage * ITEMS_PER_PAGE, filteredHistory.length)} จาก {filteredHistory.length} รายการ
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setCurrentPage(1)}
+                  disabled={currentPage === 1}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${
+                    currentPage === 1 ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                  }`}
+                >
+                  ≪
+                </button>
+                <button
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${
+                    currentPage === 1 ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                  }`}
+                >
+                  ‹
+                </button>
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let page
+                  if (totalPages <= 5) {
+                    page = i + 1
+                  } else if (currentPage <= 3) {
+                    page = i + 1
+                  } else if (currentPage >= totalPages - 2) {
+                    page = totalPages - 4 + i
+                  } else {
+                    page = currentPage - 2 + i
+                  }
+                  return (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${
+                        currentPage === page
+                          ? 'bg-blue-600 text-white shadow-glow-blue'
+                          : 'bg-gray-100 text-gray-700 hover:bg-blue-100'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  )
+                })}
+                <button
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${
+                    currentPage === totalPages ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                  }`}
+                >
+                  ›
+                </button>
+                <button
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={currentPage === totalPages}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${
+                    currentPage === totalPages ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                  }`}
+                >
+                  ≫
+                </button>
+              </div>
             </div>
           )}
         </div>

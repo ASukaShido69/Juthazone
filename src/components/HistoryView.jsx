@@ -1,11 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import supabase from '../firebase'
 import { exportToExcel, printReceipt, printHistoryReceipt } from '../utils/exportUtils'
 
 function HistoryView() {
   const [history, setHistory] = useState([])
-  const [filteredHistory, setFilteredHistory] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
   const [filterRoom, setFilterRoom] = useState('all')
   const [filterPaid, setFilterPaid] = useState('all')
@@ -18,14 +17,24 @@ function HistoryView() {
   const [originalSnapshot, setOriginalSnapshot] = useState({}) // latest data pulled before edit
   const [showEditModal, setShowEditModal] = useState(false) // modal state สำหรับแก้ไข
   const [showShiftModal, setShowShiftModal] = useState(false) // modal state สำหรับจัดการกะ
+  const [currentPage, setCurrentPage] = useState(1) // pagination
+  const [debouncedSearch, setDebouncedSearch] = useState('') // debounced search
+  const ITEMS_PER_PAGE = 50
+  const debounceRef = useRef(null)
+
+  // Debounce search input — ลด re-render จากการพิมพ์
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => {
+      setDebouncedSearch(searchTerm)
+      setCurrentPage(1)
+    }, 300)
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
+  }, [searchTerm])
 
   useEffect(() => {
     fetchHistory()
   }, [])
-
-  useEffect(() => {
-    applyFilters()
-  }, [history, searchTerm, filterRoom, filterPaid, dateFrom, dateTo])
 
   const fetchHistory = async () => {
     if (!supabase) {
@@ -53,14 +62,14 @@ function HistoryView() {
     }
   }
 
-  const applyFilters = () => {
-    let filtered = [...history]
+  // ═══ useMemo: คำนวณ filteredHistory เฉพาะเมื่อ dependencies เปลี่ยน ═══
+  const filteredHistory = useMemo(() => {
+    let filtered = history
 
-    // Search by name
-    if (searchTerm) {
-      filtered = filtered.filter(h =>
-        h.name.toLowerCase().includes(searchTerm.toLowerCase())
-      )
+    // Search by name (ใช้ debouncedSearch แทน searchTerm ตรงๆ)
+    if (debouncedSearch) {
+      const term = debouncedSearch.toLowerCase()
+      filtered = filtered.filter(h => h.name.toLowerCase().includes(term))
     }
 
     // Filter by room
@@ -75,7 +84,8 @@ function HistoryView() {
 
     // Filter by date range
     if (dateFrom) {
-      filtered = filtered.filter(h => new Date(h.start_time) >= new Date(dateFrom))
+      const fromDate = new Date(dateFrom)
+      filtered = filtered.filter(h => new Date(h.start_time) >= fromDate)
     }
     if (dateTo) {
       const endDate = new Date(dateTo)
@@ -83,8 +93,18 @@ function HistoryView() {
       filtered = filtered.filter(h => new Date(h.start_time) <= endDate)
     }
 
-    setFilteredHistory(filtered)
-  }
+    return filtered
+  }, [history, debouncedSearch, filterRoom, filterPaid, dateFrom, dateTo])
+
+  // Reset page when filters change
+  useEffect(() => { setCurrentPage(1) }, [filterRoom, filterPaid, dateFrom, dateTo])
+
+  // ═══ Pagination: แสดงเฉพาะ rows ของหน้าปัจจุบัน ═══
+  const totalPages = Math.ceil(filteredHistory.length / ITEMS_PER_PAGE)
+  const paginatedHistory = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE
+    return filteredHistory.slice(start, start + ITEMS_PER_PAGE)
+  }, [filteredHistory, currentPage])
 
   const formatDateTime = (timestamp) => {
     if (!timestamp) return '-'
@@ -379,20 +399,20 @@ function HistoryView() {
     }
   }
 
-  const getTotalStats = () => {
-    const total = filteredHistory.reduce(
+  // ═══ useMemo: คำนวณ stats เฉพาะเมื่อ filteredHistory เปลี่ยน ═══
+  const stats = useMemo(() => {
+    return filteredHistory.reduce(
       (acc, h) => ({
         count: acc.count + 1,
-        revenue: acc.revenue + parseFloat(h.final_cost),
-        duration: acc.duration + parseFloat(h.duration_minutes),
+        revenue: acc.revenue + parseFloat(h.final_cost || 0),
+        duration: acc.duration + parseFloat(h.duration_minutes || 0),
         paid: acc.paid + (h.is_paid ? 1 : 0)
       }),
       { count: 0, revenue: 0, duration: 0, paid: 0 }
     )
-    return total
-  }
+  }, [filteredHistory])
 
-  const getShiftStats = () => {
+  const getShiftStats = useCallback(() => {
     const shifts = {
       '1': { name: 'กะ 1 (10:00-19:00)', count: 0, revenue: 0, duration: 0, paid: 0, color: 'green' },
       '2': { name: 'กะ 2 (19:00-01:00)', count: 0, revenue: 0, duration: 0, paid: 0, color: 'orange' },
@@ -411,9 +431,7 @@ function HistoryView() {
     })
 
     return shifts
-  }
-
-  const stats = getTotalStats()
+  }, [filteredHistory])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-800 to-gray-900 p-3 md:p-6 lg:p-8">
@@ -614,13 +632,12 @@ function HistoryView() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredHistory.map((record, index) => (
+                  {paginatedHistory.map((record, index) => (
                     <tr
                       key={record.id}
-                      className={`fade-in border-b border-gray-100 ${
+                      className={`border-b border-gray-100 ${
                         index % 2 === 0 ? 'bg-red-50/50' : 'bg-white'
-                      } hover:bg-red-100/70 transition-all duration-200`}
-                      style={{ animationDelay: `${index * 0.03}s` }}
+                      } hover:bg-red-100/70 transition-colors duration-150`}
                     >
                       <td className="px-2 md:px-4 py-2 md:py-3 font-semibold text-xs md:text-sm">
                         {record.name}
@@ -749,6 +766,78 @@ function HistoryView() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4 pt-4 border-t border-gray-200">
+              <div className="text-sm text-gray-600 font-medium">
+                แสดง {((currentPage - 1) * ITEMS_PER_PAGE) + 1}-{Math.min(currentPage * ITEMS_PER_PAGE, filteredHistory.length)} จาก {filteredHistory.length} รายการ
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setCurrentPage(1)}
+                  disabled={currentPage === 1}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${
+                    currentPage === 1 ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-red-100 text-red-700 hover:bg-red-200'
+                  }`}
+                >
+                  ≪
+                </button>
+                <button
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${
+                    currentPage === 1 ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-red-100 text-red-700 hover:bg-red-200'
+                  }`}
+                >
+                  ‹
+                </button>
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let page
+                  if (totalPages <= 5) {
+                    page = i + 1
+                  } else if (currentPage <= 3) {
+                    page = i + 1
+                  } else if (currentPage >= totalPages - 2) {
+                    page = totalPages - 4 + i
+                  } else {
+                    page = currentPage - 2 + i
+                  }
+                  return (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${
+                        currentPage === page
+                          ? 'bg-red-600 text-white shadow-glow-red'
+                          : 'bg-gray-100 text-gray-700 hover:bg-red-100'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  )
+                })}
+                <button
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${
+                    currentPage === totalPages ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-red-100 text-red-700 hover:bg-red-200'
+                  }`}
+                >
+                  ›
+                </button>
+                <button
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={currentPage === totalPages}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${
+                    currentPage === totalPages ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-red-100 text-red-700 hover:bg-red-200'
+                  }`}
+                >
+                  ≫
+                </button>
+              </div>
             </div>
           )}
         </div>
