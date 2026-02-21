@@ -5,6 +5,8 @@ import supabase from '../firebase'
 import { logActivity } from '../utils/authUtils'
 import ComputerZoneEntry from './ComputerZoneEntry'
 import ComputerZoneManager from './ComputerZoneManager'
+import { useTheme } from '../contexts/ThemeContext'
+import ThemePicker from './ThemePicker'
 
 function AdminDashboard({
   customers,
@@ -42,6 +44,10 @@ function AdminDashboard({
   const audioRef = useRef(null)
   const alarmTimeoutRef = useRef(null)
   const notificationsRef = useRef([])
+  const { setActiveZone } = useTheme()
+
+  // Set active zone on mount
+  useEffect(() => { setActiveZone('red') }, [])
 
   // Keep notifications ref in sync
   useEffect(() => {
@@ -509,19 +515,19 @@ function AdminDashboard({
           <div className="mt-4 flex flex-col sm:flex-row justify-center gap-3">
             <a
               href="/history"
-              className="inline-block bg-white/10 hover:bg-white/20 text-white font-bold py-2 px-6 rounded-xl shadow-lg hover:shadow-glow-red transform hover:scale-105 transition-all duration-300 border border-white/20"
+              className="inline-block bg-white/10 hover:bg-white/20 text-white font-bold py-2 px-6 rounded-xl shadow-lg jz-glow-hover transform hover:scale-105 transition-all duration-300 border border-white/20"
             >
               📊 ดูประวัติการใช้งาน
             </a>
             <a
               href="/analytics"
-              className="inline-block bg-white/10 hover:bg-white/20 text-white font-bold py-2 px-6 rounded-xl shadow-lg hover:shadow-glow-red transform hover:scale-105 transition-all duration-300 border border-white/20"
+              className="inline-block bg-white/10 hover:bg-white/20 text-white font-bold py-2 px-6 rounded-xl shadow-lg jz-glow-hover transform hover:scale-105 transition-all duration-300 border border-white/20"
             >
               📈 Analytics
             </a>
             <a
               href="/daily-summary"
-              className="inline-block bg-white/10 hover:bg-white/20 text-white font-bold py-2 px-6 rounded-xl shadow-lg hover:shadow-glow-red transform hover:scale-105 transition-all duration-300 border border-white/20"
+              className="inline-block bg-white/10 hover:bg-white/20 text-white font-bold py-2 px-6 rounded-xl shadow-lg jz-glow-hover transform hover:scale-105 transition-all duration-300 border border-white/20"
             >
               💰 สรุปยอดรายวัน
             </a>
@@ -576,7 +582,7 @@ function AdminDashboard({
         {/* Completion Confirmation Modal */}
         {completionConfirm && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-3 z-50">
-            <div className="bg-white rounded-2xl shadow-2xl p-6 md:p-8 max-w-md w-full border-4 border-red-500 modal-in">
+            <div className="bg-white rounded-2xl shadow-2xl p-6 md:p-8 max-w-md w-full border-4 modal-in" style={{borderColor: 'var(--jz-primary)'}}>
               {/* Header */}
               <div className="text-center mb-6">
                 <div className="text-5xl mb-4">🎯</div>
@@ -651,8 +657,8 @@ function AdminDashboard({
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
           {/* Add Customer Form */}
-          <div className="lg:col-span-2 bg-white/95 backdrop-blur-sm rounded-xl md:rounded-2xl shadow-card p-4 md:p-6 transform hover:scale-[1.01] transition-all duration-300 border border-red-200/30 slide-up">
-            <h2 className="text-lg md:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-red-600 to-rose-500 bg-clip-text text-transparent mb-3 md:mb-4">
+          <div className="lg:col-span-2 bg-white/95 backdrop-blur-sm rounded-xl md:rounded-2xl shadow-card p-4 md:p-6 transform hover:scale-[1.01] transition-all duration-300 border jz-card-border slide-up">
+            <h2 className="text-lg md:text-2xl lg:text-3xl font-bold jz-text-gradient mb-3 md:mb-4">
               ➕ เพิ่มลูกค้าใหม่
             </h2>
             <form onSubmit={handleSubmit} className="space-y-3 md:space-y-4">
@@ -662,7 +668,7 @@ function AdminDashboard({
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3 py-2 md:px-4 md:py-2 border-2 border-purple-300 rounded-lg focus:outline-none focus:border-purple-500 text-sm md:text-base"
+                  className="w-full px-3 py-2 md:px-4 md:py-2 border-2 jz-input rounded-lg focus:outline-none text-sm md:text-base"
                   placeholder="กรอกชื่อลูกค้า"
                   required
                 />
@@ -673,7 +679,7 @@ function AdminDashboard({
                 <select
                   value={formData.room}
                   onChange={(e) => setFormData({ ...formData, room: e.target.value })}
-                  className="w-full px-3 py-2 md:px-4 md:py-2 border-2 border-purple-300 rounded-lg focus:outline-none focus:border-purple-500 text-sm md:text-base"
+                  className="w-full px-3 py-2 md:px-4 md:py-2 border-2 jz-input rounded-lg focus:outline-none text-sm md:text-base"
                 >
                   <option value="ชั้น 2 ห้อง VIP">ชั้น 2 ห้อง VIP</option>
                   <option value="ชั้น 3 ห้อง VIP KARAOKE">ชั้น 3 ห้อง VIP KARAOKE</option>
@@ -688,7 +694,7 @@ function AdminDashboard({
                     type="number"
                     value={formData.minutes}
                     onChange={(e) => setFormData({ ...formData, minutes: e.target.value })}
-                    className="w-full px-3 py-2 md:px-4 md:py-2 border-2 border-purple-300 rounded-lg focus:outline-none focus:border-purple-500 text-sm md:text-base"
+                    className="w-full px-3 py-2 md:px-4 md:py-2 border-2 jz-input rounded-lg focus:outline-none text-sm md:text-base"
                     placeholder="เช่น 60"
                     min="1"
                     required
@@ -701,7 +707,7 @@ function AdminDashboard({
                     type="number"
                     value={formData.cost}
                     onChange={(e) => setFormData({ ...formData, cost: e.target.value })}
-                    className="w-full px-3 py-2 md:px-4 md:py-2 border-2 border-purple-300 rounded-lg focus:outline-none focus:border-purple-500 text-sm md:text-base"
+                    className="w-full px-3 py-2 md:px-4 md:py-2 border-2 jz-input rounded-lg focus:outline-none text-sm md:text-base"
                     placeholder="เช่น 100"
                     min="0"
                     step="0.01"
@@ -715,7 +721,7 @@ function AdminDashboard({
                 <select
                   value={formData.paymentMethod}
                   onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value })}
-                  className="w-full px-3 py-2 md:px-4 md:py-2 border-2 border-purple-300 rounded-lg focus:outline-none focus:border-purple-500 text-sm md:text-base"
+                  className="w-full px-3 py-2 md:px-4 md:py-2 border-2 jz-input rounded-lg focus:outline-none text-sm md:text-base"
                 >
                   <option value="transfer">💸 เงินโอน (Transfer)</option>
                   <option value="cash">💸 เงินสด (Cash)</option>
@@ -727,7 +733,7 @@ function AdminDashboard({
                 <select
                   value={formData.shift || 'all'}
                   onChange={(e) => setFormData({ ...formData, shift: e.target.value })}
-                  className="w-full px-3 py-2 md:px-4 md:py-2 border-2 border-purple-300 rounded-lg focus:outline-none focus:border-purple-500 text-sm md:text-base bg-white"
+                  className="w-full px-3 py-2 md:px-4 md:py-2 border-2 jz-input rounded-lg focus:outline-none text-sm md:text-base bg-white"
                 >
                   <option value="all">ไม่ระบุกะ</option>
                   <option value="1">กะ 1 (10:00-19:00)</option>
@@ -740,14 +746,14 @@ function AdminDashboard({
                 <textarea
                   value={formData.note}
                   onChange={(e) => setFormData({ ...formData, note: e.target.value })}
-                  className="w-full px-3 py-2 md:px-4 md:py-2 border-2 border-purple-300 rounded-lg focus:outline-none focus:border-purple-500 text-sm md:text-base h-20 resize-none"
+                  className="w-full px-3 py-2 md:px-4 md:py-2 border-2 jz-input rounded-lg focus:outline-none text-sm md:text-base h-20 resize-none"
                   placeholder="เช่น เล่นแบดมินตัน, ร้อนจัด ฯลฯ"
                 />
               </div>
 
               <button
                 type="submit"
-                className="w-full bg-gradient-to-r from-red-600 via-rose-600 to-red-500 text-white font-bold py-3 md:py-4 px-6 rounded-xl hover:from-red-700 hover:via-rose-700 hover:to-red-600 transform hover:scale-105 active:scale-95 transition-all duration-300 shadow-2xl hover:shadow-glow-red text-sm md:text-base"
+                className="w-full jz-btn font-bold py-3 md:py-4 px-6 rounded-xl transform hover:scale-105 active:scale-95 transition-all duration-300 shadow-2xl text-sm md:text-base"
               >
                 เพิ่มลูกค้า 🎯
               </button>
@@ -755,11 +761,11 @@ function AdminDashboard({
           </div>
 
           {/* QR Code Section */}
-          <div className="bg-white/95 backdrop-blur-sm rounded-xl md:rounded-2xl shadow-card p-4 md:p-6 flex flex-col items-center justify-center border border-red-200/30 transform hover:scale-105 hover:shadow-glow-red transition-all duration-300 slide-up-1">
-            <h2 className="text-lg md:text-xl font-bold bg-gradient-to-r from-red-600 to-rose-500 bg-clip-text text-transparent mb-3 md:mb-4 animate-bounce-slow text-center">
+          <div className="bg-white/95 backdrop-blur-sm rounded-xl md:rounded-2xl shadow-card p-4 md:p-6 flex flex-col items-center justify-center border jz-card-border transform hover:scale-105 jz-glow-hover transition-all duration-300 slide-up-1">
+            <h2 className="text-lg md:text-xl font-bold jz-text-gradient mb-3 md:mb-4 animate-bounce-slow text-center">
               📱 QR Code สำหรับลูกค้า
             </h2>
-            <div className="bg-white p-3 md:p-4 rounded-xl border-2 border-red-400 shadow-lg hover:shadow-2xl hover:border-rose-400 transition-all duration-300">
+            <div className="bg-white p-3 md:p-4 rounded-xl border-2 shadow-lg hover:shadow-2xl transition-all duration-300" style={{borderColor: 'var(--jz-primary)'}}>
               <QRCodeSVG value={customerViewUrl} size={150} level="H" className="md:w-[180px] md:h-[180px]" />
             </div>
             <p className="text-xs md:text-sm text-gray-600 mt-3 md:mt-4 text-center font-semibold">สแกนเพื่อดูข้อมูลเวลา</p>
@@ -767,11 +773,11 @@ function AdminDashboard({
         </div>
 
         {/* 🎮 รายการลูกค้าห้อง VIP ทั้งหมด */}
-        <div className="bg-white/95 backdrop-blur-sm rounded-xl md:rounded-2xl shadow-card p-4 md:p-6 border border-red-200/30 mb-6 slide-up-2">
+        <div className="bg-white/95 backdrop-blur-sm rounded-xl md:rounded-2xl shadow-card p-4 md:p-6 border jz-card-border mb-6 slide-up-2">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-3 md:mb-4">
-            <h2 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-red-500 to-rose-500 bg-clip-text text-transparent flex items-center gap-2">
+            <h2 className="text-xl md:text-2xl font-bold jz-text-gradient flex items-center gap-2">
               🎮 รายการลูกค้าทั้งหมด
-              <span className="inline-flex items-center justify-center bg-red-100 text-red-700 text-sm font-bold px-2.5 py-0.5 rounded-full">{customers.length}</span>
+              <span className="inline-flex items-center justify-center jz-badge text-sm font-bold px-2.5 py-0.5 rounded-full">{customers.length}</span>
             </h2>
           </div>
           
@@ -787,7 +793,7 @@ function AdminDashboard({
                 <div className="overflow-hidden">
                   <table className="min-w-full border-separate border-spacing-y-1">
                     <thead>
-                      <tr className="bg-gradient-to-r from-red-600 via-rose-600 to-red-700 text-white shadow-lg">
+                      <tr className="jz-table-header shadow-lg">
                         <th className="px-2 md:px-4 py-2.5 md:py-3.5 text-left rounded-tl-xl text-xs md:text-sm font-bold tracking-wide">ชื่อ</th>
                         <th className="px-2 md:px-4 py-2.5 md:py-3.5 text-left text-xs md:text-sm font-bold tracking-wide">ห้อง</th>
                         <th className="px-2 md:px-4 py-2.5 md:py-3.5 text-center text-xs md:text-sm font-bold tracking-wide hidden md:table-cell">🕐 เริ่ม</th>
@@ -804,8 +810,8 @@ function AdminDashboard({
                         <tr
                           key={customer.id}
                           className={`fade-in rounded-lg ${
-                            index % 2 === 0 ? 'bg-red-50/50' : 'bg-white'
-                          } hover:bg-gradient-to-r hover:from-red-50 hover:to-rose-50 transition-all duration-200`}
+                            index % 2 === 0 ? 'jz-row-alt' : 'bg-white'
+                          } jz-row-hover transition-all duration-200`}
                           style={{ animationDelay: `${index * 0.05}s` }}
                         >
                           <td className="px-2 md:px-4 py-2 md:py-3 font-semibold text-xs md:text-base">{customer.name}</td>
@@ -1279,6 +1285,9 @@ function AdminDashboard({
           user={user}
         />
       </div>
+
+      {/* Theme Picker */}
+      <ThemePicker zone="red" />
     </div>
   )
 }

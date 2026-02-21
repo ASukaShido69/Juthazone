@@ -7,6 +7,30 @@
    Performance-first CSS with GPU acceleration
    ═══════════════════════════════════════════ */
 
+/* ── Theme CSS Custom Properties (defaults) ── */
+:root {
+  --jz-primary: #dc2626;
+  --jz-primary-light: #fecaca;
+  --jz-primary-dark: #991b1b;
+  --jz-accent: #e11d48;
+  --jz-accent-light: #ffe4e6;
+  --jz-gradient1: #dc2626;
+  --jz-gradient2: #e11d48;
+  --jz-gradient3: #ef4444;
+  --jz-table-h1: #dc2626;
+  --jz-table-h2: #e11d48;
+  --jz-table-h3: #b91c1c;
+  --jz-row-alt: rgba(254, 202, 202, 0.3);
+  --jz-row-hover: rgba(254, 202, 202, 0.5);
+  --jz-card-border: rgba(254, 202, 202, 0.3);
+  --jz-glow: rgba(239, 68, 68, 0.15);
+  --jz-glow-strong: rgba(239, 68, 68, 0.3);
+  --jz-badge: #fef2f2;
+  --jz-badge-text: #b91c1c;
+  --jz-input-border: #fca5a5;
+  --jz-input-focus: #ef4444;
+}
+
 /* ── Base Reset & Typography ── */
 *,
 *::before,
@@ -149,6 +173,84 @@ input:focus, select:focus, textarea:focus {
   /* ── Modal entrance ── */
   .modal-in {
     animation: jz-modalIn 0.25s ease-out both;
+  }
+
+  /* ══════════════════════════════════════
+     THEME-AWARE UTILITY CLASSES
+     Uses CSS custom properties from ThemeContext
+     ══════════════════════════════════════ */
+
+  /* ── Themed Gradient Background ── */
+  .jz-gradient {
+    background: linear-gradient(to right, var(--jz-gradient1), var(--jz-gradient2), var(--jz-gradient3));
+  }
+  .jz-gradient-135 {
+    background: linear-gradient(135deg, var(--jz-gradient1), var(--jz-gradient2), var(--jz-gradient3));
+  }
+
+  /* ── Themed Table Header ── */
+  .jz-table-header {
+    background: linear-gradient(to right, var(--jz-table-h1), var(--jz-table-h2), var(--jz-table-h3));
+    color: white;
+  }
+
+  /* ── Themed Card Border ── */
+  .jz-card-border {
+    border-color: var(--jz-card-border);
+  }
+
+  /* ── Themed Row ── */
+  .jz-row-alt {
+    background: var(--jz-row-alt);
+  }
+  .jz-row-hover:hover {
+    background: var(--jz-row-hover);
+  }
+
+  /* ── Themed Glow Shadow ── */
+  .jz-glow {
+    box-shadow: 0 0 20px var(--jz-glow);
+  }
+  .jz-glow-hover:hover {
+    box-shadow: 0 0 24px var(--jz-glow-strong);
+  }
+
+  /* ── Themed Text (gradient) ── */
+  .jz-text-gradient {
+    background: linear-gradient(to right, var(--jz-primary), var(--jz-accent));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* ── Themed Text (solid) ── */
+  .jz-text-primary { color: var(--jz-primary); }
+  .jz-text-dark { color: var(--jz-primary-dark); }
+
+  /* ── Themed Badge ── */
+  .jz-badge {
+    background: var(--jz-badge);
+    color: var(--jz-badge-text);
+  }
+
+  /* ── Themed Input ── */
+  .jz-input {
+    border-color: var(--jz-input-border);
+  }
+  .jz-input:focus {
+    border-color: var(--jz-input-focus);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--jz-input-focus) 15%, transparent);
+  }
+
+  /* ── Themed Button ── */
+  .jz-btn {
+    background: linear-gradient(to right, var(--jz-gradient1), var(--jz-gradient2));
+    color: white;
+    transition: all 0.2s ease;
+  }
+  .jz-btn:hover {
+    box-shadow: 0 0 20px var(--jz-glow-strong);
+    filter: brightness(1.1);
   }
 }
 

@@ -3,6 +3,8 @@ import { QRCodeSVG } from 'qrcode.react'
 import { formatTimeDisplay, formatDateTimeThai } from '../utils/timeFormat'
 import supabase from '../firebase'
 import { logActivityBlue, calculateCostBlue, formatElapsedTime } from '../utils/authUtilsBlue'
+import { useTheme } from '../contexts/ThemeContext'
+import ThemePicker from './ThemePicker'
 
 function AdminDashboardBlue({
   customers,
@@ -20,12 +22,16 @@ function AdminDashboardBlue({
     hourlyRate: '',
     note: ''
   })
+  const { setActiveZone } = useTheme()
   const [, setUpdateTrigger] = useState(0)
   const [notifications, setNotifications] = useState([])
   const [notifOpen, setNotifOpen] = useState(false)
   const audioRef = useRef(null)
   const alarmTimeoutRef = useRef(null)
   const notificationsRef = useRef([])
+
+  // Set active zone for theme
+  useEffect(() => { setActiveZone('blue') }, [setActiveZone])
 
   // Keep notifications ref in sync
   useEffect(() => {
@@ -277,19 +283,19 @@ function AdminDashboardBlue({
           <div className="mt-4 flex flex-col sm:flex-row justify-center gap-3">
             <a
               href="/blue/history"
-              className="inline-block bg-white/10 hover:bg-white/20 text-white font-bold py-2 px-6 rounded-xl shadow-lg hover:shadow-glow-blue transform hover:scale-105 transition-all duration-300 border border-white/20"
+              className="inline-block bg-white/10 hover:bg-white/20 text-white font-bold py-2 px-6 rounded-xl shadow-lg jz-glow-hover transform hover:scale-105 transition-all duration-300 border border-white/20"
             >
               📊 ดูประวัติการใช้งาน
             </a>
             <a
               href="/blue/analytics"
-              className="inline-block bg-white/10 hover:bg-white/20 text-white font-bold py-2 px-6 rounded-xl shadow-lg hover:shadow-glow-blue transform hover:scale-105 transition-all duration-300 border border-white/20"
+              className="inline-block bg-white/10 hover:bg-white/20 text-white font-bold py-2 px-6 rounded-xl shadow-lg jz-glow-hover transform hover:scale-105 transition-all duration-300 border border-white/20"
             >
               📈 Analytics
             </a>
             <a
               href="/"
-              className="inline-block bg-white/10 hover:bg-white/20 text-white font-bold py-2 px-6 rounded-xl shadow-lg hover:shadow-glow-blue transform hover:scale-105 transition-all duration-300 border border-white/20"
+              className="inline-block bg-white/10 hover:bg-white/20 text-white font-bold py-2 px-6 rounded-xl shadow-lg jz-glow-hover transform hover:scale-105 transition-all duration-300 border border-white/20"
             >
               🏠 กลับหน้าหลัก
             </a>
@@ -298,9 +304,9 @@ function AdminDashboardBlue({
 
         {/* Notification panel */}
         {notifOpen && (
-          <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl p-4 md:p-6 mb-6 border-3 border-blue-300">
+          <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl p-4 md:p-6 mb-6 border-3 jz-card-border" style={{ borderColor: 'var(--jz-card-border)' }}>
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg md:text-xl font-bold text-blue-700">📞 การเรียกพนักงาน</h2>
+              <h2 className="text-lg md:text-xl font-bold jz-text-primary">📞 การเรียกพนักงาน</h2>
               <button
                 onClick={() => setNotifications([])}
                 className="text-sm text-gray-500 hover:text-gray-700 font-semibold"
@@ -316,9 +322,9 @@ function AdminDashboardBlue({
                   const created = notif.created_at ? new Date(notif.created_at) : null
                   const data = notif.data_changed || {}
                   return (
-                    <div key={notif.id} className="border-2 border-blue-200 rounded-xl p-3 flex flex-col gap-1 bg-blue-50">
+                    <div key={notif.id} className="border-2 rounded-xl p-3 flex flex-col gap-1 jz-row-alt" style={{ borderColor: 'var(--jz-card-border)' }}>
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-bold text-blue-700">{data.room || 'ห้องไม่ระบุ'}</span>
+                        <span className="text-sm font-bold jz-text-primary">{data.room || 'ห้องไม่ระบุ'}</span>
                         <span className="text-xs text-gray-500">{created ? created.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : ''}</span>
                       </div>
                       <div className="text-sm text-gray-800 font-semibold">{notif.description || 'เรียกพนักงาน'}</div>
@@ -343,8 +349,8 @@ function AdminDashboardBlue({
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
           {/* Add Customer Form */}
-          <div className="lg:col-span-2 bg-white/95 backdrop-blur-sm rounded-xl md:rounded-2xl shadow-card p-4 md:p-6 transform hover:scale-[1.01] transition-all duration-300 border border-blue-200/30 slide-up">
-            <h2 className="text-lg md:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent mb-3 md:mb-4">
+          <div className="lg:col-span-2 bg-white/95 backdrop-blur-sm rounded-xl md:rounded-2xl shadow-card p-4 md:p-6 transform hover:scale-[1.01] transition-all duration-300 jz-card-border slide-up">
+            <h2 className="text-lg md:text-2xl lg:text-3xl font-bold jz-text-gradient mb-3 md:mb-4">
               ➕
             </h2>
             <form onSubmit={handleSubmit} className="space-y-3 md:space-y-4">
@@ -354,7 +360,7 @@ function AdminDashboardBlue({
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3 py-2 md:px-4 md:py-2 border-2 border-blue-300 rounded-lg focus:outline-none focus:border-blue-500 text-sm md:text-base"
+                  className="w-full px-3 py-2 md:px-4 md:py-2 border-2 jz-input rounded-lg focus:outline-none text-sm md:text-base"
                   placeholder="กรอกชื่อลูกค้า"
                   required
                 />
@@ -366,7 +372,7 @@ function AdminDashboardBlue({
                   type="text"
                   value={formData.room}
                   onChange={(e) => setFormData({ ...formData, room: e.target.value })}
-                  className="w-full px-3 py-2 md:px-4 md:py-2 border-2 border-blue-300 rounded-lg focus:outline-none focus:border-blue-500 text-sm md:text-base"
+                  className="w-full px-3 py-2 md:px-4 md:py-2 border-2 jz-input rounded-lg focus:outline-none text-sm md:text-base"
                   placeholder="เช่น ชั้น 2 ห้อง VIP, ห้อง A1, Golf Zone ฯลฯ"
                   required
                 />
@@ -380,7 +386,7 @@ function AdminDashboardBlue({
                   type="number"
                   value={formData.hourlyRate}
                   onChange={(e) => setFormData({ ...formData, hourlyRate: e.target.value })}
-                  className="w-full px-3 py-2 md:px-4 md:py-2 border-2 border-blue-300 rounded-lg focus:outline-none focus:border-blue-500 text-sm md:text-base"
+                  className="w-full px-3 py-2 md:px-4 md:py-2 border-2 jz-input rounded-lg focus:outline-none text-sm md:text-base"
                   placeholder="กรอกราคาต่อชั่วโมง เช่น 159, 200, 150 ฯลฯ"
                   min="0"
                   step="0.01"
@@ -396,14 +402,14 @@ function AdminDashboardBlue({
                 <textarea
                   value={formData.note}
                   onChange={(e) => setFormData({ ...formData, note: e.target.value })}
-                  className="w-full px-3 py-2 md:px-4 md:py-2 border-2 border-blue-300 rounded-lg focus:outline-none focus:border-blue-500 text-sm md:text-base h-20 resize-none"
+                  className="w-full px-3 py-2 md:px-4 md:py-2 border-2 jz-input rounded-lg focus:outline-none text-sm md:text-base h-20 resize-none"
                   placeholder="เช่น เล่นแบดมินตัน, ร้อนจัด ฯลฯ"
                 />
               </div>
 
               <button
                 type="submit"
-                className="w-full bg-gradient-to-r from-blue-600 via-cyan-600 to-teal-500 text-white font-bold py-3 md:py-4 px-6 rounded-xl hover:from-blue-700 hover:via-cyan-700 hover:to-teal-600 transform hover:scale-105 active:scale-95 transition-all duration-300 shadow-2xl hover:shadow-blue-500/50 text-sm md:text-base"
+                className="w-full jz-btn font-bold py-3 md:py-4 px-6 rounded-xl transform hover:scale-105 active:scale-95 transition-all duration-300 shadow-2xl text-sm md:text-base"
               >
                 เพิ่มลูกค้า 🎯
               </button>
@@ -411,11 +417,11 @@ function AdminDashboardBlue({
           </div>
 
           {/* QR Code Section */}
-          <div className="bg-white/95 backdrop-blur-sm rounded-xl md:rounded-2xl shadow-card p-4 md:p-6 flex flex-col items-center justify-center border border-blue-200/30 transform hover:scale-105 hover:shadow-glow-blue transition-all duration-300 slide-up-1">
-            <h2 className="text-lg md:text-xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent mb-3 md:mb-4 animate-bounce-slow text-center">
+          <div className="bg-white/95 backdrop-blur-sm rounded-xl md:rounded-2xl shadow-card p-4 md:p-6 flex flex-col items-center justify-center jz-card-border transform hover:scale-105 jz-glow-hover transition-all duration-300 slide-up-1">
+            <h2 className="text-lg md:text-xl font-bold jz-text-gradient mb-3 md:mb-4 animate-bounce-slow text-center">
               📱 QR Code สำหรับลูกค้า
             </h2>
-            <div className="bg-white p-3 md:p-4 rounded-xl border-3 md:border-4 border-blue-400 shadow-lg hover:shadow-2xl hover:border-cyan-400 transition-all duration-300">
+            <div className="bg-white p-3 md:p-4 rounded-xl border-3 md:border-4 shadow-lg hover:shadow-2xl transition-all duration-300" style={{ borderColor: 'var(--jz-primary)' }}>
               <QRCodeSVG value={customerViewUrl} size={150} level="H" className="md:w-[180px] md:h-[180px]" />
             </div>
             <p className="text-xs md:text-sm text-gray-600 mt-3 md:mt-4 text-center font-semibold">สแกนเพื่อดูราคาตามเวลาจริง</p>
@@ -423,11 +429,11 @@ function AdminDashboardBlue({
         </div>
 
         {/* Customer List */}
-        <div className="bg-white/95 backdrop-blur-sm rounded-xl md:rounded-2xl shadow-card p-4 md:p-6 border border-blue-200/30 slide-up-2">
+        <div className="bg-white/95 backdrop-blur-sm rounded-xl md:rounded-2xl shadow-card p-4 md:p-6 jz-card-border slide-up-2">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-3 md:mb-4">
-            <h2 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-blue-600 to-teal-600 bg-clip-text text-transparent flex items-center gap-2">
+            <h2 className="text-xl md:text-2xl font-bold jz-text-gradient flex items-center gap-2">
               📋 รายการลูกค้าทั้งหมด
-              <span className="inline-flex items-center justify-center bg-blue-100 text-blue-700 text-sm font-bold px-2.5 py-0.5 rounded-full">{customers.length}</span>
+              <span className="inline-flex items-center justify-center jz-badge text-sm font-bold px-2.5 py-0.5 rounded-full">{customers.length}</span>
             </h2>
           </div>
           
@@ -443,7 +449,7 @@ function AdminDashboardBlue({
                 <div className="overflow-hidden">
                   <table className="min-w-full border-separate border-spacing-y-1">
                     <thead>
-                      <tr className="bg-gradient-to-r from-blue-600 via-cyan-600 to-teal-500 text-white shadow-lg">
+                      <tr className="jz-table-header text-white shadow-lg">
                         <th className="px-2 md:px-4 py-2.5 md:py-3.5 text-left rounded-tl-xl text-xs md:text-sm font-bold tracking-wide">ชื่อ</th>
                         <th className="px-2 md:px-4 py-2.5 md:py-3.5 text-left text-xs md:text-sm font-bold tracking-wide">ห้อง</th>
                         <th className="px-2 md:px-4 py-2.5 md:py-3.5 text-center text-xs md:text-sm font-bold tracking-wide">🕐 เริ่ม</th>
@@ -459,19 +465,19 @@ function AdminDashboardBlue({
                         <tr
                           key={customer.id}
                           className={`fade-in rounded-lg ${
-                            index % 2 === 0 ? 'bg-blue-50/50' : 'bg-white'
-                          } hover:bg-gradient-to-r hover:from-blue-50 hover:to-cyan-50 transition-all duration-200`}
+                            index % 2 === 0 ? 'jz-row-alt' : 'bg-white'
+                          } jz-row-hover transition-all duration-200`}
                           style={{ animationDelay: `${index * 0.05}s` }}
                         >
                           <td className="px-2 md:px-4 py-2 md:py-3 font-semibold text-xs md:text-base">{customer.name}</td>
                           <td className="px-2 md:px-4 py-2 md:py-3">
-                            <span className="inline-block bg-blue-100 text-blue-700 px-2 md:px-3 py-0.5 md:py-1 rounded-full text-xs md:text-sm">
+                            <span className="inline-block jz-badge px-2 md:px-3 py-0.5 md:py-1 rounded-full text-xs md:text-sm">
                               {customer.room}
                             </span>
                           </td>
                           <td className="px-2 md:px-4 py-2 md:py-3 text-center text-xs md:text-sm">
-                            <div className="bg-blue-100 border-2 border-blue-400 rounded-lg p-1.5 inline-block">
-                              <p className="font-semibold text-blue-700">{formatTimeDisplay(customer.start_time)}</p>
+                            <div className="rounded-lg p-1.5 inline-block jz-badge border-2" style={{ borderColor: 'var(--jz-primary)' }}>
+                              <p className="font-semibold jz-text-primary">{formatTimeDisplay(customer.start_time)}</p>
                             </div>
                           </td>
                           <td className="px-2 md:px-4 py-2 md:py-3 text-center">
@@ -495,7 +501,7 @@ function AdminDashboardBlue({
                             </div>
                           </td>
                           <td className="px-2 md:px-4 py-2 md:py-3 text-center hidden md:table-cell">
-                            <span className="inline-block bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs max-w-[100px] truncate" title={customer.note || 'ไม่มี'}>
+                            <span className="inline-block jz-badge px-2 py-1 rounded text-xs max-w-[100px] truncate" title={customer.note || 'ไม่มี'}>
                               {customer.note || '-'}
                             </span>
                           </td>
@@ -568,6 +574,7 @@ function AdminDashboardBlue({
           )}
         </div>
       </div>
+      <ThemePicker zone="blue" />
     </div>
   )
 }

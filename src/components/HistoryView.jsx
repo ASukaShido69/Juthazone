@@ -2,8 +2,11 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import supabase from '../firebase'
 import { exportToExcel, printReceipt, printHistoryReceipt } from '../utils/exportUtils'
+import { useTheme } from '../contexts/ThemeContext'
+import ThemePicker from './ThemePicker'
 
 function HistoryView() {
+  const { setActiveZone } = useTheme()
   const [history, setHistory] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
   const [filterRoom, setFilterRoom] = useState('all')
@@ -33,6 +36,7 @@ function HistoryView() {
   }, [searchTerm])
 
   useEffect(() => {
+    setActiveZone('red')
     fetchHistory()
   }, [])
 
@@ -455,7 +459,7 @@ function HistoryView() {
             </button>
             <Link
               to="/admin"
-              className="bg-white/10 hover:bg-white/20 text-white font-bold py-2 px-6 rounded-xl shadow-lg hover:shadow-glow-red transform hover:scale-105 active:scale-95 transition-all duration-300 border border-white/20"
+              className="bg-white/10 hover:bg-white/20 text-white font-bold py-2 px-6 rounded-xl shadow-lg jz-glow-hover transform hover:scale-105 active:scale-95 transition-all duration-300 border border-white/20"
             >
               ← กลับแอดมิน
             </Link>
@@ -464,12 +468,12 @@ function HistoryView() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6">
-          <div className="slide-up bg-white/95 backdrop-blur-sm rounded-2xl p-4 md:p-5 shadow-card border border-red-200/30 hover:shadow-glow-red transition-shadow" style={{animationDelay: '0s'}}>
+          <div className="slide-up bg-white/95 backdrop-blur-sm rounded-2xl p-4 md:p-5 shadow-card border jz-card-border jz-glow-hover transition-shadow" style={{animationDelay: '0s'}}>
             <div className="flex items-center justify-between mb-1">
               <span className="text-2xl">📊</span>
-              <span className="text-[10px] font-bold text-red-400 uppercase tracking-wider">ทั้งหมด</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider jz-text-primary" style={{opacity: 0.7}}>ทั้งหมด</span>
             </div>
-            <div className="text-3xl md:text-4xl font-extrabold bg-gradient-to-r from-red-600 to-rose-600 bg-clip-text text-transparent">{stats.count}</div>
+            <div className="text-3xl md:text-4xl font-extrabold jz-text-gradient">{stats.count}</div>
             <div className="text-xs text-gray-500 font-medium mt-1">รายการ</div>
           </div>
           <div className="slide-up bg-white/95 backdrop-blur-sm rounded-2xl p-4 md:p-5 shadow-card border border-green-200/30 hover:shadow-card-hover transition-shadow" style={{animationDelay: '0.1s'}}>
@@ -499,8 +503,8 @@ function HistoryView() {
         </div>
 
         {/* Filters */}
-        <div className="bg-white/95 backdrop-blur-sm rounded-xl md:rounded-2xl shadow-card p-4 md:p-6 mb-6 border border-red-200/30 transform hover:scale-[1.01] transition-all duration-300">
-          <h2 className="text-lg md:text-2xl font-bold bg-gradient-to-r from-red-600 to-rose-500 bg-clip-text text-transparent mb-4">🔍 ค้นหาและกรอง</h2>
+        <div className="bg-white/95 backdrop-blur-sm rounded-xl md:rounded-2xl shadow-card p-4 md:p-6 mb-6 border jz-card-border transform hover:scale-[1.01] transition-all duration-300">
+          <h2 className="text-lg md:text-2xl font-bold jz-text-gradient mb-4">🔍 ค้นหาและกรอง</h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
             <div>
@@ -510,7 +514,7 @@ function HistoryView() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="ชื่อลูกค้า..."
-                className="w-full px-3 py-2 border-2 border-purple-300 rounded-lg focus:outline-none focus:border-purple-500 text-sm"
+                className="w-full px-3 py-2 border-2 jz-input rounded-lg focus:outline-none text-sm"
               />
             </div>
 
@@ -519,7 +523,7 @@ function HistoryView() {
               <select
                 value={filterRoom}
                 onChange={(e) => setFilterRoom(e.target.value)}
-                className="w-full px-3 py-2 border-2 border-purple-300 rounded-lg focus:outline-none focus:border-purple-500 text-sm"
+                className="w-full px-3 py-2 border-2 jz-input rounded-lg focus:outline-none text-sm"
               >
                 <option value="all">ทั้งหมด</option>
                 <option value="ชั้น 2 ห้อง VIP">ชั้น 2 ห้อง VIP</option>
@@ -533,7 +537,7 @@ function HistoryView() {
               <select
                 value={filterPaid}
                 onChange={(e) => setFilterPaid(e.target.value)}
-                className="w-full px-3 py-2 border-2 border-purple-300 rounded-lg focus:outline-none focus:border-purple-500 text-sm"
+                className="w-full px-3 py-2 border-2 jz-input rounded-lg focus:outline-none text-sm"
               >
                 <option value="all">ทั้งหมด</option>
                 <option value="paid">จ่ายแล้ว</option>
@@ -547,7 +551,7 @@ function HistoryView() {
                 type="date"
                 value={dateFrom}
                 onChange={(e) => setDateFrom(e.target.value)}
-                className="w-full px-3 py-2 border-2 border-purple-300 rounded-lg focus:outline-none focus:border-purple-500 text-sm"
+                className="w-full px-3 py-2 border-2 jz-input rounded-lg focus:outline-none text-sm"
               />
             </div>
 
@@ -557,7 +561,7 @@ function HistoryView() {
                 type="date"
                 value={dateTo}
                 onChange={(e) => setDateTo(e.target.value)}
-                className="w-full px-3 py-2 border-2 border-purple-300 rounded-lg focus:outline-none focus:border-purple-500 text-sm"
+                className="w-full px-3 py-2 border-2 jz-input rounded-lg focus:outline-none text-sm"
               />
             </div>
 
@@ -579,9 +583,9 @@ function HistoryView() {
         </div>
 
         {/* History Table */}
-        <div className="bg-white/95 backdrop-blur-sm rounded-xl md:rounded-2xl shadow-card p-4 md:p-6 border border-red-200/30">
+        <div className="bg-white/95 backdrop-blur-sm rounded-xl md:rounded-2xl shadow-card p-4 md:p-6 border jz-card-border">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
-            <h2 className="text-lg md:text-2xl font-bold bg-gradient-to-r from-red-500 to-rose-500 bg-clip-text text-transparent">
+            <h2 className="text-lg md:text-2xl font-bold jz-text-gradient">
               📋 รายการทั้งหมด ({filteredHistory.length})
             </h2>
             <div className="flex flex-wrap gap-2">
@@ -615,7 +619,7 @@ function HistoryView() {
             <div className="overflow-x-auto -mx-4 md:mx-0">
               <table className="min-w-full">
                 <thead>
-                  <tr className="bg-gradient-to-r from-red-600 via-rose-600 to-red-700 text-white shadow-lg">
+                  <tr className="jz-table-header shadow-lg">
                     <th className="px-2 md:px-4 py-2.5 md:py-3.5 text-left text-xs md:text-sm font-bold tracking-wide">ชื่อ</th>
                     <th className="px-2 md:px-4 py-2.5 md:py-3.5 text-left text-xs md:text-sm font-bold tracking-wide">ห้อง</th>
                     <th className="px-2 md:px-4 py-2.5 md:py-3.5 text-left text-xs md:text-sm font-bold tracking-wide hidden sm:table-cell">👥 สร้าง</th>
@@ -636,8 +640,8 @@ function HistoryView() {
                     <tr
                       key={record.id}
                       className={`border-b border-gray-100 ${
-                        index % 2 === 0 ? 'bg-red-50/50' : 'bg-white'
-                      } hover:bg-red-100/70 transition-colors duration-150`}
+                        index % 2 === 0 ? 'jz-row-alt' : 'bg-white'
+                      } jz-row-hover transition-colors duration-150`}
                     >
                       <td className="px-2 md:px-4 py-2 md:py-3 font-semibold text-xs md:text-sm">
                         {record.name}
@@ -780,7 +784,7 @@ function HistoryView() {
                   onClick={() => setCurrentPage(1)}
                   disabled={currentPage === 1}
                   className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${
-                    currentPage === 1 ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-red-100 text-red-700 hover:bg-red-200'
+                    currentPage === 1 ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'jz-badge font-bold hover:opacity-80'
                   }`}
                 >
                   ≪
@@ -789,7 +793,7 @@ function HistoryView() {
                   onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                   disabled={currentPage === 1}
                   className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${
-                    currentPage === 1 ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-red-100 text-red-700 hover:bg-red-200'
+                    currentPage === 1 ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'jz-badge font-bold hover:opacity-80'
                   }`}
                 >
                   ‹
@@ -811,8 +815,8 @@ function HistoryView() {
                       onClick={() => setCurrentPage(page)}
                       className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${
                         currentPage === page
-                          ? 'bg-red-600 text-white shadow-glow-red'
-                          : 'bg-gray-100 text-gray-700 hover:bg-red-100'
+                          ? 'jz-btn jz-glow'
+                          : 'bg-gray-100 text-gray-700 hover:opacity-80'
                       }`}
                     >
                       {page}
@@ -823,7 +827,7 @@ function HistoryView() {
                   onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                   disabled={currentPage === totalPages}
                   className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${
-                    currentPage === totalPages ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-red-100 text-red-700 hover:bg-red-200'
+                    currentPage === totalPages ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'jz-badge font-bold hover:opacity-80'
                   }`}
                 >
                   ›
@@ -832,7 +836,7 @@ function HistoryView() {
                   onClick={() => setCurrentPage(totalPages)}
                   disabled={currentPage === totalPages}
                   className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${
-                    currentPage === totalPages ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-red-100 text-red-700 hover:bg-red-200'
+                    currentPage === totalPages ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'jz-badge font-bold hover:opacity-80'
                   }`}
                 >
                   ≫
@@ -845,10 +849,10 @@ function HistoryView() {
         {/* Shift Management Modal */}
         {showShiftModal && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 overflow-y-auto">
-            <div className="bg-white rounded-2xl shadow-2xl p-6 md:p-8 max-w-6xl w-full border-4 border-red-500 my-auto max-h-[90vh] overflow-y-auto modal-in">
+            <div className="bg-white rounded-2xl shadow-2xl p-6 md:p-8 max-w-6xl w-full border-4 my-auto max-h-[90vh] overflow-y-auto modal-in" style={{borderColor: 'var(--jz-primary)'}}>
               {/* Header */}
-              <div className="flex justify-between items-center mb-6 pb-4 border-b-2 border-red-300">
-                <h2 className="text-2xl md:text-3xl font-bold text-red-700">🔄 สถิติและจัดการตามกะ</h2>
+              <div className="flex justify-between items-center mb-6 pb-4 border-b-2" style={{borderColor: 'var(--jz-primary-light)'}}>
+                <h2 className="text-2xl md:text-3xl font-bold jz-text-primary">🔄 สถิติและจัดการตามกะ</h2>
                 <button
                   onClick={() => setShowShiftModal(false)}
                   className="text-2xl text-gray-500 hover:text-gray-700 font-bold"
@@ -979,10 +983,10 @@ function HistoryView() {
         {/* Edit Modal Dialog */}
         {showEditModal && editingId && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 overflow-y-auto">
-            <div className="bg-white rounded-2xl shadow-2xl p-6 md:p-8 max-w-4xl w-full border-4 border-red-500 my-auto modal-in">
+            <div className="bg-white rounded-2xl shadow-2xl p-6 md:p-8 max-w-4xl w-full border-4 my-auto modal-in" style={{borderColor: 'var(--jz-primary)'}}>
               {/* Header */}
-              <div className="flex justify-between items-center mb-6 pb-4 border-b-2 border-red-300">
-                <h2 className="text-2xl md:text-3xl font-bold text-red-700">✏️ แก้ไขข้อมูลประวัติ</h2>
+              <div className="flex justify-between items-center mb-6 pb-4 border-b-2" style={{borderColor: 'var(--jz-primary-light)'}}>
+                <h2 className="text-2xl md:text-3xl font-bold jz-text-primary">✏️ แก้ไขข้อมูลประวัติ</h2>
                 <button
                   onClick={() => {
                     setShowEditModal(false)
@@ -1253,6 +1257,9 @@ function HistoryView() {
           </div>
         )}
       </div>
+
+      {/* Theme Picker */}
+      <ThemePicker zone="red" />
     </div>
   )
 }

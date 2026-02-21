@@ -3,8 +3,11 @@ import { Link } from 'react-router-dom'
 import supabase from '../firebase'
 import { exportToExcel, printReceipt, printHistoryReceipt } from '../utils/exportUtils'
 import { formatDateTimeThai } from '../utils/timeFormat'
+import { useTheme } from '../contexts/ThemeContext'
+import ThemePicker from './ThemePicker'
 
 function HistoryViewBlue() {
+  const { setActiveZone } = useTheme()
   const [history, setHistory] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
   const [filterRoom, setFilterRoom] = useState('all')
@@ -33,6 +36,7 @@ function HistoryViewBlue() {
   }, [searchTerm])
 
   useEffect(() => {
+    setActiveZone('blue')
     fetchUsers()
     fetchHistory()
   }, [])
@@ -336,13 +340,13 @@ function HistoryViewBlue() {
           <div className="mt-4 flex flex-wrap justify-center gap-3">
             <Link
               to="/blue/admin"
-              className="inline-block bg-white/10 hover:bg-white/20 text-white font-bold py-2 px-6 rounded-xl shadow-lg hover:shadow-glow-blue transform hover:scale-105 transition-all duration-300 border border-white/20"
+              className="inline-block bg-white/10 hover:bg-white/20 text-white font-bold py-2 px-6 rounded-xl shadow-lg jz-glow-hover transform hover:scale-105 transition-all duration-300 border border-white/20"
             >
               ← กลับหน้าแอดมิน
             </Link>
             <Link
               to="/"
-              className="inline-block bg-white/10 hover:bg-white/20 text-white font-bold py-2 px-6 rounded-xl shadow-lg hover:shadow-glow-blue transform hover:scale-105 transition-all duration-300 border border-white/20"
+              className="inline-block bg-white/10 hover:bg-white/20 text-white font-bold py-2 px-6 rounded-xl shadow-lg jz-glow-hover transform hover:scale-105 transition-all duration-300 border border-white/20"
             >
               🏠 กลับหน้าหลัก
             </Link>
@@ -350,8 +354,8 @@ function HistoryViewBlue() {
         </div>
 
         {/* Filters */}
-        <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-card p-4 md:p-6 mb-6 border border-blue-200/30 slide-up-1">
-          <h2 className="text-xl md:text-2xl font-bold text-blue-700 mb-4">🔍 ค้นหาและกรอง</h2>
+        <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-card p-4 md:p-6 mb-6 border jz-card-border slide-up-1">
+          <h2 className="text-xl md:text-2xl font-bold jz-text-gradient mb-4">🔍 ค้นหาและกรอง</h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Search */}
@@ -362,7 +366,7 @@ function HistoryViewBlue() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="กรอกชื่อ..."
-                className="w-full px-3 py-2 border-2 border-blue-300 rounded-lg focus:outline-none focus:border-blue-500 text-sm"
+                className="w-full px-3 py-2 border-2 jz-input rounded-lg focus:outline-none text-sm"
               />
             </div>
 
@@ -372,7 +376,7 @@ function HistoryViewBlue() {
               <select
                 value={filterRoom}
                 onChange={(e) => setFilterRoom(e.target.value)}
-                className="w-full px-3 py-2 border-2 border-blue-300 rounded-lg focus:outline-none focus:border-blue-500 text-sm"
+                className="w-full px-3 py-2 border-2 jz-input rounded-lg focus:outline-none text-sm"
               >
                 <option value="all">ทั้งหมด</option>
                 <option value="ชั้น 2 ห้อง VIP">ชั้น 2 ห้อง VIP</option>
@@ -387,7 +391,7 @@ function HistoryViewBlue() {
               <select
                 value={filterPaid}
                 onChange={(e) => setFilterPaid(e.target.value)}
-                className="w-full px-3 py-2 border-2 border-blue-300 rounded-lg focus:outline-none focus:border-blue-500 text-sm"
+                className="w-full px-3 py-2 border-2 jz-input rounded-lg focus:outline-none text-sm"
               >
                 <option value="all">ทั้งหมด</option>
                 <option value="paid">จ่ายแล้ว</option>
@@ -402,7 +406,7 @@ function HistoryViewBlue() {
                 type="date"
                 value={dateFrom}
                 onChange={(e) => setDateFrom(e.target.value)}
-                className="w-full px-3 py-2 border-2 border-blue-300 rounded-lg focus:outline-none focus:border-blue-500 text-sm"
+                className="w-full px-3 py-2 border-2 jz-input rounded-lg focus:outline-none text-sm"
               />
             </div>
 
@@ -413,7 +417,7 @@ function HistoryViewBlue() {
                 type="date"
                 value={dateTo}
                 onChange={(e) => setDateTo(e.target.value)}
-                className="w-full px-3 py-2 border-2 border-blue-300 rounded-lg focus:outline-none focus:border-blue-500 text-sm"
+                className="w-full px-3 py-2 border-2 jz-input rounded-lg focus:outline-none text-sm"
               />
             </div>
           </div>
@@ -436,12 +440,12 @@ function HistoryViewBlue() {
 
         {/* Summary */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="slide-up bg-white/95 backdrop-blur-sm rounded-2xl shadow-card p-4 border border-blue-200/30 hover:shadow-glow-blue transition-shadow" style={{animationDelay: '0s'}}>
+          <div className="slide-up bg-white/95 backdrop-blur-sm rounded-2xl shadow-card p-4 border jz-card-border jz-glow-hover transition-shadow" style={{animationDelay: '0s'}}>
             <div className="flex items-center justify-between mb-1">
               <span className="text-2xl">📊</span>
-              <span className="text-[10px] font-bold text-blue-400 uppercase tracking-wider">จำนวน</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider jz-text-primary" style={{opacity: 0.7}}>จำนวน</span>
             </div>
-            <p className="text-3xl font-extrabold text-blue-600">{filteredHistory.length}</p>
+            <p className="text-3xl font-extrabold jz-text-gradient">{filteredHistory.length}</p>
             <p className="text-xs text-gray-500 font-medium mt-1">รายการ</p>
           </div>
           <div className="slide-up bg-white/95 backdrop-blur-sm rounded-2xl shadow-card p-4 border border-green-200/30 hover:shadow-card-hover transition-shadow" style={{animationDelay: '0.1s'}}>
@@ -465,8 +469,8 @@ function HistoryViewBlue() {
         </div>
 
         {/* History Table */}
-        <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-card p-4 md:p-6 border border-blue-200/30">
-          <h2 className="text-xl md:text-2xl font-bold text-teal-700 mb-4">📋 รายการทั้งหมด</h2>
+        <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-card p-4 md:p-6 border jz-card-border">
+          <h2 className="text-xl md:text-2xl font-bold jz-text-gradient mb-4">📋 รายการทั้งหมด</h2>
           
           {filteredHistory.length === 0 ? (
             <div className="text-center py-12 text-gray-400">
@@ -477,7 +481,7 @@ function HistoryViewBlue() {
             <div className="overflow-x-auto">
               <table className="min-w-full">
                 <thead>
-                  <tr className="bg-gradient-to-r from-blue-600 via-cyan-600 to-teal-500 text-white shadow-lg">
+                  <tr className="jz-table-header shadow-lg">
                     <th className="px-4 py-3 text-left rounded-tl-xl text-sm font-bold tracking-wide">ชื่อ</th>
                     <th className="px-4 py-3 text-left text-sm font-bold tracking-wide">ห้อง</th>
                     <th className="px-4 py-3 text-center text-sm font-bold tracking-wide">🕐 เริ่ม</th>
@@ -497,12 +501,12 @@ function HistoryViewBlue() {
                     <tr
                       key={record.id}
                       className={`border-b border-gray-100 ${
-                        index % 2 === 0 ? 'bg-blue-50/50' : 'bg-white'
-                      } hover:bg-cyan-100/50 transition-colors duration-150`}
+                        index % 2 === 0 ? 'jz-row-alt' : 'bg-white'
+                      } jz-row-hover transition-colors duration-150`}
                     >
                       <td className="px-4 py-3 font-semibold text-sm">{record.name}</td>
                       <td className="px-4 py-3 text-sm">
-                        <span className="inline-block bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs">
+                        <span className="inline-block jz-badge px-2 py-1 rounded-full text-xs">
                           {record.room}
                         </span>
                       </td>
@@ -593,7 +597,7 @@ function HistoryViewBlue() {
                   onClick={() => setCurrentPage(1)}
                   disabled={currentPage === 1}
                   className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${
-                    currentPage === 1 ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                    currentPage === 1 ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'jz-badge font-bold hover:opacity-80'
                   }`}
                 >
                   ≪
@@ -602,7 +606,7 @@ function HistoryViewBlue() {
                   onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                   disabled={currentPage === 1}
                   className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${
-                    currentPage === 1 ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                    currentPage === 1 ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'jz-badge font-bold hover:opacity-80'
                   }`}
                 >
                   ‹
@@ -624,8 +628,8 @@ function HistoryViewBlue() {
                       onClick={() => setCurrentPage(page)}
                       className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${
                         currentPage === page
-                          ? 'bg-blue-600 text-white shadow-glow-blue'
-                          : 'bg-gray-100 text-gray-700 hover:bg-blue-100'
+                          ? 'jz-btn jz-glow'
+                          : 'bg-gray-100 text-gray-700 hover:opacity-80'
                       }`}
                     >
                       {page}
@@ -636,7 +640,7 @@ function HistoryViewBlue() {
                   onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                   disabled={currentPage === totalPages}
                   className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${
-                    currentPage === totalPages ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                    currentPage === totalPages ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'jz-badge font-bold hover:opacity-80'
                   }`}
                 >
                   ›
@@ -645,7 +649,7 @@ function HistoryViewBlue() {
                   onClick={() => setCurrentPage(totalPages)}
                   disabled={currentPage === totalPages}
                   className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${
-                    currentPage === totalPages ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                    currentPage === totalPages ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'jz-badge font-bold hover:opacity-80'
                   }`}
                 >
                   ≫
@@ -658,10 +662,10 @@ function HistoryViewBlue() {
         {/* Edit Modal Dialog */}
         {showEditModal && editingId && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 overflow-y-auto">
-            <div className="bg-white rounded-2xl shadow-2xl p-6 md:p-8 max-w-4xl w-full border-4 border-blue-500 my-auto modal-in">
+            <div className="bg-white rounded-2xl shadow-2xl p-6 md:p-8 max-w-4xl w-full border-4 my-auto modal-in" style={{borderColor: 'var(--jz-primary)'}}>
               {/* Header */}
-              <div className="flex justify-between items-center mb-6 pb-4 border-b-2 border-blue-300">
-                <h2 className="text-2xl md:text-3xl font-bold text-blue-700">✏️ แก้ไขข้อมูลประวัติ - Blue Zone</h2>
+              <div className="flex justify-between items-center mb-6 pb-4 border-b-2" style={{borderColor: 'var(--jz-primary-light)'}}>
+                <h2 className="text-2xl md:text-3xl font-bold jz-text-primary">✏️ แก้ไขข้อมูลประวัติ - Blue Zone</h2>
                 <button
                   onClick={() => {
                     setShowEditModal(false)
@@ -895,6 +899,9 @@ function HistoryViewBlue() {
           </div>
         )}
       </div>
+
+      {/* Theme Picker */}
+      <ThemePicker zone="blue" />
     </div>
   )
 }
