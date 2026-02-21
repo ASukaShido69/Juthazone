@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import supabase from '../firebase'
-import { exportToExcel, printReceipt } from '../utils/exportUtils'
+import { exportToExcel, printReceipt, printHistoryReceipt } from '../utils/exportUtils'
 import { formatDateTimeThai } from '../utils/timeFormat'
 
 function HistoryViewBlue() {
@@ -303,7 +303,19 @@ function HistoryViewBlue() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-600 via-cyan-500 to-teal-500 p-4 md:p-6 lg:p-8">
+    <div className="min-h-screen bg-gradient-to-br from-blue-700 via-cyan-600 to-teal-500 p-4 md:p-6 lg:p-8">
+      <style>{`
+        @keyframes stat-in {
+          from { opacity: 0; transform: translateY(15px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .stat-animate { animation: stat-in 0.4s ease-out both; }
+        @keyframes table-row-in {
+          from { opacity: 0; transform: translateX(-8px); }
+          to { opacity: 1; transform: translateX(0); }
+        }
+        .table-row-animate { animation: table-row-in 0.25s ease-out; }
+      `}</style>
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="text-center mb-6">
@@ -416,19 +428,31 @@ function HistoryViewBlue() {
 
         {/* Summary */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-xl p-4 border-3 border-blue-300">
-            <p className="text-gray-600 font-semibold mb-1 text-sm">จำนวนรายการ</p>
-            <p className="text-3xl font-bold text-blue-600">{filteredHistory.length}</p>
+          <div className="stat-animate bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl p-4 border border-blue-200 hover:shadow-2xl transition-shadow" style={{animationDelay: '0s'}}>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-2xl">📊</span>
+              <span className="text-[10px] font-bold text-blue-400 uppercase tracking-wider">จำนวน</span>
+            </div>
+            <p className="text-3xl font-extrabold text-blue-600">{filteredHistory.length}</p>
+            <p className="text-xs text-gray-500 font-medium mt-1">รายการ</p>
           </div>
-          <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-xl p-4 border-3 border-green-300">
-            <p className="text-gray-600 font-semibold mb-1 text-sm">รายได้รวม</p>
-            <p className="text-3xl font-bold text-green-600">฿{calculateTotalRevenue().toFixed(2)}</p>
+          <div className="stat-animate bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl p-4 border border-green-200 hover:shadow-2xl transition-shadow" style={{animationDelay: '0.1s'}}>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-2xl">💰</span>
+              <span className="text-[10px] font-bold text-green-400 uppercase tracking-wider">รายได้รวม</span>
+            </div>
+            <p className="text-3xl font-extrabold text-green-600">฿{calculateTotalRevenue().toFixed(0)}</p>
+            <p className="text-xs text-gray-500 font-medium mt-1">บาท</p>
           </div>
-          <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-xl p-4 border-3 border-cyan-300">
-            <p className="text-gray-600 font-semibold mb-1 text-sm">เฉลี่ยต่อรายการ</p>
-            <p className="text-3xl font-bold text-cyan-600">
-              ฿{filteredHistory.length > 0 ? (calculateTotalRevenue() / filteredHistory.length).toFixed(2) : '0.00'}
+          <div className="stat-animate bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl p-4 border border-cyan-200 hover:shadow-2xl transition-shadow" style={{animationDelay: '0.2s'}}>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-2xl">📈</span>
+              <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider">เฉลี่ย</span>
+            </div>
+            <p className="text-3xl font-extrabold text-cyan-600">
+              ฿{filteredHistory.length > 0 ? (calculateTotalRevenue() / filteredHistory.length).toFixed(0) : '0'}
             </p>
+            <p className="text-xs text-gray-500 font-medium mt-1">บาท/รายการ</p>
           </div>
         </div>
 
@@ -445,28 +469,29 @@ function HistoryViewBlue() {
             <div className="overflow-x-auto">
               <table className="min-w-full">
                 <thead>
-                  <tr className="bg-gradient-to-r from-blue-600 via-cyan-600 to-teal-500 text-white">
-                    <th className="px-4 py-3 text-left rounded-tl-xl text-sm">ชื่อ</th>
-                    <th className="px-4 py-3 text-left text-sm">ห้อง</th>
-                    <th className="px-4 py-3 text-center text-sm">เริ่ม</th>
-                    <th className="px-4 py-3 text-center text-sm">จบ</th>
-                    <th className="px-4 py-3 text-center text-sm">ระยะเวลา</th>
-                    <th className="px-4 py-3 text-center text-sm">อัตรา/ชม</th>
-                    <th className="px-4 py-3 text-center text-sm">ราคา</th>
-                    <th className="px-4 py-3 text-center text-sm">พนักงาน</th>
-                    <th className="px-4 py-3 text-center text-sm">สถานะ</th>
-                    <th className="px-4 py-3 text-center text-sm">เหตุผล</th>
-                    <th className="px-4 py-3 text-center text-sm">Note</th>
-                    <th className="px-4 py-3 text-center rounded-tr-xl text-sm">จัดการ</th>
+                  <tr className="bg-gradient-to-r from-blue-600 via-cyan-600 to-teal-500 text-white shadow-lg">
+                    <th className="px-4 py-3 text-left rounded-tl-xl text-sm font-bold tracking-wide">ชื่อ</th>
+                    <th className="px-4 py-3 text-left text-sm font-bold tracking-wide">ห้อง</th>
+                    <th className="px-4 py-3 text-center text-sm font-bold tracking-wide">🕐 เริ่ม</th>
+                    <th className="px-4 py-3 text-center text-sm font-bold tracking-wide">🕑 จบ</th>
+                    <th className="px-4 py-3 text-center text-sm font-bold tracking-wide">⏱ เวลา</th>
+                    <th className="px-4 py-3 text-center text-sm font-bold tracking-wide">💲 อัตรา</th>
+                    <th className="px-4 py-3 text-center text-sm font-bold tracking-wide">💰 ราคา</th>
+                    <th className="px-4 py-3 text-center text-sm font-bold tracking-wide">👤 พนักงาน</th>
+                    <th className="px-4 py-3 text-center text-sm font-bold tracking-wide">💳 สถานะ</th>
+                    <th className="px-4 py-3 text-center text-sm font-bold tracking-wide">📊 เหตุผล</th>
+                    <th className="px-4 py-3 text-center text-sm font-bold tracking-wide">📝 Note</th>
+                    <th className="px-4 py-3 text-center rounded-tr-xl text-sm font-bold tracking-wide">จัดการ</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredHistory.map((record, index) => (
                     <tr
                       key={record.id}
-                      className={`border-b ${
-                        index % 2 === 0 ? 'bg-blue-50' : 'bg-white'
-                      } hover:bg-cyan-100 transition-all`}
+                      className={`table-row-animate border-b border-gray-100 ${
+                        index % 2 === 0 ? 'bg-blue-50/50' : 'bg-white'
+                      } hover:bg-cyan-100/50 transition-all duration-200`}
+                      style={{ animationDelay: `${index * 0.03}s` }}
                     >
                       <td className="px-4 py-3 font-semibold text-sm">{record.name}</td>
                       <td className="px-4 py-3 text-sm">
@@ -517,8 +542,15 @@ function HistoryViewBlue() {
                       <td className="px-4 py-3 text-center">
                         <div className="flex flex-col gap-1">
                           <button
+                            onClick={() => printHistoryReceipt(record, 'blue')}
+                            className="px-2 py-1 bg-purple-500 hover:bg-purple-600 text-white rounded-lg font-semibold text-xs shadow transform hover:scale-105 active:scale-95 transition-all"
+                            title="พิมพ์ใบเสร็จ"
+                          >
+                            🖨️ พิมพ์
+                          </button>
+                          <button
                             onClick={() => startEdit(record)}
-                            className="px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold text-xs"
+                            className="px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold text-xs shadow transform hover:scale-105 active:scale-95 transition-all"
                             title="แก้ไขรายการ"
                           >
                             ✏️ แก้ไข
@@ -529,7 +561,7 @@ function HistoryViewBlue() {
                                 deleteHistory(record.id)
                               }
                             }}
-                            className="px-2 py-1 bg-red-500 hover:bg-red-600 text-white rounded-lg font-semibold text-xs"
+                            className="px-2 py-1 bg-red-500 hover:bg-red-600 text-white rounded-lg font-semibold text-xs shadow transform hover:scale-105 active:scale-95 transition-all"
                             title="ลบรายการประวัติ"
                           >
                             🗑️ ลบ

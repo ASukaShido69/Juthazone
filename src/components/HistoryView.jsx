@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import supabase from '../firebase'
-import { exportToExcel, printReceipt } from '../utils/exportUtils'
+import { exportToExcel, printReceipt, printHistoryReceipt } from '../utils/exportUtils'
 
 function HistoryView() {
   const [history, setHistory] = useState([])
@@ -416,7 +416,7 @@ function HistoryView() {
   const stats = getTotalStats()
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-600 via-pink-500 to-orange-500 animate-gradient p-3 md:p-6 lg:p-8">
+    <div className="min-h-screen bg-gradient-to-br from-purple-700 via-pink-600 to-orange-500 animate-gradient p-3 md:p-6 lg:p-8">
       <style>{`
         @keyframes gradient {
           0%, 100% { background-position: 0% 50%; }
@@ -426,6 +426,16 @@ function HistoryView() {
           background-size: 200% 200%;
           animation: gradient 15s ease infinite;
         }
+        @keyframes stat-in {
+          from { opacity: 0; transform: translateY(15px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .stat-animate { animation: stat-in 0.4s ease-out both; }
+        @keyframes table-row-in {
+          from { opacity: 0; transform: translateX(-8px); }
+          to { opacity: 1; transform: translateX(0); }
+        }
+        .table-row-animate { animation: table-row-in 0.25s ease-out; }
       `}</style>
       <div className="max-w-7xl mx-auto">
         {/* Header */}
@@ -456,21 +466,37 @@ function HistoryView() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6">
-          <div className="bg-white/95 backdrop-blur-sm rounded-xl md:rounded-2xl p-4 md:p-6 shadow-2xl transform hover:scale-[1.02] transition-all duration-300 border-2 border-purple-300">
-            <div className="text-2xl md:text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">{stats.count}</div>
-            <div className="text-xs md:text-sm text-gray-600 font-semibold mt-1">ทั้งหมด</div>
+          <div className="stat-animate bg-white/95 backdrop-blur-sm rounded-2xl p-4 md:p-5 shadow-xl border border-purple-200 hover:shadow-2xl transition-shadow" style={{animationDelay: '0s'}}>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-2xl">📊</span>
+              <span className="text-[10px] font-bold text-purple-400 uppercase tracking-wider">ทั้งหมด</span>
+            </div>
+            <div className="text-3xl md:text-4xl font-extrabold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">{stats.count}</div>
+            <div className="text-xs text-gray-500 font-medium mt-1">รายการ</div>
           </div>
-          <div className="bg-white/95 backdrop-blur-sm rounded-xl md:rounded-2xl p-4 md:p-6 shadow-2xl transform hover:scale-[1.02] transition-all duration-300 border-2 border-green-300">
-            <div className="text-2xl md:text-4xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">฿{stats.revenue.toFixed(2)}</div>
-            <div className="text-xs md:text-sm text-gray-600 font-semibold mt-1">รายได้</div>
+          <div className="stat-animate bg-white/95 backdrop-blur-sm rounded-2xl p-4 md:p-5 shadow-xl border border-green-200 hover:shadow-2xl transition-shadow" style={{animationDelay: '0.1s'}}>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-2xl">💰</span>
+              <span className="text-[10px] font-bold text-green-400 uppercase tracking-wider">รายได้</span>
+            </div>
+            <div className="text-2xl md:text-3xl font-extrabold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">฿{stats.revenue.toFixed(0)}</div>
+            <div className="text-xs text-gray-500 font-medium mt-1">บาท</div>
           </div>
-          <div className="bg-white/95 backdrop-blur-sm rounded-xl md:rounded-2xl p-4 md:p-6 shadow-2xl transform hover:scale-[1.02] transition-all duration-300 border-2 border-blue-300">
-            <div className="text-2xl md:text-4xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">{formatDuration(stats.duration)}</div>
-            <div className="text-xs md:text-sm text-gray-600 font-semibold mt-1">เวลารวม</div>
+          <div className="stat-animate bg-white/95 backdrop-blur-sm rounded-2xl p-4 md:p-5 shadow-xl border border-blue-200 hover:shadow-2xl transition-shadow" style={{animationDelay: '0.2s'}}>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-2xl">⏱️</span>
+              <span className="text-[10px] font-bold text-blue-400 uppercase tracking-wider">เวลารวม</span>
+            </div>
+            <div className="text-2xl md:text-3xl font-extrabold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">{formatDuration(stats.duration)}</div>
+            <div className="text-xs text-gray-500 font-medium mt-1">ชั่วโมง</div>
           </div>
-          <div className="bg-white/95 backdrop-blur-sm rounded-xl md:rounded-2xl p-4 md:p-6 shadow-2xl transform hover:scale-[1.02] transition-all duration-300 border-2 border-orange-300">
-            <div className="text-2xl md:text-4xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">{stats.paid}/{stats.count}</div>
-            <div className="text-xs md:text-sm text-gray-600 font-semibold mt-1">จ่ายแล้ว</div>
+          <div className="stat-animate bg-white/95 backdrop-blur-sm rounded-2xl p-4 md:p-5 shadow-xl border border-orange-200 hover:shadow-2xl transition-shadow" style={{animationDelay: '0.3s'}}>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-2xl">✅</span>
+              <span className="text-[10px] font-bold text-orange-400 uppercase tracking-wider">จ่ายแล้ว</span>
+            </div>
+            <div className="text-3xl md:text-4xl font-extrabold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">{stats.paid}<span className="text-lg text-gray-400">/{stats.count}</span></div>
+            <div className="text-xs text-gray-500 font-medium mt-1">{stats.count > 0 ? Math.round(stats.paid/stats.count*100) : 0}%</div>
           </div>
         </div>
 
@@ -591,29 +617,30 @@ function HistoryView() {
             <div className="overflow-x-auto -mx-4 md:mx-0">
               <table className="min-w-full">
                 <thead>
-                  <tr className="bg-gradient-to-r from-purple-600 to-pink-600 text-white">
-                    <th className="px-2 md:px-4 py-2 md:py-3 text-left text-xs md:text-sm">ชื่อ</th>
-                    <th className="px-2 md:px-4 py-2 md:py-3 text-left text-xs md:text-sm">ห้อง</th>
-                    <th className="px-2 md:px-4 py-2 md:py-3 text-left text-xs md:text-sm hidden sm:table-cell">👥 สร้างโดย</th>
-                    <th className="px-2 md:px-4 py-2 md:py-3 text-left text-xs md:text-sm hidden lg:table-cell">✏️ แก้ไขโดย</th>
-                    <th className="px-2 md:px-4 py-2 md:py-3 text-center text-xs md:text-sm hidden sm:table-cell">🔄 กะ</th>
-                    <th className="px-2 md:px-4 py-2 md:py-3 text-center text-xs md:text-sm hidden md:table-cell">📅 วันที่</th>
-                    <th className="px-2 md:px-4 py-2 md:py-3 text-center text-xs md:text-sm hidden md:table-cell">🕐 เริ่ม</th>
-                    <th className="px-2 md:px-4 py-2 md:py-3 text-center text-xs md:text-sm hidden md:table-cell">🕑 จบ</th>
-                    <th className="px-2 md:px-4 py-2 md:py-3 text-center text-xs md:text-sm">ระยะเวลา</th>
-                    <th className="px-2 md:px-4 py-2 md:py-3 text-center text-xs md:text-sm">ค่าใช้จ่าย</th>
-                    <th className="px-2 md:px-4 py-2 md:py-3 text-center text-xs md:text-sm">สถานะจ่าย</th>
-                    <th className="px-2 md:px-4 py-2 md:py-3 text-center text-xs md:text-sm hidden lg:table-cell">สถานะ</th>
-                    <th className="px-2 md:px-4 py-2 md:py-3 text-center text-xs md:text-sm">จัดการ</th>
+                  <tr className="bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 text-white shadow-lg">
+                    <th className="px-2 md:px-4 py-2.5 md:py-3.5 text-left text-xs md:text-sm font-bold tracking-wide">ชื่อ</th>
+                    <th className="px-2 md:px-4 py-2.5 md:py-3.5 text-left text-xs md:text-sm font-bold tracking-wide">ห้อง</th>
+                    <th className="px-2 md:px-4 py-2.5 md:py-3.5 text-left text-xs md:text-sm font-bold tracking-wide hidden sm:table-cell">👥 สร้าง</th>
+                    <th className="px-2 md:px-4 py-2.5 md:py-3.5 text-left text-xs md:text-sm font-bold tracking-wide hidden lg:table-cell">✏️ แก้ไข</th>
+                    <th className="px-2 md:px-4 py-2.5 md:py-3.5 text-center text-xs md:text-sm font-bold tracking-wide hidden sm:table-cell">🔄 กะ</th>
+                    <th className="px-2 md:px-4 py-2.5 md:py-3.5 text-center text-xs md:text-sm font-bold tracking-wide hidden md:table-cell">📅 วันที่</th>
+                    <th className="px-2 md:px-4 py-2.5 md:py-3.5 text-center text-xs md:text-sm font-bold tracking-wide hidden md:table-cell">🕐 เริ่ม</th>
+                    <th className="px-2 md:px-4 py-2.5 md:py-3.5 text-center text-xs md:text-sm font-bold tracking-wide hidden md:table-cell">🕑 จบ</th>
+                    <th className="px-2 md:px-4 py-2.5 md:py-3.5 text-center text-xs md:text-sm font-bold tracking-wide">⏱ เวลา</th>
+                    <th className="px-2 md:px-4 py-2.5 md:py-3.5 text-center text-xs md:text-sm font-bold tracking-wide">💰 ราคา</th>
+                    <th className="px-2 md:px-4 py-2.5 md:py-3.5 text-center text-xs md:text-sm font-bold tracking-wide">💳 จ่าย</th>
+                    <th className="px-2 md:px-4 py-2.5 md:py-3.5 text-center text-xs md:text-sm font-bold tracking-wide hidden lg:table-cell">สถานะ</th>
+                    <th className="px-2 md:px-4 py-2.5 md:py-3.5 text-center text-xs md:text-sm font-bold tracking-wide">จัดการ</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredHistory.map((record, index) => (
                     <tr
                       key={record.id}
-                      className={`border-b ${
-                        index % 2 === 0 ? 'bg-purple-50' : 'bg-white'
-                      } hover:bg-purple-100 transition-all duration-200`}
+                      className={`table-row-animate border-b border-gray-100 ${
+                        index % 2 === 0 ? 'bg-purple-50/50' : 'bg-white'
+                      } hover:bg-purple-100/70 transition-all duration-200`}
+                      style={{ animationDelay: `${index * 0.03}s` }}
                     >
                       <td className="px-2 md:px-4 py-2 md:py-3 font-semibold text-xs md:text-sm">
                         {record.name}
@@ -710,16 +737,7 @@ function HistoryView() {
                         <div className="flex flex-col gap-1 justify-center min-w-[100px]">
                             <button
                               onClick={() => {
-                                const customer = {
-                                  name: record.name,
-                                  room: record.room,
-                                  note: record.note,
-                                  startTime: record.start_time,
-                                  expectedEndTime: record.end_time,
-                                  cost: record.final_cost,
-                                  isPaid: record.is_paid
-                                }
-                                printReceipt(customer).catch(err => console.error('Print error:', err))
+                                printHistoryReceipt(record, 'red')
                               }}
                               className="px-3 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg text-xs font-bold shadow transform hover:scale-105 active:scale-95 transition-all"
                               title="พิมพ์ใบเสร็จ"

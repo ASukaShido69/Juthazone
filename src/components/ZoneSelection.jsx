@@ -1,11 +1,36 @@
 import { useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
 
 function ZoneSelection() {
   const navigate = useNavigate()
+  const [clock, setClock] = useState(new Date())
+  const [particles] = useState(() =>
+    Array.from({ length: 20 }, (_, i) => ({
+      id: i,
+      x: Math.random() * 100,
+      y: Math.random() * 100,
+      size: Math.random() * 6 + 2,
+      duration: Math.random() * 8 + 6,
+      delay: Math.random() * 5,
+      emoji: ['🎮', '🎯', '🕹️', '🏆', '⭐', '🎲', '🎪', '✨'][Math.floor(Math.random() * 8)]
+    }))
+  )
+
+  useEffect(() => {
+    const timer = setInterval(() => setClock(new Date()), 1000)
+    return () => clearInterval(timer)
+  }, [])
 
   const handleZoneSelect = (zone) => {
     localStorage.setItem('selected_zone', zone)
     navigate('/login')
+  }
+
+  const formatClock = (date) => {
+    return date.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+  }
+  const formatDate = (date) => {
+    return date.toLocaleDateString('th-TH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
   }
 
   return (
@@ -33,11 +58,63 @@ function ZoneSelection() {
         .pulse-glow {
           animation: pulse-glow 2s ease-in-out infinite;
         }
+        @keyframes particle-float {
+          0% { transform: translateY(0) rotate(0deg); opacity: 0.8; }
+          50% { opacity: 1; }
+          100% { transform: translateY(-100vh) rotate(360deg); opacity: 0; }
+        }
+        .particle {
+          animation: particle-float var(--duration) var(--delay) infinite;
+        }
+        @keyframes clock-pulse {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.02); }
+        }
+        .clock-pulse {
+          animation: clock-pulse 2s ease-in-out infinite;
+        }
+        @keyframes slide-up {
+          0% { transform: translateY(30px); opacity: 0; }
+          100% { transform: translateY(0); opacity: 1; }
+        }
+        .slide-up { animation: slide-up 0.6s ease-out forwards; }
+        .slide-up-delay-1 { animation: slide-up 0.6s 0.15s ease-out forwards; opacity: 0; }
+        .slide-up-delay-2 { animation: slide-up 0.6s 0.3s ease-out forwards; opacity: 0; }
       `}</style>
 
-      <div className="w-full max-w-5xl">
+      {/* Floating Particles */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+        {particles.map(p => (
+          <div
+            key={p.id}
+            className="particle absolute text-lg md:text-2xl"
+            style={{
+              left: `${p.x}%`,
+              bottom: `-5%`,
+              '--duration': `${p.duration}s`,
+              '--delay': `${p.delay}s`,
+            }}
+          >
+            {p.emoji}
+          </div>
+        ))}
+      </div>
+
+      <div className="w-full max-w-5xl relative z-10">
+        {/* Live Clock */}
+        <div className="text-center mb-6 slide-up">
+          <div className="inline-block bg-white/15 backdrop-blur-md rounded-2xl px-6 py-3 border border-white/30 clock-pulse">
+            <p className="text-3xl md:text-4xl font-bold text-white tracking-widest tabular-nums drop-shadow-lg">
+              🕐 {formatClock(clock)}
+            </p>
+            <p className="text-white/80 text-sm md:text-base font-semibold mt-1">
+              {formatDate(clock)}
+            </p>
+          </div>
+        </div>
+
         {/* Logo */}
-        <div className="text-center mb-12 animate-float">
+        <div className="text-center mb-12 animate-float slide-up-delay-1">
           <h1 className="text-7xl md:text-8xl mb-4">🎮</h1>
           <h2 className="text-5xl md:text-7xl font-bold text-white drop-shadow-2xl mb-4">
             JUTHAZONE
@@ -48,7 +125,7 @@ function ZoneSelection() {
         </div>
 
         {/* Zone Selection Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 px-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 px-4 slide-up-delay-2">
           {/* Juthazone Red */}
           <button
             onClick={() => handleZoneSelect('red')}

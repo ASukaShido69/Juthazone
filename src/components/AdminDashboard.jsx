@@ -471,7 +471,20 @@ function AdminDashboard({
   const customerViewUrl = `${window.location.origin}/customer`
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-600 via-pink-500 to-orange-500 animate-gradient p-3 md:p-6 lg:p-8">
+    <div className="min-h-screen bg-gradient-to-br from-purple-700 via-pink-600 to-orange-500 animate-gradient p-3 md:p-6 lg:p-8">
+      <style>{`
+        @keyframes table-row-in {
+          from { opacity: 0; transform: translateX(-10px); }
+          to { opacity: 1; transform: translateX(0); }
+        }
+        .table-row-animate { animation: table-row-in 0.3s ease-out; }
+        .glass-card {
+          background: rgba(255,255,255,0.95);
+          backdrop-filter: blur(10px);
+          border: 1px solid rgba(255,255,255,0.3);
+        }
+      `}</style>
+
       <div className="max-w-7xl mx-auto">
         {/* Header with animation */}
         <div className="text-center mb-6 md:mb-8 animate-float relative">
@@ -767,10 +780,11 @@ function AdminDashboard({
         </div>
 
         {/* 🎮 รายการลูกค้าห้อง VIP ทั้งหมด */}
-        <div className="bg-white/95 backdrop-blur-sm rounded-xl md:rounded-2xl shadow-2xl p-4 md:p-6 border-3 md:border-4 border-orange-300 mb-6">
+        <div className="glass-card rounded-xl md:rounded-2xl shadow-2xl p-4 md:p-6 border-2 border-orange-200 mb-6">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-3 md:mb-4">
-            <h2 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-purple-600 to-orange-600 bg-clip-text text-transparent">
-              🎮 รายการลูกค้าทั้งหมด ({customers.length})
+            <h2 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-purple-600 to-orange-600 bg-clip-text text-transparent flex items-center gap-2">
+              🎮 รายการลูกค้าทั้งหมด
+              <span className="inline-flex items-center justify-center bg-purple-100 text-purple-700 text-sm font-bold px-2.5 py-0.5 rounded-full">{customers.length}</span>
             </h2>
           </div>
           
@@ -784,27 +798,28 @@ function AdminDashboard({
             <div className="overflow-x-auto -mx-4 md:mx-0">
               <div className="inline-block min-w-full align-middle">
                 <div className="overflow-hidden">
-                  <table className="min-w-full">
+                  <table className="min-w-full border-separate border-spacing-y-1">
                     <thead>
-                      <tr className="bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 text-white">
-                        <th className="px-2 md:px-4 py-2 md:py-3 text-left rounded-tl-xl text-xs md:text-base">ชื่อ</th>
-                        <th className="px-2 md:px-4 py-2 md:py-3 text-left text-xs md:text-base">ห้อง</th>
-                        <th className="px-2 md:px-4 py-2 md:py-3 text-center text-xs md:text-base hidden md:table-cell">🕐 เริ่ม</th>
-                        <th className="px-2 md:px-4 py-2 md:py-3 text-center text-xs md:text-base hidden md:table-cell">🕑 จบ</th>
-                        <th className="px-2 md:px-4 py-2 md:py-3 text-center text-xs md:text-base">เวลาที่เหลือ</th>
-                        <th className="px-2 md:px-4 py-2 md:py-3 text-center text-xs md:text-base hidden sm:table-cell">ค่าใช้จ่าย</th>
-                        <th className="px-2 md:px-4 py-2 md:py-3 text-center text-xs md:text-base hidden md:table-cell">Note</th>
-                        <th className="px-2 md:px-4 py-2 md:py-3 text-center text-xs md:text-base hidden lg:table-cell">สถานะการจ่าย</th>
-                        <th className="px-2 md:px-4 py-2 md:py-3 text-center rounded-tr-xl text-xs md:text-base">จัดการ</th>
+                      <tr className="bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 text-white shadow-lg">
+                        <th className="px-2 md:px-4 py-2.5 md:py-3.5 text-left rounded-tl-xl text-xs md:text-sm font-bold tracking-wide">ชื่อ</th>
+                        <th className="px-2 md:px-4 py-2.5 md:py-3.5 text-left text-xs md:text-sm font-bold tracking-wide">ห้อง</th>
+                        <th className="px-2 md:px-4 py-2.5 md:py-3.5 text-center text-xs md:text-sm font-bold tracking-wide hidden md:table-cell">🕐 เริ่ม</th>
+                        <th className="px-2 md:px-4 py-2.5 md:py-3.5 text-center text-xs md:text-sm font-bold tracking-wide hidden md:table-cell">🕑 จบ</th>
+                        <th className="px-2 md:px-4 py-2.5 md:py-3.5 text-center text-xs md:text-sm font-bold tracking-wide">⏱ เวลาเหลือ</th>
+                        <th className="px-2 md:px-4 py-2.5 md:py-3.5 text-center text-xs md:text-sm font-bold tracking-wide hidden sm:table-cell">💰 ราคา</th>
+                        <th className="px-2 md:px-4 py-2.5 md:py-3.5 text-center text-xs md:text-sm font-bold tracking-wide hidden md:table-cell">📝 Note</th>
+                        <th className="px-2 md:px-4 py-2.5 md:py-3.5 text-center text-xs md:text-sm font-bold tracking-wide hidden lg:table-cell">สถานะ</th>
+                        <th className="px-2 md:px-4 py-2.5 md:py-3.5 text-center rounded-tr-xl text-xs md:text-sm font-bold tracking-wide">จัดการ</th>
                       </tr>
                     </thead>
                     <tbody>
                       {displayCustomers.map((customer, index) => (
                         <tr
                           key={customer.id}
-                          className={`border-b ${
-                            index % 2 === 0 ? 'bg-purple-50' : 'bg-white'
-                          } hover:bg-gradient-to-r hover:from-purple-100 hover:to-pink-100 transition-all duration-300 transform hover:scale-[1.01]`}
+                          className={`table-row-animate rounded-lg ${
+                            index % 2 === 0 ? 'bg-purple-50/70' : 'bg-white'
+                          } hover:bg-gradient-to-r hover:from-purple-100 hover:to-pink-50 transition-all duration-200`}
+                          style={{ animationDelay: `${index * 0.05}s` }}
                         >
                           <td className="px-2 md:px-4 py-2 md:py-3 font-semibold text-xs md:text-base">{customer.name}</td>
                           <td className="px-2 md:px-4 py-2 md:py-3">

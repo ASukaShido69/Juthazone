@@ -95,7 +95,32 @@ function CustomerView({ customers }) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 animate-gradient p-3 md:p-4 lg:p-6">
+    <div className="min-h-screen bg-gradient-to-br from-purple-700 via-pink-600 to-orange-500 animate-gradient p-3 md:p-4 lg:p-6">
+      <style>{`
+        @keyframes shimmer {
+          0% { background-position: -200% 0; }
+          100% { background-position: 200% 0; }
+        }
+        @keyframes glow-pulse {
+          0%, 100% { box-shadow: 0 0 5px rgba(139,92,246,0.3); }
+          50% { box-shadow: 0 0 20px rgba(139,92,246,0.6), 0 0 40px rgba(139,92,246,0.2); }
+        }
+        @keyframes urgent-glow {
+          0%, 100% { box-shadow: 0 0 5px rgba(239,68,68,0.3); }
+          50% { box-shadow: 0 0 25px rgba(239,68,68,0.7), 0 0 50px rgba(239,68,68,0.3); }
+        }
+        .card-glow { animation: glow-pulse 3s ease-in-out infinite; }
+        .card-urgent { animation: urgent-glow 1.5s ease-in-out infinite; }
+        .shimmer-bg {
+          background: linear-gradient(90deg, transparent 25%, rgba(255,255,255,0.3) 50%, transparent 75%);
+          background-size: 200% 100%;
+          animation: shimmer 2s infinite;
+        }
+        .progress-bar-inner {
+          transition: width 1s linear;
+        }
+      `}</style>
+
       <div className="max-w-6xl mx-auto relative">
         {showRoomPicker && customers.length > 0 && (
           <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6">
@@ -276,30 +301,39 @@ function CustomerView({ customers }) {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
             {filteredCustomers.map((customer) => {
               const isLowTime = customer.displayTimeRemaining < 300 // Less than 5 minutes
-              const cardBgColor = isLowTime
-                ? 'bg-gradient-to-br from-red-100 via-red-50 to-orange-100 border-red-500'
-                : 'bg-gradient-to-br from-white via-purple-50 to-pink-50 border-purple-400'
+              const totalDuration = customer.expectedEndTime && customer.startTime
+                ? (new Date(customer.expectedEndTime) - new Date(customer.startTime)) / 1000
+                : 1
+              const elapsed = totalDuration - customer.displayTimeRemaining
+              const progressPercent = Math.max(0, Math.min(100, (elapsed / totalDuration) * 100))
 
               return (
                 <div
                   key={customer.id}
-                  className={`${cardBgColor} rounded-2xl md:rounded-3xl shadow-2xl p-4 md:p-6 border-3 md:border-4 transform transition-all duration-300 hover:shadow-purple-500/50 active:scale-95`}
+                  className={`relative overflow-hidden rounded-2xl md:rounded-3xl shadow-2xl p-4 md:p-6 border-2 transform transition-all duration-300 active:scale-95 ${
+                    isLowTime
+                      ? 'bg-gradient-to-br from-red-50 via-red-100 to-orange-50 border-red-400 card-urgent'
+                      : 'bg-gradient-to-br from-white via-purple-50 to-indigo-50 border-purple-300/60 card-glow hover:border-purple-400'
+                  }`}
                 >
+                  {/* Top shimmer accent */}
+                  <div className={`absolute top-0 left-0 right-0 h-1 ${isLowTime ? 'bg-gradient-to-r from-red-500 via-orange-400 to-red-500' : 'bg-gradient-to-r from-purple-500 via-pink-400 to-purple-500'} shimmer-bg`} />
+
                   {/* Customer Name */}
                   <div className="mb-3 md:mb-4">
                     <h2 className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-purple-700 to-pink-600 bg-clip-text text-transparent mb-2">
                       👤 {customer.name}
                     </h2>
-                    <div className="inline-block bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-3 py-1.5 md:px-4 md:py-2 rounded-full text-xs sm:text-sm font-bold shadow-lg">
-                      📍 {customer.room}
+                    <div className="inline-flex items-center gap-1.5 bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-3 py-1.5 md:px-4 md:py-2 rounded-full text-xs sm:text-sm font-bold shadow-lg">
+                      <span>📍</span> {customer.room}
                     </div>
                   </div>
 
                   {/* Note Section */}
                   {customer.note && (
                     <div className="mb-3 md:mb-4">
-                      <div className="bg-yellow-100 border-2 border-yellow-400 rounded-lg p-2 md:p-3">
-                        <p className="text-xs sm:text-sm text-gray-700 font-semibold mb-1">📝 Note</p>
+                      <div className="bg-amber-50 border border-amber-300 rounded-xl p-2.5 md:p-3">
+                        <p className="text-xs text-amber-600 font-bold mb-0.5">📝 Note</p>
                         <p className="text-sm md:text-base text-gray-800 break-words">{customer.note}</p>
                       </div>
                     </div>
@@ -307,35 +341,47 @@ function CustomerView({ customers }) {
 
                   {/* Countdown Timer */}
                   <div className={`mb-3 md:mb-4 ${isLowTime ? 'countdown-alert' : ''}`}>
-                    <p className="text-xs sm:text-sm text-gray-600 mb-1 font-semibold">⏰ เวลาที่เหลือ</p>
+                    <p className="text-xs sm:text-sm text-gray-500 mb-1.5 font-bold tracking-wide uppercase">⏰ เวลาที่เหลือ</p>
                     <div
-                      className={`text-4xl sm:text-5xl md:text-6xl font-bold text-center py-4 md:py-6 rounded-xl md:rounded-2xl shadow-inner ${
+                      className={`text-4xl sm:text-5xl md:text-6xl font-bold text-center py-4 md:py-5 rounded-2xl shadow-inner relative overflow-hidden ${
                         isLowTime
-                          ? 'bg-gradient-to-br from-red-300 to-red-200 text-red-800 animate-pulse border-3 md:border-4 border-red-400'
-                          : 'bg-gradient-to-br from-green-200 to-emerald-200 text-green-800 border-3 md:border-4 border-green-400'
+                          ? 'bg-gradient-to-br from-red-200 to-orange-200 text-red-800 border-2 border-red-300'
+                          : 'bg-gradient-to-br from-emerald-100 to-green-100 text-emerald-800 border-2 border-emerald-300'
                       }`}
                     >
                       {formatTime(customer.displayTimeRemaining)}
                     </div>
-                    <div className="grid grid-cols-2 gap-2 md:gap-3 mt-2 md:mt-3">
-                      <div className="bg-blue-100 border-2 border-blue-400 rounded-lg p-2 text-center">
-                        <p className="text-xs text-gray-600 font-semibold">🕐 เริ่ม</p>
+
+                    {/* Progress Bar */}
+                    <div className="mt-2.5 bg-gray-200 rounded-full h-2.5 overflow-hidden shadow-inner">
+                      <div
+                        className={`progress-bar-inner h-full rounded-full ${
+                          isLowTime
+                            ? 'bg-gradient-to-r from-red-500 to-orange-500'
+                            : 'bg-gradient-to-r from-purple-500 via-pink-500 to-purple-500'
+                        }`}
+                        style={{ width: `${progressPercent}%` }}
+                      />
+                    </div>
+                    <div className="text-xs text-gray-400 text-right mt-0.5 font-medium">{Math.round(progressPercent)}%</div>
+
+                    <div className="grid grid-cols-2 gap-2 mt-2">
+                      <div className="bg-blue-50 border border-blue-200 rounded-xl p-2 text-center">
+                        <p className="text-[10px] text-blue-500 font-bold uppercase">เริ่ม</p>
                         <p className="text-sm md:text-base font-bold text-blue-700">
                           {formatTimeDisplay(customer.startTime)}
                         </p>
                       </div>
-                      <div className="bg-orange-100 border-2 border-orange-400 rounded-lg p-2 text-center">
-                        <p className="text-xs text-gray-600 font-semibold">🕑 จบ</p>
+                      <div className="bg-orange-50 border border-orange-200 rounded-xl p-2 text-center">
+                        <p className="text-[10px] text-orange-500 font-bold uppercase">จบ</p>
                         <p className="text-sm md:text-base font-bold text-orange-700">
                           {formatTimeDisplay(customer.expectedEndTime)}
                         </p>
                       </div>
                     </div>
-                    <div className="mt-2 md:mt-3 text-center text-xs md:text-sm text-gray-600 font-semibold">
-                      ⏱️ เหลือ: {getDurationText(customer.displayTimeRemaining)}
-                    </div>
+
                     {isLowTime && (
-                      <p className="text-red-700 text-center mt-2 md:mt-3 font-bold animate-pulse text-sm md:text-lg bg-red-200 py-1.5 md:py-2 rounded-lg md:rounded-xl">
+                      <p className="text-red-700 text-center mt-2 font-bold animate-pulse text-sm md:text-base bg-red-100 py-1.5 rounded-xl border border-red-300">
                         ⚠️ เวลาใกล้หมดแล้ว!
                       </p>
                     )}
@@ -343,58 +389,41 @@ function CustomerView({ customers }) {
 
                   {/* Cost */}
                   <div className="mb-3 md:mb-4">
-                    <div className="bg-gradient-to-br from-yellow-200 to-orange-200 border-3 md:border-4 border-yellow-500 rounded-xl md:rounded-2xl p-3 md:p-4 shadow-lg">
-                      <p className="text-xs sm:text-sm text-gray-700 font-semibold">💰 ค่าใช้จ่าย</p>
-                      <p className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-yellow-700 to-orange-700 bg-clip-text text-transparent">
+                    <div className="bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-300 rounded-2xl p-3 md:p-4 shadow-sm">
+                      <p className="text-[10px] text-amber-600 font-bold uppercase tracking-wider">💰 ค่าใช้จ่าย</p>
+                      <p className="text-2xl sm:text-3xl md:text-4xl font-extrabold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
                         ฿{customer.cost}
                       </p>
                     </div>
                   </div>
 
-                  {/* Status Section */}
-                  <div className="mb-3 md:mb-4 grid grid-cols-2 gap-2">
+                  {/* Payment Status + Timer Status */}
+                  <div className="grid grid-cols-2 gap-2">
                     <div
-                      className={`rounded-lg p-2 md:p-3 text-center border-2 ${
+                      className={`rounded-xl p-2.5 text-center border ${
                         customer.isPaid
-                          ? 'bg-green-100 border-green-500'
-                          : 'bg-red-100 border-red-500'
+                          ? 'bg-emerald-50 border-emerald-300'
+                          : 'bg-red-50 border-red-300'
                       }`}
                     >
-                      <p className="text-xs text-gray-600 font-semibold">💰 สถานะการจ่าย</p>
-                      <p className={`text-sm md:text-base font-bold ${
-                        customer.isPaid
-                          ? 'text-green-700'
-                          : 'text-red-700'
-                      }`}>
+                      <p className="text-[10px] text-gray-500 font-bold uppercase">การจ่ายเงิน</p>
+                      <p className={`text-sm font-bold ${customer.isPaid ? 'text-emerald-600' : 'text-red-600'}`}>
                         {customer.isPaid ? '✅ จ่ายแล้ว' : '❌ ยังไม่จ่าย'}
                       </p>
                     </div>
-                    <div className="bg-purple-100 border-2 border-purple-400 rounded-lg p-2 md:p-3 text-center">
-                      <p className="text-xs text-gray-600 font-semibold">🎯 สถานะ</p>
-                      <p className="text-sm md:text-base font-bold text-purple-700">
+                    <div className={`rounded-xl p-2.5 text-center border ${customer.isRunning ? 'bg-purple-50 border-purple-300' : 'bg-gray-50 border-gray-300'}`}>
+                      <p className="text-[10px] text-gray-500 font-bold uppercase">สถานะ</p>
+                      <p className={`text-sm font-bold ${customer.isRunning ? 'text-purple-600' : 'text-gray-500'}`}>
                         {customer.isRunning ? '⏳ กำลังจับเวลา' : '⏸️ หยุดแล้ว'}
                       </p>
                     </div>
-                  </div>
-
-                  {/* Payment Status (old) */}
-                  <div className="flex justify-center">
-                    <span
-                      className={`inline-block px-4 py-2 md:px-6 md:py-3 rounded-xl md:rounded-2xl text-base sm:text-lg md:text-xl font-bold shadow-xl transform active:scale-95 transition-all duration-300 ${
-                        customer.isPaid
-                          ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white'
-                          : 'bg-gradient-to-r from-red-500 to-pink-500 text-white animate-pulse'
-                      }`}
-                    >
-                      {customer.isPaid ? '✅ จ่ายเงินแล้ว' : '❌ ยังไม่ได้จ่าย'}
-                    </span>
                   </div>
 
                   {/* Call staff button */}
                   <div className="mt-3">
                     <button
                       onClick={() => handleCallStaff(customer)}
-                      className="w-full bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600 text-white font-bold py-2.5 md:py-3 px-4 rounded-xl md:rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-[1.01] active:scale-95 transition-all duration-300"
+                      className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-2.5 md:py-3 px-4 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-[1.01] active:scale-95 transition-all duration-200"
                     >
                       📞 เรียกพนักงาน
                     </button>
