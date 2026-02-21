@@ -34,9 +34,9 @@ export const THEME_PALETTES = {
       badgeText: '#b91c1c',
       inputBorder: '#fca5a5',
       inputFocus: '#ef4444',
-      bgFrom: '#1a0505',
-      bgVia: '#2d1010',
-      bgTo: '#1a0808',
+      bgFrom: '#1c0606',
+      bgVia: '#5c1818',
+      bgTo: '#2a0a0a',
     }
   },
   rose: {
@@ -64,9 +64,9 @@ export const THEME_PALETTES = {
       badgeText: '#9f1239',
       inputBorder: '#fda4af',
       inputFocus: '#e11d48',
-      bgFrom: '#1a0508',
-      bgVia: '#2d0e14',
-      bgTo: '#1a070a',
+      bgFrom: '#1c060e',
+      bgVia: '#5c1835',
+      bgTo: '#2a0a14',
     }
   },
   orange: {
@@ -94,9 +94,9 @@ export const THEME_PALETTES = {
       badgeText: '#9a3412',
       inputBorder: '#fdba74',
       inputFocus: '#ea580c',
-      bgFrom: '#1a0c02',
-      bgVia: '#2d1608',
-      bgTo: '#1a0f05',
+      bgFrom: '#1c0e03',
+      bgVia: '#5c3210',
+      bgTo: '#2a1806',
     }
   },
   amber: {
@@ -124,9 +124,9 @@ export const THEME_PALETTES = {
       badgeText: '#92400e',
       inputBorder: '#fcd34d',
       inputFocus: '#d97706',
-      bgFrom: '#1a1002',
-      bgVia: '#2d1c06',
-      bgTo: '#1a1305',
+      bgFrom: '#1c1403',
+      bgVia: '#5c4410',
+      bgTo: '#2a1e06',
     }
   },
   emerald: {
@@ -154,9 +154,9 @@ export const THEME_PALETTES = {
       badgeText: '#065f46',
       inputBorder: '#6ee7b7',
       inputFocus: '#059669',
-      bgFrom: '#021a10',
-      bgVia: '#082d1a',
-      bgTo: '#051a12',
+      bgFrom: '#031c0e',
+      bgVia: '#0e5c32',
+      bgTo: '#062a14',
     }
   },
   purple: {
@@ -184,6 +184,9 @@ export const THEME_PALETTES = {
       badgeText: '#5b21b6',
       inputBorder: '#c4b5fd',
       inputFocus: '#7c3aed',
+      bgFrom: '#12031c',
+      bgVia: '#35105c',
+      bgTo: '#1a082a',
     }
   },
 
@@ -213,9 +216,9 @@ export const THEME_PALETTES = {
       badgeText: '#1e40af',
       inputBorder: '#93c5fd',
       inputFocus: '#2563eb',
-      bgFrom: '#020a1a',
-      bgVia: '#0a152d',
-      bgTo: '#050d1a',
+      bgFrom: '#030a1c',
+      bgVia: '#10285c',
+      bgTo: '#06122a',
     }
   },
   cyan: {
@@ -243,9 +246,9 @@ export const THEME_PALETTES = {
       badgeText: '#155e75',
       inputBorder: '#67e8f9',
       inputFocus: '#0891b2',
-      bgFrom: '#021518',
-      bgVia: '#08232d',
-      bgTo: '#05181a',
+      bgFrom: '#031a1c',
+      bgVia: '#104a5c',
+      bgTo: '#06222a',
     }
   },
   teal: {
@@ -273,9 +276,9 @@ export const THEME_PALETTES = {
       badgeText: '#115e59',
       inputBorder: '#5eead4',
       inputFocus: '#0d9488',
-      bgFrom: '#021a16',
-      bgVia: '#082d24',
-      bgTo: '#051a18',
+      bgFrom: '#031c16',
+      bgVia: '#105c48',
+      bgTo: '#062a1e',
     }
   },
   indigo: {
@@ -303,9 +306,9 @@ export const THEME_PALETTES = {
       badgeText: '#3730a3',
       inputBorder: '#a5b4fc',
       inputFocus: '#4f46e5',
-      bgFrom: '#08051a',
-      bgVia: '#110e2d',
-      bgTo: '#0a071a',
+      bgFrom: '#0a031c',
+      bgVia: '#1e105c',
+      bgTo: '#10082a',
     }
   },
   sky: {
@@ -333,9 +336,9 @@ export const THEME_PALETTES = {
       badgeText: '#075985',
       inputBorder: '#7dd3fc',
       inputFocus: '#0284c7',
-      bgFrom: '#020e1a',
-      bgVia: '#081c2d',
-      bgTo: '#05111a',
+      bgFrom: '#03101c',
+      bgVia: '#103a5c',
+      bgTo: '#06182a',
     }
   },
   violet: {
@@ -363,9 +366,9 @@ export const THEME_PALETTES = {
       badgeText: '#5b21b6',
       inputBorder: '#c4b5fd',
       inputFocus: '#7c3aed',
-      bgFrom: '#0f051a',
-      bgVia: '#1a0e2d',
-      bgTo: '#0d071a',
+      bgFrom: '#10031c',
+      bgVia: '#30105c',
+      bgTo: '#18082a',
     }
   },
 }
