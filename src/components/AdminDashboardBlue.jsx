@@ -444,11 +444,11 @@ function AdminDashboardBlue({
           product_price: prod.price,
           quantity,
           total_price: total,
-          added_by: salesForm.addedBy || user?.displayName || null
+          added_by: salesForm.added_by || user?.displayName || null
         }])
       }
       alert(`บันทึกการขาย ${prod.name} x${quantity}`)
-      setSalesForm(prev => ({ productId: '', quantity: 1, addedBy: prev.addedBy }))
+      setSalesForm(prev => ({ productId: '', quantity: 1, added_by: prev.added_by }))
       fetchProductHistory()
     } catch (err) {
       console.error('Record sale error', err)
@@ -737,15 +737,6 @@ function AdminDashboardBlue({
               min="1"
               placeholder="จำนวน"
             />
-            <div className="col-span-3">
-              <label className="block text-gray-600 font-semibold mb-1 text-sm">👤 พนักงาน</label>
-              <input
-                type="text"
-                value={salesForm.addedBy}
-                onChange={e => setSalesForm({ ...salesForm, addedBy: e.target.value })}
-                className="w-full px-3 py-2 border-2 rounded-lg focus:outline-none focus:border-blue-400"
-                placeholder="ชื่อพนักงาน"
-              />
             </div>
             <button
               onClick={recordSale}
