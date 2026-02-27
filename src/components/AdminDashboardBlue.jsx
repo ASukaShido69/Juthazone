@@ -98,7 +98,7 @@ function AdminDashboardBlue({
   const [showZoneModal, setShowZoneModal] = useState(false)
   const [products, setProducts] = useState(DEFAULT_PRODUCTS)
   const [showProductModal, setShowProductModal] = useState(false)
-  const [salesForm, setSalesForm] = useState({ productId: '', quantity: 1 })
+  const [salesForm, setSalesForm] = useState({ productId: '', quantity: 1, addedBy: '' })
   const [productHistory, setProductHistory] = useState([])
   const { setActiveZone } = useTheme()
   const [, setUpdateTrigger] = useState(0)
@@ -112,6 +112,13 @@ function AdminDashboardBlue({
 
   // Set active zone for theme
   useEffect(() => { setActiveZone('blue') }, [setActiveZone])
+
+  // Pre-fill addedBy from logged-in user
+  useEffect(() => {
+    if (user?.displayName) {
+      setSalesForm(prev => ({ ...prev, addedBy: user.displayName }))
+    }
+  }, [user])
 
   // Keep notifications ref in sync
   useEffect(() => {
@@ -436,11 +443,12 @@ function AdminDashboardBlue({
           product_name: prod.name,
           product_price: prod.price,
           quantity,
-          total_price: total
+          total_price: total,
+          added_by: salesForm.addedBy || user?.displayName || null
         }])
       }
       alert(`บันทึกการขาย ${prod.name} x${quantity}`)
-      setSalesForm({ productId: '', quantity: 1 })
+      setSalesForm(prev => ({ productId: '', quantity: 1, addedBy: prev.addedBy }))
       fetchProductHistory()
     } catch (err) {
       console.error('Record sale error', err)
@@ -727,7 +735,18 @@ function AdminDashboardBlue({
               onChange={e => setSalesForm({ ...salesForm, quantity: parseInt(e.target.value) || 1 })}
               className="px-3 py-2 border-2 rounded-lg w-full"
               min="1"
+              placeholder="จำนวน"
             />
+            <div className="col-span-3">
+              <label className="block text-gray-600 font-semibold mb-1 text-sm">👤 พนักงาน</label>
+              <input
+                type="text"
+                value={salesForm.addedBy}
+                onChange={e => setSalesForm({ ...salesForm, addedBy: e.target.value })}
+                className="w-full px-3 py-2 border-2 rounded-lg focus:outline-none focus:border-blue-400"
+                placeholder="ชื่อพนักงาน"
+              />
+            </div>
             <button
               onClick={recordSale}
               className="col-span-3 bg-green-500 hover:bg-green-600 text-white font-bold py-2 rounded-xl w-full"
