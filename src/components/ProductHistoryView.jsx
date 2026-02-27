@@ -173,6 +173,7 @@ function ProductHistoryView() {
         product_price: data.product_price !== '' ? Number(data.product_price) : original.product_price,
         total_price: data.total_price !== '' ? Number(data.total_price) : original.total_price,
         created_at: data.created_at ? new Date(data.created_at).toISOString() : original.created_at,
+        added_by: data.added_by ?? original.added_by ?? '',
         note: data.note ?? original.note ?? ''
       }
 
@@ -188,6 +189,8 @@ function ProductHistoryView() {
         changes.push(`💰 รวม: ฿${original.total_price} → ฿${payload.total_price}`)
       if (formatDateTimeThai(original.created_at) !== formatDateTimeThai(payload.created_at))
         changes.push(`🕐 เวลา: ${formatDateTimeThai(original.created_at)} → ${formatDateTimeThai(payload.created_at)}`)
+      if ((original.added_by || '') !== (payload.added_by || ''))
+        changes.push(`👤 พนักงาน: "${original.added_by || '(ไม่ระบุ)'}" → "${payload.added_by || '(ไม่ระบุ)'}"`)
       if ((original.note || '') !== (payload.note || ''))
         changes.push(`📝 หมายเหตุ: "${original.note || '(ไม่มี)'}" → "${payload.note || '(ไม่มี)'}"`)
 
@@ -234,6 +237,7 @@ function ProductHistoryView() {
       'จำนวน': h.quantity,
       'ราคา/ชิ้น': h.product_price,
       'รวม': h.total_price,
+      'พนักงาน': h.added_by || '-',
       'หมายเหตุ': h.note || '-'
     }))
     try {
@@ -417,6 +421,7 @@ function ProductHistoryView() {
                     <th className="px-4 py-3 text-center text-sm font-bold">🔢 จำนวน</th>
                     <th className="px-4 py-3 text-center text-sm font-bold">💵 ราคา/ชิ้น</th>
                     <th className="px-4 py-3 text-center text-sm font-bold">💰 รวม</th>
+                    <th className="px-4 py-3 text-center text-sm font-bold">👤 พนักงาน</th>
                     <th className="px-4 py-3 text-center text-sm font-bold">📝 หมายเหตุ</th>
                     <th className="px-4 py-3 text-center text-sm font-bold">⚙️ จัดการ</th>
                   </tr>
@@ -448,6 +453,9 @@ function ProductHistoryView() {
                         <span className="font-bold text-green-600">
                           ฿{Number(h.total_price).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
                         </span>
+                      </td>
+                      <td className="px-4 py-3 text-center text-sm text-gray-600 font-medium">
+                        {h.added_by || '-'}
                       </td>
                       <td className="px-4 py-3 text-center text-sm text-gray-500">
                         {h.note || '-'}
@@ -630,6 +638,23 @@ function ProductHistoryView() {
                     />
                     <div className="text-xs text-gray-500 italic bg-gray-100 p-2 rounded">
                       💾 ต้นฉบับ: {formatDateTimeThai(originalSnapshot[editingId]?.created_at) || '-'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* พนักงาน */}
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">👤 พนักงาน</label>
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      value={editData[editingId]?.added_by ?? ''}
+                      onChange={e => setEditData({ ...editData, [editingId]: { ...editData[editingId], added_by: e.target.value } })}
+                      className="w-full px-4 py-2 border-2 border-cyan-300 rounded-lg text-base focus:outline-none focus:border-cyan-600"
+                      placeholder="ชื่อพนักงาน"
+                    />
+                    <div className="text-xs text-gray-500 italic bg-gray-100 p-2 rounded">
+                      💾 ต้นฉบับ: {originalSnapshot[editingId]?.added_by || '(ไม่ระบุ)'}
                     </div>
                   </div>
                 </div>
