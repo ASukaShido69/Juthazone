@@ -94,6 +94,12 @@ DROP POLICY IF EXISTS "Allow all access to juthazoneb_activity_logs" ON juthazon
 CREATE POLICY "Allow all access to juthazoneb_activity_logs" 
   ON juthazoneb_activity_logs FOR ALL USING (true);
 
+-- RLS for product history table (added Feb 2026)
+ALTER TABLE historyforproduct ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow all access to historyforproduct" ON historyforproduct;
+CREATE POLICY "Allow all access to historyforproduct"
+  ON historyforproduct FOR ALL USING (true);
+
 -- ========================================
 -- Create VIEWS for Statistics
 -- ========================================

@@ -735,41 +735,6 @@ function AdminDashboardBlue({
           </div>
         </div>
 
-        {/* Product Sales History */}
-        <div className="mt-6 bg-white/95 backdrop-blur-sm rounded-xl md:rounded-2xl shadow-card p-4 md:p-6 jz-card-border slide-up-2">
-          <h2 className="text-xl md:text-2xl font-bold mb-3">🧾 ประวัติการขายสินค้า</h2>
-          {productHistory.length === 0 ? (
-            <p className="text-gray-500">ยังไม่มีรายการขาย</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-left">
-                <thead>
-                  <tr>
-                    <th className="px-2 py-1 border">#</th>
-                    <th className="px-2 py-1 border">เวลา</th>
-                    <th className="px-2 py-1 border">สินค้า</th>
-                    <th className="px-2 py-1 border">จำนวน</th>
-                    <th className="px-2 py-1 border">ราคา/ชิ้น</th>
-                    <th className="px-2 py-1 border">รวม</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {productHistory.map((h,i)=>(
-                    <tr key={h.id}>
-                      <td className="px-2 py-1 border">{i+1}</td>
-                      <td className="px-2 py-1 border">{new Date(h.created_at).toLocaleString()}</td>
-                      <td className="px-2 py-1 border">{h.product_name}</td>
-                      <td className="px-2 py-1 border">{h.quantity}</td>
-                      <td className="px-2 py-1 border">฿{h.product_price}</td>
-                      <td className="px-2 py-1 border">฿{h.total_price}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-
         {/* Customer List */}
         <div className="bg-white/95 backdrop-blur-sm rounded-xl md:rounded-2xl shadow-card p-4 md:p-6 jz-card-border slide-up-2">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-3 md:mb-4">
