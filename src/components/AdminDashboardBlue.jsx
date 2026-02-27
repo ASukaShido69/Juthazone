@@ -5,6 +5,51 @@ import supabase from '../firebase'
 import { logActivityBlue, calculateCostBlue, formatElapsedTime } from '../utils/authUtilsBlue'
 import { useTheme } from '../contexts/ThemeContext'
 import ThemePicker from './ThemePicker'
+import ZoneManagementModal from './ZoneManagementModal'
+import CustomerManagementModal from './CustomerManagementModal'
+
+// Zone configurations with pricing
+const ZONES = {
+  'board-game': {
+    label: '🎲 บอร์ดเกม',
+    items: [
+      { id: 'board-game-big', label: 'โต๊ะใหญ่', defaultPrice: 100 },
+      { id: 'board-game-small', label: 'โต๊ะเล็ก', defaultPrice: 50 }
+    ]
+  },
+  'sim': {
+    label: '🏎️ Sim',
+    items: [
+      { id: 'sim-12', label: '1-2 ตัวพื้นฐาน', defaultPrice: 120 },
+      { id: 'sim-34', label: '3-4 ตัวสมจริง', defaultPrice: 160 }
+    ]
+  },
+  'ps': {
+    label: '🎮 PS',
+    items: [
+      { id: 'ps-5to10', label: '5-10', defaultPrice: 100 }
+    ]
+  },
+  'ps5-vip': {
+    label: '🎮 PS5 VIP',
+    items: [
+      { id: 'ps5-2joy', label: '2 จอย', defaultPrice: 120 },
+      { id: 'ps5-4joy', label: '4 จอย', defaultPrice: 160 }
+    ]
+  },
+  'karaoke': {
+    label: '🎤 คาราโอเกะ',
+    items: [
+      { id: 'karaoke-main', label: 'คาราโอเกะ', defaultPrice: 219 }
+    ]
+  },
+  'nintendo': {
+    label: '🎯 Nintendo',
+    items: [
+      { id: 'nintendo-main', label: 'Nintendo', defaultPrice: 80 }
+    ]
+  }
+}
 
 function AdminDashboardBlue({
   customers,
@@ -16,16 +61,26 @@ function AdminDashboardBlue({
   user,
   onLogout
 }) {
+  const [mode, setMode] = useState('blue') // 'blue' or 'red'
   const [formData, setFormData] = useState({
-    name: '',
-    room: '',
+    selectedZone: '', // For Blue mode - zone selection
+    selectedItem: '', // For Blue mode - specific item
     hourlyRate: '',
-    note: ''
+    note: '',
+    // Red mode fields
+    minutes: '',
+    cost: '',
+    paymentMethod: 'transfer'
   })
+  const [zones, setZones] = useState(ZONES)
+  const [showZoneModal, setShowZoneModal] = useState(false)
+  const [showCustomerModal, setShowCustomerModal] = useState(false)
   const { setActiveZone } = useTheme()
   const [, setUpdateTrigger] = useState(0)
   const [notifications, setNotifications] = useState([])
   const [notifOpen, setNotifOpen] = useState(false)
+  const [editingId, setEditingId] = useState(null)
+  const [editForm, setEditForm] = useState({})
   const audioRef = useRef(null)
   const alarmTimeoutRef = useRef(null)
   const notificationsRef = useRef([])
@@ -209,19 +264,56 @@ function AdminDashboardBlue({
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    if (formData.name && formData.room && formData.hourlyRate) {
-      addCustomer({
-        name: formData.name,
-        room: formData.room,
-        hourlyRate: parseFloat(formData.hourlyRate),
-        note: formData.note
-      })
-      setFormData({ name: '', room: '', hourlyRate: '', note: '' })
+    
+    if (mode === 'blue') {
+      // Blue mode: pro-rated pricing
+      if (formData.selectedZone && formData.selectedItem && formData.hourlyRate) {
+        const zone = ZONES[formData.selectedZone]
+        const item = zone.items.find(i => i.id === formData.selectedItem)
+        const roomName = `${zone.label} - ${item.label}`
+        
+        addCustomer({
+          name: roomName, // Using zone info as name in Blue mode
+          room: formData.selectedItem,
+          hourlyRate: parseFloat(formData.hourlyRate),
+          note: formData.note,
+          mode: 'blue'
+        })
+        setFormData({ selectedZone: '', selectedItem: '', hourlyRate: '', note: '', minutes: '', cost: '', paymentMethod: 'transfer' })
+      }
+    } else {
+      // Red mode: fixed time + fixed price
+      if (formData.selectedZone && formData.selectedItem && formData.minutes && formData.cost) {
+        const zone = ZONES[formData.selectedZone]
+        const item = zone.items.find(i => i.id === formData.selectedItem)
+        const roomName = `${zone.label} - ${item.label}`
+        
+        addCustomer({
+          name: roomName,
+          room: formData.selectedItem,
+          hours: parseFloat(formData.minutes) / 60,
+          cost: parseFloat(formData.cost),
+          note: formData.note,
+          paymentMethod: formData.paymentMethod,
+          mode: 'red'
+        })
+        setFormData({ selectedZone: '', selectedItem: '', hourlyRate: '', note: '', minutes: '', cost: '', paymentMethod: 'transfer' })
+      }
     }
   }
 
   // Calculate real-time cost for each customer
   const displayCustomers = customers.map(customer => {
+    if (customer.mode === 'red') {
+      // Red mode: fixed time and price
+      return {
+        ...customer,
+        currentCost: customer.cost || 0,
+        elapsedTime: customer.hours ? `${(customer.hours * 60).toFixed(0)}นาที` : '-',
+        isRedMode: true
+      }
+    }
+    // Blue mode: pro-rated pricing
     const currentCost = calculateCostBlue(
       customer.start_time,
       customer.hourly_rate,
@@ -238,11 +330,68 @@ function AdminDashboardBlue({
     return {
       ...customer,
       currentCost,
-      elapsedTime
+      elapsedTime,
+      isRedMode: false
     }
   })
 
   const customerViewUrl = `${window.location.origin}/blue/customer`
+
+  // Handle edit mode
+  const startEdit = (customer) => {
+    setEditingId(customer.id)
+    if (customer.isRedMode) {
+      setEditForm({
+        cost: customer.cost || 0,
+        note: customer.note || ''
+      })
+    } else {
+      setEditForm({
+        hourlyRate: customer.hourly_rate || 0,
+        note: customer.note || ''
+      })
+    }
+  }
+
+  const saveEdit = async (customerId) => {
+    const customer = customers.find(c => c.id === customerId)
+    if (!customer) return
+
+    // In a real app, you'd save this to database
+    // For now, we'll just log it
+    console.log('Updated customer:', customerId, editForm)
+    
+    // You can dispatch an update action here if you have it
+    // For now, just close the edit mode
+    setEditingId(null)
+  }
+
+  const cancelEdit = () => {
+    setEditingId(null)
+    setEditForm({})
+  }
+
+  // Handle zone update
+  const handleZoneUpdate = (updatedZones) => {
+    setZones(updatedZones)
+    console.log('Zones updated:', updatedZones)
+    // In a real app, you'd save this to database
+  }
+
+  // Handle customer update
+  const handleCustomerUpdate = (customerId, updates) => {
+    console.log('Customer update:', customerId, updates)
+    // In a real app, you'd update the database and refresh the customer
+    // For now, just show that it's logged
+  }
+
+  // Handle customer delete
+  const handleCustomerDelete = (customerId) => {
+    const customer = customers.find(c => c.id === customerId)
+    if (customer) {
+      deleteCustomer(customerId)
+    }
+  }
 
   return (
     <div className="min-h-screen jz-bg p-3 md:p-6 lg:p-8">
@@ -280,7 +429,19 @@ function AdminDashboardBlue({
               )}
             </button>
           </div>
-          <div className="mt-4 flex flex-col sm:flex-row justify-center gap-3">
+          <div className="mt-4 flex flex-col sm:flex-row justify-center gap-3 flex-wrap">
+            <button
+              onClick={() => setShowZoneModal(true)}
+              className="inline-block bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-6 rounded-xl shadow-lg jz-glow-hover transform hover:scale-105 transition-all duration-300 border border-purple-300"
+            >
+              ⚙️ จัดการโซน
+            </button>
+            <button
+              onClick={() => setShowCustomerModal(true)}
+              className="inline-block bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-6 rounded-xl shadow-lg jz-glow-hover transform hover:scale-105 transition-all duration-300 border border-orange-300"
+            >
+              👥 จัดการลูกค้า
+            </button>
             <a
               href="/blue/history"
               className="inline-block bg-white/10 hover:bg-white/20 text-white font-bold py-2 px-6 rounded-xl shadow-lg jz-glow-hover transform hover:scale-105 transition-all duration-300 border border-white/20"
@@ -350,53 +511,140 @@ function AdminDashboardBlue({
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
           {/* Add Customer Form */}
           <div className="lg:col-span-2 bg-white/95 backdrop-blur-sm rounded-xl md:rounded-2xl shadow-card p-4 md:p-6 transform hover:scale-[1.01] transition-all duration-300 jz-card-border slide-up">
-            <h2 className="text-lg md:text-2xl lg:text-3xl font-bold jz-text-gradient mb-3 md:mb-4">
-              ➕
-            </h2>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg md:text-2xl lg:text-3xl font-bold jz-text-gradient">
+                ➕ เพิ่มลูกค้า
+              </h2>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setMode('blue')}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${mode === 'blue' ? 'bg-blue-500 text-white' : 'bg-gray-300 text-gray-700'}`}
+                >
+                  🔵 Blue
+                </button>
+                <button
+                  onClick={() => setMode('red')}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${mode === 'red' ? 'bg-red-500 text-white' : 'bg-gray-300 text-gray-700'}`}
+                >
+                  🔴 Red
+                </button>
+              </div>
+            </div>
+            
             <form onSubmit={handleSubmit} className="space-y-3 md:space-y-4">
+              {/* Zone Selection */}
               <div>
-                <label className="block text-gray-700 font-semibold mb-1.5 md:mb-2 text-sm md:text-base">ชื่อลูกค้า</label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3 py-2 md:px-4 md:py-2 border-2 jz-input rounded-lg focus:outline-none text-sm md:text-base"
-                  placeholder="กรอกชื่อลูกค้า"
-                  required
-                />
+                <label className="block text-gray-700 font-semibold mb-1.5 md:mb-2 text-sm md:text-base">🎯 เลือกโซน</label>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                  {Object.entries(ZONES).map(([key, zone]) => (
+                    <label key={key} className="flex items-center gap-2 p-2 border-2 rounded-lg cursor-pointer hover:bg-blue-50 transition-all"
+                           style={{ borderColor: formData.selectedZone === key ? 'var(--jz-primary)' : '#e5e7eb' }}>
+                      <input
+                        type="radio"
+                        name="zone"
+                        value={key}
+                        checked={formData.selectedZone === key}
+                        onChange={(e) => {
+                          setFormData({ ...formData, selectedZone: e.target.value, selectedItem: '' })
+                        }}
+                        className="w-4 h-4"
+                      />
+                      <span className="text-sm font-semibold">{zone.label}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
 
-              <div>
-                <label className="block text-gray-700 font-semibold mb-1.5 md:mb-2 text-sm md:text-base">ชื่อห้อง/สถานที่</label>
-                <input
-                  type="text"
-                  value={formData.room}
-                  onChange={(e) => setFormData({ ...formData, room: e.target.value })}
-                  className="w-full px-3 py-2 md:px-4 md:py-2 border-2 jz-input rounded-lg focus:outline-none text-sm md:text-base"
-                  placeholder="เช่น ชั้น 2 ห้อง VIP, ห้อง A1, Golf Zone ฯลฯ"
-                  required
-                />
-              </div>
+              {/* Item Selection */}
+              {formData.selectedZone && (
+                <div>
+                  <label className="block text-gray-700 font-semibold mb-1.5 md:mb-2 text-sm md:text-base">📍 เลือกรายการ</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {ZONES[formData.selectedZone].items.map(item => (
+                      <label key={item.id} className="flex items-center gap-2 p-2 border-2 rounded-lg cursor-pointer hover:bg-blue-50 transition-all"
+                             style={{ borderColor: formData.selectedItem === item.id ? 'var(--jz-primary)' : '#e5e7eb' }}>
+                        <input
+                          type="radio"
+                          name="item"
+                          value={item.id}
+                          checked={formData.selectedItem === item.id}
+                          onChange={(e) => setFormData({ ...formData, selectedItem: e.target.value })}
+                          className="w-4 h-4"
+                        />
+                        <span className="text-sm font-semibold">{item.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-              <div>
-                <label className="block text-gray-700 font-semibold mb-1.5 md:mb-2 text-sm md:text-base">
-                  💰 ราคาต่อชั่วโมง (บาท)
-                </label>
-                <input
-                  type="number"
-                  value={formData.hourlyRate}
-                  onChange={(e) => setFormData({ ...formData, hourlyRate: e.target.value })}
-                  className="w-full px-3 py-2 md:px-4 md:py-2 border-2 jz-input rounded-lg focus:outline-none text-sm md:text-base"
-                  placeholder="กรอกราคาต่อชั่วโมง เช่น 159, 200, 150 ฯลฯ"
-                  min="0"
-                  step="0.01"
-                  required
-                />
-                <p className="text-xs md:text-sm text-gray-500 mt-1">
-                  💡 สามารถกรอกราคาอะไรก็ได้ ระบบจะคำนวณตามเวลาจริง (Pro-rated)
-                </p>
-              </div>
+              {/* Blue Mode Fields */}
+              {mode === 'blue' && (
+                <>
+                  <div>
+                    <label className="block text-gray-700 font-semibold mb-1.5 md:mb-2 text-sm md:text-base">
+                      💰 ราคาต่อชั่วโมง (บาท)
+                    </label>
+                    <input
+                      type="number"
+                      value={formData.hourlyRate}
+                      onChange={(e) => setFormData({ ...formData, hourlyRate: e.target.value })}
+                      className="w-full px-3 py-2 md:px-4 md:py-2 border-2 jz-input rounded-lg focus:outline-none text-sm md:text-base"
+                      placeholder="กรอกราคาต่อชั่วโมง เช่น 100, 120, 160 ฯลฯ"
+                      min="0"
+                      step="0.01"
+                    />
+                    <p className="text-xs md:text-sm text-gray-500 mt-1">
+                      💡 ระบบจะคำนวณตามเวลาจริง (Pro-rated)
+                    </p>
+                  </div>
+                </>
+              )}
 
+              {/* Red Mode Fields */}
+              {mode === 'red' && (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-gray-700 font-semibold mb-1.5 md:mb-2 text-sm md:text-base">⏱️ นาที</label>
+                      <input
+                        type="number"
+                        value={formData.minutes}
+                        onChange={(e) => setFormData({ ...formData, minutes: e.target.value })}
+                        className="w-full px-3 py-2 md:px-4 md:py-2 border-2 jz-input rounded-lg focus:outline-none text-sm md:text-base"
+                        placeholder="เช่น 60, 120"
+                        min="0"
+                        step="1"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-700 font-semibold mb-1.5 md:mb-2 text-sm md:text-base">💰 ราคารวม</label>
+                      <input
+                        type="number"
+                        value={formData.cost}
+                        onChange={(e) => setFormData({ ...formData, cost: e.target.value })}
+                        className="w-full px-3 py-2 md:px-4 md:py-2 border-2 jz-input rounded-lg focus:outline-none text-sm md:text-base"
+                        placeholder="เช่น 100, 200"
+                        min="0"
+                        step="0.01"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-gray-700 font-semibold mb-1.5 md:mb-2 text-sm md:text-base">💳 วิธีการชำระเงิน</label>
+                    <select
+                      value={formData.paymentMethod}
+                      onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value })}
+                      className="w-full px-3 py-2 md:px-4 md:py-2 border-2 jz-input rounded-lg focus:outline-none text-sm md:text-base"
+                    >
+                      <option value="transfer">💸 โอนเงิน</option>
+                      <option value="cash">💵 เงินสด</option>
+                    </select>
+                  </div>
+                </>
+              )}
+
+              {/* Common Note Field */}
               <div>
                 <label className="block text-gray-700 font-semibold mb-1.5 md:mb-2 text-sm md:text-base">📝 Note (ไม่บังคับ)</label>
                 <textarea
@@ -485,25 +733,56 @@ function AdminDashboardBlue({
                               <span className="inline-block font-bold text-lg md:text-xl text-cyan-600">
                                 {customer.elapsedTime}
                               </span>
-                              <div className="text-xs text-gray-500 mt-1">
-                                {customer.hourly_rate} บาท/ชม.
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-2 md:px-4 py-2 md:py-3 text-center">
-                            <div className="inline-block bg-gradient-to-r from-green-100 to-emerald-100 border-2 border-green-400 rounded-xl px-3 py-2">
-                              <span className="font-bold text-xl md:text-2xl text-green-700">
-                                ฿{customer.currentCost.toFixed(2)}
-                              </span>
-                              {!customer.is_running && (
-                                <div className="text-xs text-orange-600 font-semibold mt-1">⏸️ หยุดชั่วคราว</div>
+                              {!customer.isRedMode && customer.hourly_rate && (
+                                <div className="text-xs text-gray-500 mt-1">
+                                  {customer.hourly_rate} บาท/ชม.
+                                </div>
                               )}
                             </div>
                           </td>
+                          <td className="px-2 md:px-4 py-2 md:py-3 text-center">
+                            {editingId === customer.id ? (
+                              <div className="flex gap-2 justify-center items-center">
+                                <input
+                                  type="number"
+                                  value={editForm.cost || editForm.hourlyRate || 0}
+                                  onChange={(e) => {
+                                    if (customer.isRedMode) {
+                                      setEditForm({ ...editForm, cost: e.target.value })
+                                    } else {
+                                      setEditForm({ ...editForm, hourlyRate: e.target.value })
+                                    }
+                                  }}
+                                  className="w-20 px-2 py-1 border rounded text-sm"
+                                  step="0.01"
+                                  min="0"
+                                />
+                              </div>
+                            ) : (
+                              <div className="inline-block bg-gradient-to-r from-green-100 to-emerald-100 border-2 border-green-400 rounded-xl px-3 py-2">
+                                <span className="font-bold text-xl md:text-2xl text-green-700">
+                                  ฿{customer.currentCost.toFixed(2)}
+                                </span>
+                                {customer.is_running === false && !customer.isRedMode && (
+                                  <div className="text-xs text-orange-600 font-semibold mt-1">⏸️ หยุดชั่วคราว</div>
+                                )}
+                              </div>
+                            )}
+                          </td>
                           <td className="px-2 md:px-4 py-2 md:py-3 text-center hidden md:table-cell">
-                            <span className="inline-block jz-badge px-2 py-1 rounded text-xs max-w-[100px] truncate" title={customer.note || 'ไม่มี'}>
-                              {customer.note || '-'}
-                            </span>
+                            {editingId === customer.id ? (
+                              <input
+                                type="text"
+                                value={editForm.note || ''}
+                                onChange={(e) => setEditForm({ ...editForm, note: e.target.value })}
+                                className="w-full px-2 py-1 border rounded text-xs"
+                                placeholder="Note"
+                              />
+                            ) : (
+                              <span className="inline-block jz-badge px-2 py-1 rounded text-xs max-w-[100px] truncate" title={customer.note || 'ไม่มี'}>
+                                {customer.note || '-'}
+                              </span>
+                            )}
                           </td>
                           <td className="px-2 md:px-4 py-2 md:py-3 text-center hidden lg:table-cell">
                             <span
@@ -518,50 +797,78 @@ function AdminDashboardBlue({
                           </td>
                           <td className="px-2 md:px-4 py-2 md:py-3">
                             <div className="flex flex-wrap gap-1 md:gap-2 justify-center">
-                              <button
-                                onClick={() => toggleTimer(customer.id)}
-                                className={`px-2 md:px-3 py-1 rounded-lg text-white font-semibold text-xs md:text-sm ${
-                                  customer.is_running
-                                    ? 'bg-orange-500 hover:bg-orange-600'
-                                    : 'bg-green-500 hover:bg-green-600'
-                                }`}
-                                title={customer.is_running ? 'หยุดชั่วคราว' : 'เริ่มต่อ'}
-                              >
-                                {customer.is_running ? '⏸️ หยุด' : '▶️ เริ่ม'}
-                              </button>
-                              <button
-                                onClick={() => togglePayment(customer.id)}
-                                className={`px-2 md:px-3 py-1 rounded-lg text-white font-semibold text-xs md:text-sm ${
-                                  customer.is_paid
-                                    ? 'bg-gray-500 hover:bg-gray-600'
-                                    : 'bg-green-500 hover:bg-green-600'
-                                }`}
-                                title="สลับสถานะการชำระเงิน"
-                              >
-                                💰
-                              </button>
-                              <button
-                                onClick={() => {
-                                  if (confirm(`✅ เสร็จสิ้นการใช้งานของ "${customer.name}"?\n\nราคารวม: ฿${customer.currentCost.toFixed(2)}\nจะบันทึกไว้ในประวัติ`)) {
-                                    completeCustomer(customer.id)
-                                  }
-                                }}
-                                className="px-2 md:px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold text-xs md:text-sm"
-                                title="เสร็จสิ้นและบันทึกประวัติ"
-                              >
-                                ✅
-                              </button>
-                              <button
-                                onClick={() => {
-                                  if (confirm(`ต้องการลบ "${customer.name}" ใช่หรือไม่?\nจะบันทึกไว้ในประวัติ`)) {
-                                    deleteCustomer(customer.id)
-                                  }
-                                }}
-                                className="px-2 md:px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded-lg font-semibold text-xs md:text-sm"
-                                title="ลบลูกค้า"
-                              >
-                                🗑️
-                              </button>
+                              {editingId === customer.id ? (
+                                <>
+                                  <button
+                                    onClick={() => saveEdit(customer.id)}
+                                    className="px-2 md:px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded-lg font-semibold text-xs md:text-sm"
+                                  >
+                                    ✅ บันทึก
+                                  </button>
+                                  <button
+                                    onClick={cancelEdit}
+                                    className="px-2 md:px-3 py-1 bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-semibold text-xs md:text-sm"
+                                  >
+                                    ❌ ยกเลิก
+                                  </button>
+                                </>
+                              ) : (
+                                <>
+                                  <button
+                                    onClick={() => startEdit(customer)}
+                                    className="px-2 md:px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold text-xs md:text-sm"
+                                    title="แก้ไขราคาและหมายเหตุ"
+                                  >
+                                    ✏️ แก้ไข
+                                  </button>
+                                  {!customer.isRedMode && (
+                                    <button
+                                      onClick={() => toggleTimer(customer.id)}
+                                      className={`px-2 md:px-3 py-1 rounded-lg text-white font-semibold text-xs md:text-sm ${
+                                        customer.is_running
+                                          ? 'bg-orange-500 hover:bg-orange-600'
+                                          : 'bg-green-500 hover:bg-green-600'
+                                      }`}
+                                      title={customer.is_running ? 'หยุดชั่วคราว' : 'เริ่มต่อ'}
+                                    >
+                                      {customer.is_running ? '⏸️ หยุด' : '▶️ เริ่ม'}
+                                    </button>
+                                  )}
+                                  <button
+                                    onClick={() => togglePayment(customer.id)}
+                                    className={`px-2 md:px-3 py-1 rounded-lg text-white font-semibold text-xs md:text-sm ${
+                                      customer.is_paid
+                                        ? 'bg-gray-500 hover:bg-gray-600'
+                                        : 'bg-green-500 hover:bg-green-600'
+                                    }`}
+                                    title="สลับสถานะการชำระเงิน"
+                                  >
+                                    💰
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      if (confirm(`✅ เสร็จสิ้นการใช้งานของ "${customer.name}"?\n\nราคารวม: ฿${customer.currentCost.toFixed(2)}\nจะบันทึกไว้ในประวัติ`)) {
+                                        completeCustomer(customer.id)
+                                      }
+                                    }}
+                                    className="px-2 md:px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold text-xs md:text-sm"
+                                    title="เสร็จสิ้นและบันทึกประวัติ"
+                                  >
+                                    ✅
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      if (confirm(`ต้องการลบ "${customer.name}" ใช่หรือไม่?\nจะบันทึกไว้ในประวัติ`)) {
+                                        deleteCustomer(customer.id)
+                                      }
+                                    }}
+                                    className="px-2 md:px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded-lg font-semibold text-xs md:text-sm"
+                                    title="ลบลูกค้า"
+                                  >
+                                    🗑️
+                                  </button>
+                                </>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -574,6 +881,23 @@ function AdminDashboardBlue({
           )}
         </div>
       </div>
+      
+      {/* Modals */}
+      <ZoneManagementModal
+        isOpen={showZoneModal}
+        onClose={() => setShowZoneModal(false)}
+        zones={zones}
+        onUpdate={handleZoneUpdate}
+      />
+      
+      <CustomerManagementModal
+        isOpen={showCustomerModal}
+        onClose={() => setShowCustomerModal(false)}
+        customers={displayCustomers}
+        onUpdate={handleCustomerUpdate}
+        onDelete={handleCustomerDelete}
+      />
+      
       <ThemePicker zone="blue" />
     </div>
   )
