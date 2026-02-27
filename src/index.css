@@ -43,24 +43,29 @@
 
 html {
   scroll-behavior: smooth;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  /* prefer performance and allow OS to render emoji color font */
+  text-rendering: optimizeSpeed;
+  -webkit-font-smoothing: subpixel-antialiased;
+  -moz-osx-font-smoothing: auto;
 }
 
 body {
-  font-family: 'Mali', system-ui, -apple-system, sans-serif;
+  /* include color-emoji fonts in the stack so emoji render in color */
+  font-family: 'Mali', system-ui, -apple-system, 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
   margin: 0;
   padding: 0;
   overscroll-behavior: none;
   overflow-x: hidden;
 }
 
-/* ── Emoji Support ── */
-@supports (font-family: emoji) {
-  * {
-    font-family: 'Mali', system-ui, -apple-system, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji';
-  }
+/* Force color emoji rendering where supported */
+* {
+  font-variant-emoji: normal;
+}
+
+/* Ensure common text elements also include emoji fallback fonts */
+button, span, p, h1, h2, h3, h4, h5, h6, div, a {
+  font-family: 'Mali', system-ui, -apple-system, 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
 }
 
 /* ── Selection ── */

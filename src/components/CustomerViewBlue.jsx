@@ -127,7 +127,7 @@ function CustomerViewBlue({ customers }) {
                   {/* Customer Name */}
                   <div className="mb-3 md:mb-4">
                     <h2 className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-700 to-cyan-600 bg-clip-text text-transparent mb-2">
-                      👤 {customer.name}
+                      {customer.name}
                     </h2>
                     <div className="inline-flex items-center gap-1.5 bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-3 py-1.5 md:px-4 md:py-2 rounded-full text-xs sm:text-sm font-bold shadow-lg">
                       <span>📍</span> {customer.room}

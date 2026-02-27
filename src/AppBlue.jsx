@@ -156,21 +156,43 @@ function AppBlue({ user, onLogout }) {
     try {
       const now = new Date()
       const nowIso = now.toISOString()
-      
-      const newCustomer = {
-        id: nextId,
-        name: customerData.name,
-        room: customerData.room,
-        note: customerData.note || '',
-        hourly_rate: customerData.hourlyRate,
-        current_cost: 0.00,
-        is_running: true,
-        is_paid: false,
-        start_time: nowIso,
-        pause_time: null,
-        total_pause_duration: 0,
-        created_at: nowIso,
-        updated_at: nowIso
+      let newCustomer
+      if (customerData.mode === 'red') {
+        // Fixed-price (Red) customer
+        newCustomer = {
+          id: nextId,
+          name: customerData.name,
+          room: customerData.room,
+          note: customerData.note || '',
+          hours: customerData.hours || 0,
+          cost: customerData.cost || 0,
+          payment_method: customerData.paymentMethod || 'transfer',
+          mode: 'red',
+          current_cost: customerData.cost || 0,
+          is_running: false,
+          is_paid: false,
+          start_time: nowIso,
+          created_at: nowIso,
+          updated_at: nowIso
+        }
+      } else {
+        // Blue mode: pro-rated pricing
+        newCustomer = {
+          id: nextId,
+          name: customerData.name,
+          room: customerData.room,
+          note: customerData.note || '',
+          hourly_rate: customerData.hourlyRate,
+          current_cost: 0.00,
+          is_running: true,
+          is_paid: false,
+          start_time: nowIso,
+          pause_time: null,
+          total_pause_duration: 0,
+          mode: 'blue',
+          created_at: nowIso,
+          updated_at: nowIso
+        }
       }
 
       const newCustomers = [...customers, newCustomer]
@@ -192,22 +214,46 @@ function AppBlue({ user, onLogout }) {
       
       // Create initial history record
       if (supabase && isSupabaseReady) {
-        await supabase
-          .from('juthazoneb_customers_history')
-          .insert([{
-            customer_id: newCustomer.id,
-            name: newCustomer.name,
-            room: newCustomer.room,
-            note: newCustomer.note,
-            added_by: user?.username || 'Unknown',
-            start_time: nowIso,
-            end_time: null,
-            duration_minutes: 0,
-            hourly_rate: customerData.hourlyRate,
-            final_cost: 0.00,
-            is_paid: false,
-            end_reason: 'in_progress'
-          }])
+        try {
+          if (customerData.mode === 'red') {
+            // For fixed-price Red-mode, record as completed immediately
+            const durationMinutes = Math.round((customerData.hours || 0) * 60)
+            const endTime = new Date(now.getTime() + (durationMinutes * 60000)).toISOString()
+            const historyRecordRed = {
+              customer_id: newCustomer.id,
+              name: newCustomer.name,
+              room: newCustomer.room,
+              note: newCustomer.note,
+              added_by: user?.username || 'Unknown',
+              start_time: nowIso,
+              end_time: endTime,
+              duration_minutes: durationMinutes,
+              hourly_rate: null,
+              final_cost: customerData.cost || 0,
+              is_paid: false,
+              end_reason: 'completed'
+            }
+            await supabase.from('juthazoneb_customers_history').insert([historyRecordRed])
+          } else {
+            const historyRecord = {
+              customer_id: newCustomer.id,
+              name: newCustomer.name,
+              room: newCustomer.room,
+              note: newCustomer.note,
+              added_by: user?.username || 'Unknown',
+              start_time: nowIso,
+              end_time: null,
+              duration_minutes: 0,
+              hourly_rate: customerData.hourlyRate,
+              final_cost: 0.00,
+              is_paid: false,
+              end_reason: 'in_progress'
+            }
+            await supabase.from('juthazoneb_customers_history').insert([historyRecord])
+          }
+        } catch (err) {
+          console.warn('Failed to insert history record (Blue addCustomer):', err)
+        }
       }
       
       await updateFirebase(newCustomers)
