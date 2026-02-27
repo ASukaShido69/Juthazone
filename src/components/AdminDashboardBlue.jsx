@@ -98,7 +98,7 @@ function AdminDashboardBlue({
   const [showZoneModal, setShowZoneModal] = useState(false)
   const [products, setProducts] = useState(DEFAULT_PRODUCTS)
   const [showProductModal, setShowProductModal] = useState(false)
-  const [salesForm, setSalesForm] = useState({ productId: '', quantity: 1, addedBy: '' })
+  const [salesForm, setSalesForm] = useState({ productId: '', quantity: 1, added_by: '' })
   const [productHistory, setProductHistory] = useState([])
   const { setActiveZone } = useTheme()
   const [, setUpdateTrigger] = useState(0)
@@ -116,7 +116,7 @@ function AdminDashboardBlue({
   // Pre-fill addedBy from logged-in user
   useEffect(() => {
     if (user?.displayName) {
-      setSalesForm(prev => ({ ...prev, addedBy: user.displayName }))
+      setSalesForm(prev => ({ ...prev, added_by: user.displayName }))
     }
   }, [user])
 
