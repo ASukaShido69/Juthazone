@@ -60,10 +60,10 @@ function CustomerViewBlue({ customers }) {
         `เรียกพนักงานจากหน้าลูกค้า Blue Zone: ${customer.name || ''}`,
         { note: note || '-', room: customer.room }
       )
-      alert('✅ เรียกพนักงานแล้ว')
+      alert('เรียกพนักงานแล้ว')
     } catch (error) {
       console.error('Call staff error:', error)
-      alert('❌ ไม่สามารถบันทึกการเรียกพนักงานได้')
+      alert('ไม่สามารถบันทึกการเรียกพนักงานได้')
     }
   }
 

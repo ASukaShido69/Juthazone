@@ -6,7 +6,6 @@ import { logActivityBlue, calculateCostBlue, formatElapsedTime } from '../utils/
 import { useTheme } from '../contexts/ThemeContext'
 import ThemePicker from './ThemePicker'
 import ZoneManagementModal from './ZoneManagementModal'
-import CustomerManagementModal from './CustomerManagementModal'
 
 // Zone configurations with pricing
 const ZONES = {
@@ -81,7 +80,6 @@ function AdminDashboardBlue({
   })
   const [zones, setZones] = useState(ZONES)
   const [showZoneModal, setShowZoneModal] = useState(false)
-  const [showCustomerModal, setShowCustomerModal] = useState(false)
   const { setActiveZone } = useTheme()
   const [, setUpdateTrigger] = useState(0)
   const [notifications, setNotifications] = useState([])
@@ -364,13 +362,62 @@ function AdminDashboardBlue({
     const customer = customers.find(c => c.id === customerId)
     if (!customer) return
 
-    // In a real app, you'd save this to database
-    // For now, we'll just log it
-    console.log('Updated customer:', customerId, editForm)
-    
-    // You can dispatch an update action here if you have it
-    // For now, just close the edit mode
-    setEditingId(null)
+    try {
+      const updateData = {
+        note: editForm.note || '',
+        ...(customer.isRedMode 
+          ? { cost: parseFloat(editForm.cost) || 0 }
+          : { hourly_rate: parseFloat(editForm.hourlyRate) || 0 }
+        )
+      }
+
+      if (supabase) {
+        // Update in main customers table
+        const { error: updateError } = await supabase
+          .from('juthazoneb_customers')
+          .update(updateData)
+          .eq('id', customerId)
+        
+        if (updateError) {
+          console.error('Error updating customer:', updateError)
+          alert('ไม่สามารถบันทึกได้: ' + updateError.message)
+          return
+        }
+
+        // Also update in history table for record keeping
+        const historyUpdateData = {
+          ...updateData,
+          updated_at: new Date().toISOString()
+        }
+        
+        const { error: historyError } = await supabase
+          .from('juthazoneb_customers_history')
+          .update(historyUpdateData)
+          .eq('id', customerId)
+        
+        if (historyError) {
+          console.warn('Warning: History table update failed', historyError)
+          // Don't block the main update if history fails
+        }
+
+        // Log activity
+        if (user?.username) {
+          await logActivityBlue(
+            user.username,
+            'UPDATE_CUSTOMER',
+            `อัปเดตลูกค้า: ${customer.name}`,
+            { customer_id: customerId, updates: updateData }
+          )
+        }
+      }
+
+      alert('บันทึกสำเร็จ')
+      setEditingId(null)
+      setEditForm({})
+    } catch (err) {
+      console.error('Save edit error:', err)
+      alert('เกิดข้อผิดพลาด: ' + err.message)
+    }
   }
 
   const cancelEdit = () => {
@@ -442,12 +489,6 @@ function AdminDashboardBlue({
               className="inline-block bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-6 rounded-xl shadow-lg jz-glow-hover transform hover:scale-105 transition-all duration-300 border border-purple-300"
             >
               ⚙️ จัดการโซน
-            </button>
-            <button
-              onClick={() => setShowCustomerModal(true)}
-              className="inline-block bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-6 rounded-xl shadow-lg jz-glow-hover transform hover:scale-105 transition-all duration-300 border border-orange-300"
-            >
-              👥 จัดการลูกค้า
             </button>
             <a
               href="/blue/history"
@@ -527,13 +568,13 @@ function AdminDashboardBlue({
                   onClick={() => setMode('blue')}
                   className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${mode === 'blue' ? 'bg-blue-500 text-white' : 'bg-gray-300 text-gray-700'}`}
                 >
-                  🔵 Blue
+                  🔵โหมด Blue คำนวณราคาตามเวลา
                 </button>
                 <button
                   onClick={() => setMode('red')}
                   className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${mode === 'red' ? 'bg-red-500 text-white' : 'bg-gray-300 text-gray-700'}`}
                 >
-                  🔴 Red
+                  🔴หากบอกชั่วโมงที่เล่น
                 </button>
               </div>
             </div>
@@ -902,14 +943,6 @@ function AdminDashboardBlue({
         onClose={() => setShowZoneModal(false)}
         zones={zones}
         onUpdate={handleZoneUpdate}
-      />
-      
-      <CustomerManagementModal
-        isOpen={showCustomerModal}
-        onClose={() => setShowCustomerModal(false)}
-        customers={displayCustomers}
-        onUpdate={handleCustomerUpdate}
-        onDelete={handleCustomerDelete}
       />
       
       <ThemePicker zone="blue" />

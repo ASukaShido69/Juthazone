@@ -56,6 +56,13 @@ body {
   overflow-x: hidden;
 }
 
+/* ── Emoji Support ── */
+@supports (font-family: emoji) {
+  * {
+    font-family: 'Mali', system-ui, -apple-system, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji';
+  }
+}
+
 /* ── Selection ── */
 ::selection {
   background: rgba(139, 92, 246, 0.25);
