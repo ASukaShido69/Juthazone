@@ -444,11 +444,12 @@ function AdminDashboardBlue({
           product_price: prod.price,
           quantity,
           total_price: total,
-          added_by: salesForm.added_by || user?.displayName || null
+          added_by: salesForm.added_by || user?.displayName || null,
+          note: salesForm.note || null
         }])
       }
       alert(`บันทึกการขาย ${prod.name} x${quantity}`)
-      setSalesForm(prev => ({ productId: '', quantity: 1, added_by: prev.added_by }))
+      setSalesForm(prev => ({ productId: '', quantity: 1, added_by: prev.added_by, note: prev.note }))
       fetchProductHistory()
     } catch (err) {
       console.error('Record sale error', err)
