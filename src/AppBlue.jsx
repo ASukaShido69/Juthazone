@@ -112,16 +112,30 @@ function AppBlue({ user, onLogout }) {
         const { error } = await supabase.from('juthazoneb_customers').delete().neq('id', 0)
         if (error) throw error
       } else {
-        const customersWithTimestamps = customersToSave.map(c => ({
-          ...c,
-          updated_at: new Date().toISOString(),
-          created_at: c.created_at || new Date().toISOString()
+        // Only include columns that exist in `juthazoneb_customers` to avoid schema errors
+        const nowIso = new Date().toISOString()
+        const customersForDb = customersToSave.map(c => ({
+          id: c.id,
+          name: c.name,
+          room: c.room,
+          note: c.note || '',
+          // hourly_rate may be undefined for Red-mode; keep null in DB
+          hourly_rate: c.hourly_rate ?? null,
+          // Use current_cost field for fixed-price Red-mode customers
+          current_cost: (c.mode === 'red' ? (c.cost ?? c.current_cost ?? 0) : (c.current_cost ?? 0)),
+          is_running: !!c.is_running,
+          is_paid: !!c.is_paid,
+          start_time: c.start_time || nowIso,
+          pause_time: c.pause_time || null,
+          total_pause_duration: c.total_pause_duration || 0,
+          created_at: c.created_at || nowIso,
+          updated_at: nowIso
         }))
-        
+
         const { error } = await supabase
           .from('juthazoneb_customers')
-          .upsert(customersWithTimestamps, { onConflict: 'id' })
-        
+          .upsert(customersForDb, { onConflict: 'id' })
+
         if (error) throw error
       }
     } catch (err) {
