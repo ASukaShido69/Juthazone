@@ -737,6 +737,15 @@ function AdminDashboardBlue({
               min="1"
               placeholder="จำนวน"
             />
+            <div className="col-span-3">
+              <label className="block text-gray-600 font-semibold mb-1 text-sm">👤 พนักงาน</label>
+              <input
+                type="text"
+                value={salesForm.added_by}
+                onChange={e => setSalesForm({ ...salesForm, added_by: e.target.value })}
+                className="w-full px-3 py-2 border-2 rounded-lg focus:outline-none focus:border-blue-400"
+                placeholder="ชื่อพนักงาน"
+              />
             </div>
             <button
               onClick={recordSale}
