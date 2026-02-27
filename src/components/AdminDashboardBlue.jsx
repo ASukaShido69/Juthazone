@@ -20,14 +20,21 @@ const ZONES = {
   'sim': {
     label: '🏎️ Sim',
     items: [
-      { id: 'sim-12', label: '1-2 ตัวพื้นฐาน', defaultPrice: 120 },
-      { id: 'sim-34', label: '3-4 ตัวสมจริง', defaultPrice: 160 }
+      { id: 'sim-1', label: '1 ตัวพื้นฐาน', defaultPrice: 120 },
+      { id: 'sim-2', label: '2 ตัวพื้นฐาน', defaultPrice: 120 },
+      { id: 'sim-3', label: '3 ตัวสมจริง', defaultPrice: 160 },
+      { id: 'sim-4', label: '4 ตัวสมจริง', defaultPrice: 160 }
     ]
   },
   'ps': {
     label: '🎮 PS',
     items: [
-      { id: 'ps-5to10', label: '5-10', defaultPrice: 100 }
+      { id: 'ps-5', label: '5', defaultPrice: 100 },
+      { id: 'ps-6', label: '6', defaultPrice: 100 },
+      { id: 'ps-7', label: '7', defaultPrice: 100 },
+      { id: 'ps-8', label: '8', defaultPrice: 100 },
+      { id: 'ps-9', label: '9', defaultPrice: 100 },
+      { id: 'ps-10', label: '10', defaultPrice: 100 }
     ]
   },
   'ps5-vip': {
@@ -568,7 +575,14 @@ function AdminDashboardBlue({
                           name="item"
                           value={item.id}
                           checked={formData.selectedItem === item.id}
-                          onChange={(e) => setFormData({ ...formData, selectedItem: e.target.value })}
+                          onChange={(e) => {
+                            setFormData({ 
+                              ...formData, 
+                              selectedItem: e.target.value,
+                              hourlyRate: item.defaultPrice, // Auto-fill hourly rate with default price
+                              cost: item.defaultPrice // Also fill cost for red mode
+                            })
+                          }}
                           className="w-4 h-4"
                         />
                         <span className="text-sm font-semibold">{item.label}</span>
@@ -590,7 +604,7 @@ function AdminDashboardBlue({
                       value={formData.hourlyRate}
                       onChange={(e) => setFormData({ ...formData, hourlyRate: e.target.value })}
                       className="w-full px-3 py-2 md:px-4 md:py-2 border-2 jz-input rounded-lg focus:outline-none text-sm md:text-base"
-                      placeholder="กรอกราคาต่อชั่วโมง เช่น 100, 120, 160 ฯลฯ"
+                      placeholder={formData.selectedItem ? `ราคาเริ่มต้น: ${formData.hourlyRate}` : "เลือกรายการก่อน"}
                       min="0"
                       step="0.01"
                     />
