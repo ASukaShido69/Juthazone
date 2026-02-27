@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import supabase from './firebase'
 import ProtectedRoute from './components/ProtectedRoute'
+import ProductHistoryView from './components/ProductHistoryView'
 import AdminDashboardBlue from './components/AdminDashboardBlue'
 import CustomerViewBlue from './components/CustomerViewBlue'
 import HistoryViewBlue from './components/HistoryViewBlue'
@@ -119,10 +120,9 @@ function AppBlue({ user, onLogout }) {
           name: c.name,
           room: c.room,
           note: c.note || '',
-          // hourly_rate may be undefined for Red-mode; keep null in DB
-          hourly_rate: c.hourly_rate ?? null,
-          // Use current_cost field for fixed-price Red-mode customers
-          current_cost: (c.mode === 'red' ? (c.cost ?? c.current_cost ?? 0) : (c.current_cost ?? 0)),
+          // Ensure hourly_rate is never null to satisfy DB constraint
+          hourly_rate: (c.hourly_rate != null ? c.hourly_rate : 0),
+          current_cost: (c.current_cost ?? 0),
           is_running: !!c.is_running,
           is_paid: !!c.is_paid,
           start_time: c.start_time || nowIso,
@@ -170,43 +170,21 @@ function AppBlue({ user, onLogout }) {
     try {
       const now = new Date()
       const nowIso = now.toISOString()
-      let newCustomer
-      if (customerData.mode === 'red') {
-        // Fixed-price (Red) customer
-        newCustomer = {
-          id: nextId,
-          name: customerData.name,
-          room: customerData.room,
-          note: customerData.note || '',
-          hours: customerData.hours || 0,
-          cost: customerData.cost || 0,
-          payment_method: customerData.paymentMethod || 'transfer',
-          mode: 'red',
-          current_cost: customerData.cost || 0,
-          is_running: false,
-          is_paid: false,
-          start_time: nowIso,
-          created_at: nowIso,
-          updated_at: nowIso
-        }
-      } else {
-        // Blue mode: pro-rated pricing
-        newCustomer = {
-          id: nextId,
-          name: customerData.name,
-          room: customerData.room,
-          note: customerData.note || '',
-          hourly_rate: customerData.hourlyRate,
-          current_cost: 0.00,
-          is_running: true,
-          is_paid: false,
-          start_time: nowIso,
-          pause_time: null,
-          total_pause_duration: 0,
-          mode: 'blue',
-          created_at: nowIso,
-          updated_at: nowIso
-        }
+      // Always create Blue (pro-rated) customer
+      const newCustomer = {
+        id: nextId,
+        name: customerData.name,
+        room: customerData.room,
+        note: customerData.note || '',
+        hourly_rate: (customerData.hourlyRate != null ? customerData.hourlyRate : 0),
+        current_cost: 0.00,
+        is_running: true,
+        is_paid: false,
+        start_time: nowIso,
+        pause_time: null,
+        total_pause_duration: 0,
+        created_at: nowIso,
+        updated_at: nowIso
       }
 
       const newCustomers = [...customers, newCustomer]
@@ -226,45 +204,24 @@ function AppBlue({ user, onLogout }) {
         )
       }
       
-      // Create initial history record
+      // Create initial history record as in-progress (Blue)
       if (supabase && isSupabaseReady) {
         try {
-          if (customerData.mode === 'red') {
-            // For fixed-price Red-mode, record as completed immediately
-            const durationMinutes = Math.round((customerData.hours || 0) * 60)
-            const endTime = new Date(now.getTime() + (durationMinutes * 60000)).toISOString()
-            const historyRecordRed = {
-              customer_id: newCustomer.id,
-              name: newCustomer.name,
-              room: newCustomer.room,
-              note: newCustomer.note,
-              added_by: user?.username || 'Unknown',
-              start_time: nowIso,
-              end_time: endTime,
-              duration_minutes: durationMinutes,
-              hourly_rate: null,
-              final_cost: customerData.cost || 0,
-              is_paid: false,
-              end_reason: 'completed'
-            }
-            await supabase.from('juthazoneb_customers_history').insert([historyRecordRed])
-          } else {
-            const historyRecord = {
-              customer_id: newCustomer.id,
-              name: newCustomer.name,
-              room: newCustomer.room,
-              note: newCustomer.note,
-              added_by: user?.username || 'Unknown',
-              start_time: nowIso,
-              end_time: null,
-              duration_minutes: 0,
-              hourly_rate: customerData.hourlyRate,
-              final_cost: 0.00,
-              is_paid: false,
-              end_reason: 'in_progress'
-            }
-            await supabase.from('juthazoneb_customers_history').insert([historyRecord])
+          const historyRecord = {
+            customer_id: newCustomer.id,
+            name: newCustomer.name,
+            room: newCustomer.room,
+            note: newCustomer.note,
+            added_by: user?.username || 'Unknown',
+            start_time: nowIso,
+            end_time: null,
+            duration_minutes: 0,
+            hourly_rate: customerData.hourlyRate,
+            final_cost: 0.00,
+            is_paid: false,
+            end_reason: 'in_progress'
           }
+          await supabase.from('juthazoneb_customers_history').insert([historyRecord])
         } catch (err) {
           console.warn('Failed to insert history record (Blue addCustomer):', err)
         }
@@ -539,6 +496,14 @@ function AppBlue({ user, onLogout }) {
         element={
           <ProtectedRoute isLoggedIn={!!user}>
             <HistoryViewBlue user={user} />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/product-history"
+        element={
+          <ProtectedRoute isLoggedIn={!!user}>
+            <ProductHistoryView />
           </ProtectedRoute>
         }
       />

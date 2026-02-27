@@ -68,6 +68,7 @@ npm run dev
 - `/blue/admin` - Admin Dashboard
 - `/blue/customer` - Customer View
 - `/blue/history` - ประวัติ
+- `/blue/product-history` - ประวัติการขายสินค้า
 - `/blue/analytics` - Analytics
 
 ---

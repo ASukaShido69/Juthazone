@@ -6,37 +6,24 @@ import { logActivityBlue } from '../utils/authUtilsBlue'
 function CustomerViewBlue({ customers }) {
   const [roomFilter, setRoomFilter] = useState('all')
 
-  // Calculate real-time cost and elapsed time for display
+  // Calculate real-time cost and elapsed time for display (Blue-only)
   const displayCustomers = useMemo(() => {
-    return customers.map(customer => {
-      if (customer.mode === 'red') {
-        // Red mode: fixed time and cost
-        return {
-          ...customer,
-          currentCost: customer.cost || 0,
-          elapsedTime: customer.hours ? `${(customer.hours * 60).toFixed(0)}นาที` : '-',
-          isRedMode: true
-        }
-      }
-      // Blue mode: pro-rated pricing
-      return {
-        ...customer,
-        currentCost: calculateCostBlue(
-          customer.start_time,
-          customer.hourly_rate,
-          customer.total_pause_duration,
-          customer.pause_time,
-          customer.is_running
-        ),
-        elapsedTime: formatElapsedTime(
-          customer.start_time,
-          customer.total_pause_duration,
-          customer.pause_time,
-          customer.is_running
-        ),
-        isRedMode: false
-      }
-    })
+    return customers.map(customer => ({
+      ...customer,
+      currentCost: calculateCostBlue(
+        customer.start_time,
+        customer.hourly_rate,
+        customer.total_pause_duration,
+        customer.pause_time,
+        customer.is_running
+      ),
+      elapsedTime: formatElapsedTime(
+        customer.start_time,
+        customer.total_pause_duration,
+        customer.pause_time,
+        customer.is_running
+      )
+    }))
   }, [customers])
 
   const roomOptions = useMemo(() => {
@@ -144,52 +131,36 @@ function CustomerViewBlue({ customers }) {
                     </div>
                   )}
 
-                  {/* Elapsed Time - only for Blue mode */}
-                  {!customer.isRedMode && (
-                    <div className="mb-3 md:mb-4">
-                      <p className="text-xs sm:text-sm text-gray-500 mb-1.5 font-bold tracking-wide uppercase">⏱️ เวลาที่ใช้</p>
-                      <div className="text-4xl sm:text-5xl md:text-6xl font-bold text-center py-4 md:py-5 rounded-2xl shadow-inner bg-gradient-to-br from-cyan-100 to-blue-100 text-cyan-800 border-2 border-cyan-300">
-                        {customer.elapsedTime}
-                      </div>
+                  {/* Elapsed Time */}
+                  <div className="mb-3 md:mb-4">
+                    <p className="text-xs sm:text-sm text-gray-500 mb-1.5 font-bold tracking-wide uppercase">⏱️ เวลาที่ใช้</p>
+                    <div className="text-4xl sm:text-5xl md:text-6xl font-bold text-center py-4 md:py-5 rounded-2xl shadow-inner bg-gradient-to-br from-cyan-100 to-blue-100 text-cyan-800 border-2 border-cyan-300">
+                      {customer.elapsedTime}
                     </div>
-                  )}
-
-                  {/* Current Cost */}
-                  <div className="mb-3 md:mb-4 cost-tick">
-                    {customer.isRedMode ? (
-                      <div className="bg-gradient-to-r from-red-50 to-pink-50 border border-red-300 rounded-2xl p-3 md:p-4 text-center shadow-sm">
-                        <p className="text-[10px] text-red-600 font-bold uppercase tracking-wider">💰 ราคารวม (Fixed)</p>
-                        <p className="text-4xl sm:text-5xl md:text-6xl font-extrabold bg-gradient-to-r from-red-600 to-pink-600 bg-clip-text text-transparent">
-                          ฿{customer.currentCost.toFixed(2)}
-                        </p>
-                        {customer.paymentMethod && (
-                          <div className="mt-2 text-xs sm:text-sm font-semibold text-gray-500 bg-gray-100 px-2.5 py-0.5 rounded-full inline-block">
-                            {customer.paymentMethod === 'transfer' ? '💸 โอนเงิน' : '💵 เงินสด'}
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="bg-gradient-to-r from-emerald-50 to-green-50 border border-emerald-300 rounded-2xl p-3 md:p-4 text-center shadow-sm">
-                        <p className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider">💰 ราคาปัจจุบัน</p>
-                        <p className="text-4xl sm:text-5xl md:text-6xl font-extrabold bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">
-                          ฿{customer.currentCost.toFixed(2)}
-                        </p>
-                        <div className="mt-2 flex items-center justify-center gap-2">
-                          <span className="text-xs sm:text-sm font-semibold text-gray-500 bg-gray-100 px-2.5 py-0.5 rounded-full">
-                            {customer.hourly_rate} บาท/ชม.
-                          </span>
-                          {!customer.is_running && (
-                            <span className="text-xs font-bold text-orange-600 bg-orange-100 px-2 py-0.5 rounded-full">
-                              ⏸️ หยุด
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    )}
                   </div>
 
-                  {/* Start Time - only for Blue mode */}
-                  {!customer.isRedMode && customer.start_time && (
+                  {/* Current Cost (Blue) */}
+                  <div className="mb-3 md:mb-4 cost-tick">
+                    <div className="bg-gradient-to-r from-emerald-50 to-green-50 border border-emerald-300 rounded-2xl p-3 md:p-4 text-center shadow-sm">
+                      <p className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider">💰 ราคาปัจจุบัน</p>
+                      <p className="text-4xl sm:text-5xl md:text-6xl font-extrabold bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">
+                        ฿{customer.currentCost.toFixed(2)}
+                      </p>
+                      <div className="mt-2 flex items-center justify-center gap-2">
+                        <span className="text-xs sm:text-sm font-semibold text-gray-500 bg-gray-100 px-2.5 py-0.5 rounded-full">
+                          {customer.hourly_rate} บาท/ชม.
+                        </span>
+                        {!customer.is_running && (
+                          <span className="text-xs font-bold text-orange-600 bg-orange-100 px-2 py-0.5 rounded-full">
+                            ⏸️ หยุด
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Start Time */}
+                  {customer.start_time && (
                     <div className="mb-3 md:mb-4">
                       <div className="bg-blue-50 border border-blue-200 rounded-xl p-2 md:p-3">
                         <p className="text-[10px] text-blue-500 font-bold uppercase">🕐 เวลาเริ่ม</p>

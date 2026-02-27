@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
-import { formatTimeDisplay, formatDateTimeThai } from '../utils/timeFormat'
+import { formatTimeDisplay } from '../utils/timeFormat'
 import supabase from '../firebase'
 import { logActivityBlue, calculateCostBlue, formatElapsedTime } from '../utils/authUtilsBlue'
 import { useTheme } from '../contexts/ThemeContext'
 import ThemePicker from './ThemePicker'
 import ZoneManagementModal from './ZoneManagementModal'
+import ProductManagementModal from './ProductManagementModal'
 
 // Zone configurations with pricing
 const ZONES = {
@@ -57,6 +58,26 @@ const ZONES = {
   }
 }
 
+// Default product list
+const DEFAULT_PRODUCTS = [
+  { id: 'snack-large', name: 'ขนมห่อใหญ่', price: 30 },
+  { id: 'cheeseball', name: 'ชีสบอล', price: 59 },
+  { id: 'nugget', name: 'นักเก็ต', price: 59 },
+  { id: 'water', name: 'น้ำเปล่า', price: 15 },
+  { id: 'mamaok', name: 'มาม่าOk', price: 25 },
+  { id: 'mamatub', name: 'มาม่าถ้วย', price: 25 },
+  { id: 'mamakorea', name: 'มาม่าเกาหลี', price: 50 },
+  { id: 'fries', name: 'เฟรนช์ฟรายส์', price: 59 },
+  { id: 'chicken-tendon', name: 'เอ็นข้อไก่', price: 79 },
+  { id: 'fanta', name: 'แฟนต้า', price: 25 },
+  { id: 'coke', name: 'โค๊ก', price: 25 },
+  { id: 'oishi', name: 'โออิชิ', price: 25 },
+  { id: 'chicken-pop', name: 'ไก่ป๊อป', price: 59 },
+  { id: 'cup-ice', name: 'แก้ว+น้ำแข็ง', price: 5 }
+]
+
+
+
 function AdminDashboardBlue({
   customers,
   addCustomer,
@@ -67,19 +88,18 @@ function AdminDashboardBlue({
   user,
   onLogout
 }) {
-  const [mode, setMode] = useState('blue') // 'blue' or 'red'
   const [formData, setFormData] = useState({
     selectedZone: '', // For Blue mode - zone selection
     selectedItem: '', // For Blue mode - specific item
     hourlyRate: '',
-    note: '',
-    // Red mode fields
-    minutes: '',
-    cost: '',
-    paymentMethod: 'transfer'
+    note: ''
   })
   const [zones, setZones] = useState(ZONES)
   const [showZoneModal, setShowZoneModal] = useState(false)
+  const [products, setProducts] = useState(DEFAULT_PRODUCTS)
+  const [showProductModal, setShowProductModal] = useState(false)
+  const [salesForm, setSalesForm] = useState({ productId: '', quantity: 1 })
+  const [productHistory, setProductHistory] = useState([])
   const { setActiveZone } = useTheme()
   const [, setUpdateTrigger] = useState(0)
   const [notifications, setNotifications] = useState([])
@@ -269,56 +289,24 @@ function AdminDashboardBlue({
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    
-    if (mode === 'blue') {
-      // Blue mode: pro-rated pricing
-      if (formData.selectedZone && formData.selectedItem && formData.hourlyRate) {
-        const zone = ZONES[formData.selectedZone]
-        const item = zone.items.find(i => i.id === formData.selectedItem)
-        const roomName = `${zone.label} - ${item.label}`
-        
-        addCustomer({
-          name: roomName, // Using zone info as name in Blue mode
-          room: formData.selectedItem,
-          hourlyRate: parseFloat(formData.hourlyRate),
-          note: formData.note,
-          mode: 'blue'
-        })
-        setFormData({ selectedZone: '', selectedItem: '', hourlyRate: '', note: '', minutes: '', cost: '', paymentMethod: 'transfer' })
-      }
-    } else {
-      // Red mode: fixed time + fixed price
-      if (formData.selectedZone && formData.selectedItem && formData.minutes && formData.cost) {
-        const zone = ZONES[formData.selectedZone]
-        const item = zone.items.find(i => i.id === formData.selectedItem)
-        const roomName = `${zone.label} - ${item.label}`
-        
-        addCustomer({
-          name: roomName,
-          room: formData.selectedItem,
-          hours: parseFloat(formData.minutes) / 60,
-          cost: parseFloat(formData.cost),
-          note: formData.note,
-          paymentMethod: formData.paymentMethod,
-          mode: 'red'
-        })
-        setFormData({ selectedZone: '', selectedItem: '', hourlyRate: '', note: '', minutes: '', cost: '', paymentMethod: 'transfer' })
-      }
+    // Blue mode only
+    if (formData.selectedZone && formData.selectedItem && formData.hourlyRate) {
+      const zone = ZONES[formData.selectedZone]
+      const item = zone.items.find(i => i.id === formData.selectedItem)
+      const roomName = `${zone.label} - ${item.label}`
+
+      addCustomer({
+        name: roomName,
+        room: formData.selectedItem,
+        hourlyRate: parseFloat(formData.hourlyRate),
+        note: formData.note
+      })
+      setFormData({ selectedZone: '', selectedItem: '', hourlyRate: '', note: '' })
     }
   }
 
-  // Calculate real-time cost for each customer
+  // Calculate real-time cost for each customer (Blue-only)
   const displayCustomers = customers.map(customer => {
-    if (customer.mode === 'red') {
-      // Red mode: fixed time and price
-      return {
-        ...customer,
-        currentCost: customer.cost || 0,
-        elapsedTime: customer.hours ? `${(customer.hours * 60).toFixed(0)}นาที` : '-',
-        isRedMode: true
-      }
-    }
-    // Blue mode: pro-rated pricing
     const currentCost = calculateCostBlue(
       customer.start_time,
       customer.hourly_rate,
@@ -335,8 +323,7 @@ function AdminDashboardBlue({
     return {
       ...customer,
       currentCost,
-      elapsedTime,
-      isRedMode: false
+      elapsedTime
     }
   })
 
@@ -345,17 +332,10 @@ function AdminDashboardBlue({
   // Handle edit mode
   const startEdit = (customer) => {
     setEditingId(customer.id)
-    if (customer.isRedMode) {
-      setEditForm({
-        cost: customer.cost || 0,
-        note: customer.note || ''
-      })
-    } else {
-      setEditForm({
-        hourlyRate: customer.hourly_rate || 0,
-        note: customer.note || ''
-      })
-    }
+    setEditForm({
+      hourlyRate: customer.hourly_rate || 0,
+      note: customer.note || ''
+    })
   }
 
   const saveEdit = async (customerId) => {
@@ -365,42 +345,35 @@ function AdminDashboardBlue({
     try {
       const updateData = {
         note: editForm.note || '',
-        ...(customer.isRedMode 
-          ? { cost: parseFloat(editForm.cost) || 0 }
-          : { hourly_rate: parseFloat(editForm.hourlyRate) || 0 }
-        )
+        hourly_rate: parseFloat(editForm.hourlyRate) || 0
       }
 
       if (supabase) {
-        // Update in main customers table
         const { error: updateError } = await supabase
           .from('juthazoneb_customers')
           .update(updateData)
           .eq('id', customerId)
-        
+
         if (updateError) {
           console.error('Error updating customer:', updateError)
           alert('ไม่สามารถบันทึกได้: ' + updateError.message)
           return
         }
 
-        // Also update in history table for record keeping
         const historyUpdateData = {
           ...updateData,
           updated_at: new Date().toISOString()
         }
-        
+
         const { error: historyError } = await supabase
           .from('juthazoneb_customers_history')
           .update(historyUpdateData)
           .eq('id', customerId)
-        
+
         if (historyError) {
           console.warn('Warning: History table update failed', historyError)
-          // Don't block the main update if history fails
         }
 
-        // Log activity
         if (user?.username) {
           await logActivityBlue(
             user.username,
@@ -447,6 +420,53 @@ function AdminDashboardBlue({
     }
   }
 
+  // PRODUCT MANAGEMENT
+  const handleProductUpdate = (updated) => {
+    setProducts(updated)
+  }
+
+  const recordSale = async () => {
+    const prod = products.find(p => p.id === salesForm.productId)
+    if (!prod) return
+    try {
+      const quantity = salesForm.quantity || 1
+      const total = prod.price * quantity
+      if (supabase) {
+        await supabase.from('historyforproduct').insert([{ 
+          product_name: prod.name,
+          product_price: prod.price,
+          quantity,
+          total_price: total
+        }])
+      }
+      alert(`บันทึกการขาย ${prod.name} x${quantity}`)
+      setSalesForm({ productId: '', quantity: 1 })
+      fetchProductHistory()
+    } catch (err) {
+      console.error('Record sale error', err)
+      alert('ไม่สามารถบันทึกการขายได้')
+    }
+  }
+
+  const fetchProductHistory = async () => {
+    if (!supabase) return
+    try {
+      const { data, error } = await supabase
+        .from('historyforproduct')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(50)
+      if (error) throw error
+      setProductHistory(data || [])
+    } catch (err) {
+      console.error('Error fetching product history', err)
+    }
+  }
+
+  useEffect(() => {
+    fetchProductHistory()
+  }, [])
+
   return (
     <div className="min-h-screen jz-bg p-3 md:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
@@ -490,11 +510,23 @@ function AdminDashboardBlue({
             >
               ⚙️ จัดการโซน
             </button>
+            <button
+              onClick={() => setShowProductModal(true)}
+              className="inline-block bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-6 rounded-xl shadow-lg jz-glow-hover transform hover:scale-105 transition-all duration-300 border border-yellow-300"
+            >
+              📦 จัดการสินค้า
+            </button>
             <a
               href="/blue/history"
               className="inline-block bg-white/10 hover:bg-white/20 text-white font-bold py-2 px-6 rounded-xl shadow-lg jz-glow-hover transform hover:scale-105 transition-all duration-300 border border-white/20"
             >
               📊 ดูประวัติการใช้งาน
+            </a>
+            <a
+              href="/blue/product-history"
+              className="inline-block bg-white/10 hover:bg-white/20 text-white font-bold py-2 px-6 rounded-xl shadow-lg jz-glow-hover transform hover:scale-105 transition-all duration-300 border border-white/20"
+            >
+              🛒 ประวัติการขาย
             </a>
             <a
               href="/blue/analytics"
@@ -564,18 +596,7 @@ function AdminDashboardBlue({
                 ➕ เพิ่มลูกค้า
               </h2>
               <div className="flex gap-2">
-                <button
-                  onClick={() => setMode('blue')}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${mode === 'blue' ? 'bg-blue-500 text-white' : 'bg-gray-300 text-gray-700'}`}
-                >
-                  🔵โหมด Blue คำนวณราคาตามเวลา
-                </button>
-                <button
-                  onClick={() => setMode('red')}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${mode === 'red' ? 'bg-red-500 text-white' : 'bg-gray-300 text-gray-700'}`}
-                >
-                  🔴หากบอกชั่วโมงที่เล่น
-                </button>
+                <div className="px-3 py-1.5 rounded-lg text-sm font-bold bg-blue-500 text-white">🔵 โหมด Blue</div>
               </div>
             </div>
             
@@ -616,14 +637,13 @@ function AdminDashboardBlue({
                           name="item"
                           value={item.id}
                           checked={formData.selectedItem === item.id}
-                          onChange={(e) => {
-                            setFormData({ 
-                              ...formData, 
-                              selectedItem: e.target.value,
-                              hourlyRate: item.defaultPrice, // Auto-fill hourly rate with default price
-                              cost: item.defaultPrice // Also fill cost for red mode
-                            })
-                          }}
+                            onChange={(e) => {
+                              setFormData({ 
+                                ...formData, 
+                                selectedItem: e.target.value,
+                                hourlyRate: item.defaultPrice // Auto-fill hourly rate with default price
+                              })
+                            }}
                           className="w-4 h-4"
                         />
                         <span className="text-sm font-semibold">{item.label}</span>
@@ -634,70 +654,27 @@ function AdminDashboardBlue({
               )}
 
               {/* Blue Mode Fields */}
-              {mode === 'blue' && (
-                <>
-                  <div>
-                    <label className="block text-gray-700 font-semibold mb-1.5 md:mb-2 text-sm md:text-base">
-                      💰 ราคาต่อชั่วโมง (บาท)
-                    </label>
-                    <input
-                      type="number"
-                      value={formData.hourlyRate}
-                      onChange={(e) => setFormData({ ...formData, hourlyRate: e.target.value })}
-                      className="w-full px-3 py-2 md:px-4 md:py-2 border-2 jz-input rounded-lg focus:outline-none text-sm md:text-base"
-                      placeholder={formData.selectedItem ? `ราคาเริ่มต้น: ${formData.hourlyRate}` : "เลือกรายการก่อน"}
-                      min="0"
-                      step="0.01"
-                    />
-                    <p className="text-xs md:text-sm text-gray-500 mt-1">
-                      💡 ระบบจะคำนวณตามเวลาจริง (Pro-rated)
-                    </p>
-                  </div>
-                </>
-              )}
+              <>
+                <div>
+                  <label className="block text-gray-700 font-semibold mb-1.5 md:mb-2 text-sm md:text-base">
+                    💰 ราคาต่อชั่วโมง (บาท)
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.hourlyRate}
+                    onChange={(e) => setFormData({ ...formData, hourlyRate: e.target.value })}
+                    className="w-full px-3 py-2 md:px-4 md:py-2 border-2 jz-input rounded-lg focus:outline-none text-sm md:text-base"
+                    placeholder={formData.selectedItem ? `ราคาเริ่มต้น: ${formData.hourlyRate}` : "เลือกรายการก่อน"}
+                    min="0"
+                    step="0.01"
+                  />
+                  <p className="text-xs md:text-sm text-gray-500 mt-1">
+                    💡 ระบบจะคำนวณตามเวลาจริง (Pro-rated)
+                  </p>
+                </div>
+              </>
 
-              {/* Red Mode Fields */}
-              {mode === 'red' && (
-                <>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-gray-700 font-semibold mb-1.5 md:mb-2 text-sm md:text-base">⏱️ นาที</label>
-                      <input
-                        type="number"
-                        value={formData.minutes}
-                        onChange={(e) => setFormData({ ...formData, minutes: e.target.value })}
-                        className="w-full px-3 py-2 md:px-4 md:py-2 border-2 jz-input rounded-lg focus:outline-none text-sm md:text-base"
-                        placeholder="เช่น 60, 120"
-                        min="0"
-                        step="1"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-gray-700 font-semibold mb-1.5 md:mb-2 text-sm md:text-base">💰 ราคารวม</label>
-                      <input
-                        type="number"
-                        value={formData.cost}
-                        onChange={(e) => setFormData({ ...formData, cost: e.target.value })}
-                        className="w-full px-3 py-2 md:px-4 md:py-2 border-2 jz-input rounded-lg focus:outline-none text-sm md:text-base"
-                        placeholder="เช่น 100, 200"
-                        min="0"
-                        step="0.01"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-gray-700 font-semibold mb-1.5 md:mb-2 text-sm md:text-base">💳 วิธีการชำระเงิน</label>
-                    <select
-                      value={formData.paymentMethod}
-                      onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value })}
-                      className="w-full px-3 py-2 md:px-4 md:py-2 border-2 jz-input rounded-lg focus:outline-none text-sm md:text-base"
-                    >
-                      <option value="transfer">💸 โอนเงิน</option>
-                      <option value="cash">💵 เงินสด</option>
-                    </select>
-                  </div>
-                </>
-              )}
+              {/* (Red mode removed) */}
 
               {/* Common Note Field */}
               <div>
@@ -729,6 +706,68 @@ function AdminDashboardBlue({
             </div>
             <p className="text-xs md:text-sm text-gray-600 mt-3 md:mt-4 text-center font-semibold">สแกนเพื่อดูราคาตามเวลาจริง</p>
           </div>
+        </div>
+        {/* Sale Product Form */}
+        <div className="lg:col-span-2 bg-white/95 backdrop-blur-sm rounded-xl md:rounded-2xl shadow-card p-4 md:p-6 transform hover:scale-[1.01] transition-all duration-300 jz-card-border slide-up">
+          <h2 className="text-lg md:text-2xl font-bold jz-text-gradient mb-4">🛒 บันทึกการขายสินค้า</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <select
+              value={salesForm.productId}
+              onChange={e => setSalesForm({ ...salesForm, productId: e.target.value })}
+              className="col-span-2 px-3 py-2 border-2 rounded-lg"
+            >
+              <option value="">เลือกสินค้า</option>
+              {products.map(p => (
+                <option key={p.id} value={p.id}>{p.name} - ฿{p.price}</option>
+              ))}
+            </select>
+            <input
+              type="number"
+              value={salesForm.quantity}
+              onChange={e => setSalesForm({ ...salesForm, quantity: parseInt(e.target.value) || 1 })}
+              className="px-3 py-2 border-2 rounded-lg w-full"
+              min="1"
+            />
+            <button
+              onClick={recordSale}
+              className="col-span-3 bg-green-500 hover:bg-green-600 text-white font-bold py-2 rounded-xl w-full"
+            >บันทึกการขาย</button>
+          </div>
+        </div>
+
+        {/* Product Sales History */}
+        <div className="mt-6 bg-white/95 backdrop-blur-sm rounded-xl md:rounded-2xl shadow-card p-4 md:p-6 jz-card-border slide-up-2">
+          <h2 className="text-xl md:text-2xl font-bold mb-3">🧾 ประวัติการขายสินค้า</h2>
+          {productHistory.length === 0 ? (
+            <p className="text-gray-500">ยังไม่มีรายการขาย</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-left">
+                <thead>
+                  <tr>
+                    <th className="px-2 py-1 border">#</th>
+                    <th className="px-2 py-1 border">เวลา</th>
+                    <th className="px-2 py-1 border">สินค้า</th>
+                    <th className="px-2 py-1 border">จำนวน</th>
+                    <th className="px-2 py-1 border">ราคา/ชิ้น</th>
+                    <th className="px-2 py-1 border">รวม</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {productHistory.map((h,i)=>(
+                    <tr key={h.id}>
+                      <td className="px-2 py-1 border">{i+1}</td>
+                      <td className="px-2 py-1 border">{new Date(h.created_at).toLocaleString()}</td>
+                      <td className="px-2 py-1 border">{h.product_name}</td>
+                      <td className="px-2 py-1 border">{h.quantity}</td>
+                      <td className="px-2 py-1 border">฿{h.product_price}</td>
+                      <td className="px-2 py-1 border">฿{h.total_price}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         {/* Customer List */}
@@ -788,7 +827,7 @@ function AdminDashboardBlue({
                               <span className="inline-block font-bold text-lg md:text-xl text-cyan-600">
                                 {customer.elapsedTime}
                               </span>
-                              {!customer.isRedMode && customer.hourly_rate && (
+                              {customer.hourly_rate && (
                                 <div className="text-xs text-gray-500 mt-1">
                                   {customer.hourly_rate} บาท/ชม.
                                 </div>
@@ -798,29 +837,23 @@ function AdminDashboardBlue({
                           <td className="px-2 md:px-4 py-2 md:py-3 text-center">
                             {editingId === customer.id ? (
                               <div className="flex gap-2 justify-center items-center">
-                                <input
-                                  type="number"
-                                  value={editForm.cost || editForm.hourlyRate || 0}
-                                  onChange={(e) => {
-                                    if (customer.isRedMode) {
-                                      setEditForm({ ...editForm, cost: e.target.value })
-                                    } else {
-                                      setEditForm({ ...editForm, hourlyRate: e.target.value })
-                                    }
-                                  }}
-                                  className="w-20 px-2 py-1 border rounded text-sm"
-                                  step="0.01"
-                                  min="0"
-                                />
+                                  <input
+                                    type="number"
+                                    value={editForm.hourlyRate || 0}
+                                    onChange={(e) => setEditForm({ ...editForm, hourlyRate: e.target.value })}
+                                    className="w-20 px-2 py-1 border rounded text-sm"
+                                    step="0.01"
+                                    min="0"
+                                  />
                               </div>
                             ) : (
                               <div className="inline-block bg-gradient-to-r from-green-100 to-emerald-100 border-2 border-green-400 rounded-xl px-3 py-2">
                                 <span className="font-bold text-xl md:text-2xl text-green-700">
                                   ฿{customer.currentCost.toFixed(2)}
                                 </span>
-                                {customer.is_running === false && !customer.isRedMode && (
-                                  <div className="text-xs text-orange-600 font-semibold mt-1">⏸️ หยุดชั่วคราว</div>
-                                )}
+                                  {customer.is_running === false && (
+                                    <div className="text-xs text-orange-600 font-semibold mt-1">⏸️ หยุดชั่วคราว</div>
+                                  )}
                               </div>
                             )}
                           </td>
@@ -876,19 +909,17 @@ function AdminDashboardBlue({
                                   >
                                     ✏️ แก้ไข
                                   </button>
-                                  {!customer.isRedMode && (
-                                    <button
-                                      onClick={() => toggleTimer(customer.id)}
-                                      className={`px-2 md:px-3 py-1 rounded-lg text-white font-semibold text-xs md:text-sm ${
-                                        customer.is_running
-                                          ? 'bg-orange-500 hover:bg-orange-600'
-                                          : 'bg-green-500 hover:bg-green-600'
-                                      }`}
-                                      title={customer.is_running ? 'หยุดชั่วคราว' : 'เริ่มต่อ'}
-                                    >
-                                      {customer.is_running ? '⏸️ หยุด' : '▶️ เริ่ม'}
-                                    </button>
-                                  )}
+                                  <button
+                                    onClick={() => toggleTimer(customer.id)}
+                                    className={`px-2 md:px-3 py-1 rounded-lg text-white font-semibold text-xs md:text-sm ${
+                                      customer.is_running
+                                        ? 'bg-orange-500 hover:bg-orange-600'
+                                        : 'bg-green-500 hover:bg-green-600'
+                                    }`}
+                                    title={customer.is_running ? 'หยุดชั่วคราว' : 'เริ่มต่อ'}
+                                  >
+                                    {customer.is_running ? '⏸️ หยุด' : '▶️ เริ่ม'}
+                                  </button>
                                   <button
                                     onClick={() => togglePayment(customer.id)}
                                     className={`px-2 md:px-3 py-1 rounded-lg text-white font-semibold text-xs md:text-sm ${
@@ -943,6 +974,12 @@ function AdminDashboardBlue({
         onClose={() => setShowZoneModal(false)}
         zones={zones}
         onUpdate={handleZoneUpdate}
+      />
+      <ProductManagementModal
+        isOpen={showProductModal}
+        onClose={() => setShowProductModal(false)}
+        products={products}
+        onUpdate={handleProductUpdate}
       />
       
       <ThemePicker zone="blue" />
