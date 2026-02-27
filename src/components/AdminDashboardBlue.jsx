@@ -98,7 +98,7 @@ function AdminDashboardBlue({
   const [showZoneModal, setShowZoneModal] = useState(false)
   const [products, setProducts] = useState(DEFAULT_PRODUCTS)
   const [showProductModal, setShowProductModal] = useState(false)
-  const [salesForm, setSalesForm] = useState({ productId: '', quantity: 1, added_by: '' })
+  const [salesForm, setSalesForm] = useState({ productId: '', quantity: 1, added_by: '', note: '' })
   const [productHistory, setProductHistory] = useState([])
   const { setActiveZone } = useTheme()
   const [, setUpdateTrigger] = useState(0)
@@ -113,7 +113,7 @@ function AdminDashboardBlue({
   // Set active zone for theme
   useEffect(() => { setActiveZone('blue') }, [setActiveZone])
 
-  // Pre-fill addedBy from logged-in user
+  // Pre-fill added_by from logged-in user
   useEffect(() => {
     if (user?.displayName) {
       setSalesForm(prev => ({ ...prev, added_by: user.displayName }))
@@ -449,7 +449,7 @@ function AdminDashboardBlue({
         }])
       }
       alert(`บันทึกการขาย ${prod.name} x${quantity}`)
-      setSalesForm(prev => ({ productId: '', quantity: 1, added_by: prev.added_by, note: prev.note }))
+      setSalesForm(prev => ({ productId: '', quantity: 1, added_by: prev.added_by, note: '' }))
       fetchProductHistory()
     } catch (err) {
       console.error('Record sale error', err)
@@ -746,6 +746,16 @@ function AdminDashboardBlue({
                 onChange={e => setSalesForm({ ...salesForm, added_by: e.target.value })}
                 className="w-full px-3 py-2 border-2 rounded-lg focus:outline-none focus:border-blue-400"
                 placeholder="ชื่อพนักงาน"
+              />
+            </div>
+            <div className="col-span-3">
+              <label className="block text-gray-600 font-semibold mb-1 text-sm">📝 หมายเหตุ (ไม่บังคับ)</label>
+              <input
+                type="text"
+                value={salesForm.note}
+                onChange={e => setSalesForm({ ...salesForm, note: e.target.value })}
+                className="w-full px-3 py-2 border-2 rounded-lg focus:outline-none focus:border-blue-400"
+                placeholder="หมายเหตุ"
               />
             </div>
             <button
