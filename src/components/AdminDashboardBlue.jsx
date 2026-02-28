@@ -480,7 +480,7 @@ function AdminDashboardBlue({
     <div className="min-h-screen jz-bg p-3 md:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-6 md:mb-8 animate-float relative">
+        <div className="text-center mb-6 md:mb-8 relative">
           <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white drop-shadow-2xl mb-2 slide-up">
             🔵 JUTHAZONE BLUE 🔵
           </h1>
