@@ -707,7 +707,7 @@ function AdminDashboardBlue({
 
           {/* QR Code Section */}
           <div className="bg-white/95 backdrop-blur-sm rounded-xl md:rounded-2xl shadow-card p-4 md:p-6 flex flex-col items-center justify-center jz-card-border transform hover:scale-105 jz-glow-hover transition-all duration-300 slide-up-1">
-            <h2 className="text-lg md:text-xl font-bold jz-text-gradient mb-3 md:mb-4 animate-bounce-slow text-center">
+            <h2 className="text-lg md:text-xl font-bold jz-text-gradient mb-3 md:mb-4 text-center">
               📱 QR Code สำหรับลูกค้า
             </h2>
             <div className="bg-white p-3 md:p-4 rounded-xl border-3 md:border-4 shadow-lg hover:shadow-2xl transition-all duration-300" style={{ borderColor: 'var(--jz-primary)' }}>
