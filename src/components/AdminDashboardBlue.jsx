@@ -442,6 +442,34 @@ function AdminDashboardBlue({
     setEditForm({})
   }
 
+  // ปรับเวลาเริ่ม +/- นาที
+  const adjustTime = async (customerId, minutesDelta) => {
+    if (!supabase) return
+    const customer = customers.find(c => c.id === customerId)
+    if (!customer) return
+
+    const newStartTime = new Date(
+      new Date(customer.start_time).getTime() - minutesDelta * 60 * 1000
+    ).toISOString()
+
+    try {
+      const { error } = await supabase
+        .from('juthazoneb_customers')
+        .update({ start_time: newStartTime, updated_at: new Date().toISOString() })
+        .eq('id', customerId)
+      if (error) throw error
+
+      await supabase
+        .from('juthazoneb_customers_history')
+        .update({ start_time: newStartTime, updated_at: new Date().toISOString() })
+        .eq('customer_id', customerId)
+        .eq('end_reason', 'in_progress')
+    } catch (err) {
+      console.error('adjustTime error:', err)
+      alert('ไม่สามารถปรับเวลาได้: ' + err.message)
+    }
+  }
+
   // Handle zone update
   const handleZoneUpdate = (updatedZones) => {
     setZones(updatedZones)
@@ -954,6 +982,20 @@ function AdminDashboardBlue({
                                     title="แก้ไขราคาและหมายเหตุ"
                                   >
                                     ✏️ แก้ไข
+                                  </button>
+                                  <button
+                                    onClick={() => adjustTime(customer.id, -5)}
+                                    className="px-2 md:px-3 py-1 bg-purple-500 hover:bg-purple-600 text-white rounded-lg font-semibold text-xs md:text-sm"
+                                    title="ลดเวลา 5 นาที"
+                                  >
+                                    −5
+                                  </button>
+                                  <button
+                                    onClick={() => adjustTime(customer.id, 5)}
+                                    className="px-2 md:px-3 py-1 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg font-semibold text-xs md:text-sm"
+                                    title="เพิ่มเวลา 5 นาที"
+                                  >
+                                    +5
                                   </button>
                                   <button
                                     onClick={() => toggleTimer(customer.id)}
