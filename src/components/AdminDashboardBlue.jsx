@@ -61,27 +61,114 @@ const ZONES = {
   }
 }
 
-// ═══ Board-game discount: เล่น >= 2 ชั่วโมง ลด 50% ═══
-const BOARD_GAME_ZONE_IDS = ['board-game-big', 'board-game-small']
-const BOARD_GAME_DISCOUNT_HOURS = 2
-const BOARD_GAME_DISCOUNT_RATE = 0.5
+// ═══════════════════════════════════════════════════════════
+// SPECIAL PRICING RULES
+// ═══════════════════════════════════════════════════════════
 
-const applyBoardGameDiscount = (room, rawCost, startTime, totalPauseDuration, pauseTime, isRunning) => {
-  if (!BOARD_GAME_ZONE_IDS.includes(room)) {
-    return { discountedCost: rawCost, hasDiscount: false, originalCost: rawCost, discountAmount: 0 }
-  }
+// --- บอร์ดเกม: เล่น >= 2 ชม. ลด 50% ---
+const BOARD_GAME_ZONE_IDS = ['board-game-big', 'board-game-small']
+
+// --- PS (ปกติ): โปร ทุก 2 ชม. = 189 บาท ส่วนที่เกิน คิด hourlyRate/ชม. ---
+const PS_ZONE_IDS = ['ps-5', 'ps-6', 'ps-7', 'ps-8', 'ps-9', 'ps-10']
+const PS_PACKAGE_HOURS = 2        // ทุกๆ 2 ชั่วโมง
+const PS_PACKAGE_PRICE = 189      // ราคาโปร 2 ชั่วโมง
+
+/**
+ * คำนวณเวลาที่เล่นจริง (ชั่วโมง) หลังหักเวลา pause
+ */
+const getElapsedHours = (startTime, totalPauseDuration, pauseTime, isRunning) => {
   const now = Date.now()
   const start = new Date(startTime).getTime()
   let elapsedMs = now - start
   if (totalPauseDuration) elapsedMs -= totalPauseDuration * 1000
   if (!isRunning && pauseTime) elapsedMs -= (now - new Date(pauseTime).getTime())
-  const elapsedHours = elapsedMs / 1000 / 60 / 60
+  return Math.max(0, elapsedMs) / 1000 / 60 / 60
+}
 
-  if (elapsedHours >= BOARD_GAME_DISCOUNT_HOURS) {
-    const discountedCost = rawCost * BOARD_GAME_DISCOUNT_RATE
-    return { discountedCost, hasDiscount: true, originalCost: rawCost, discountAmount: rawCost - discountedCost }
+/**
+ * คำนวณราคา PS พร้อมโปรโมชั่น:
+ * - ทุก 2 ชม. = 189 บาท
+ * - เศษที่เกิน คิด hourlyRate/ชม. (pro-rated)
+ * เช่น 2:30 ชม. = 189 + 0.5×100 = 239
+ *      4:00 ชม. = 189×2 = 378
+ *      4:30 ชม. = 189×2 + 0.5×100 = 428
+ */
+const calcPSPackageCost = (elapsedHours, hourlyRate) => {
+  const fullPackages = Math.floor(elapsedHours / PS_PACKAGE_HOURS)
+  const remainderHours = elapsedHours % PS_PACKAGE_HOURS
+  const packageCost = fullPackages * PS_PACKAGE_PRICE
+  const remainderCost = remainderHours * hourlyRate
+  return { total: packageCost + remainderCost, fullPackages, remainderHours, packageCost, remainderCost }
+}
+
+/**
+ * ฟังก์ชันหลัก: คืนค่า pricing info ที่ถูกต้องตาม zone
+ */
+const applySpecialPricing = (room, rawCost, startTime, totalPauseDuration, pauseTime, isRunning, hourlyRate) => {
+  const elapsedHours = getElapsedHours(startTime, totalPauseDuration, pauseTime, isRunning)
+
+  // ── PS Package Pricing ──
+  if (PS_ZONE_IDS.includes(room)) {
+    if (elapsedHours < PS_PACKAGE_HOURS) {
+      // ยังไม่ถึง 2 ชม. คิดปกติ
+      return {
+        finalCost: rawCost,
+        originalCost: rawCost,
+        hasSpecialPrice: false,
+        promoType: null,
+        promoLabel: null,
+        discountAmount: 0
+      }
+    }
+    const ps = calcPSPackageCost(elapsedHours, hourlyRate)
+    const saving = rawCost - ps.total
+    return {
+      finalCost: ps.total,
+      originalCost: rawCost,
+      hasSpecialPrice: true,
+      promoType: 'ps_package',
+      promoLabel: `🎮 โปร PS ${ps.fullPackages}×2ชม. = ${ps.fullPackages}×฿${PS_PACKAGE_PRICE}`,
+      discountAmount: saving > 0 ? saving : 0,
+      fullPackages: ps.fullPackages,
+      remainderHours: ps.remainderHours
+    }
   }
-  return { discountedCost: rawCost, hasDiscount: false, originalCost: rawCost, discountAmount: 0 }
+
+  // ── Board Game: ≥2 ชม. ลด 50% ──
+  if (BOARD_GAME_ZONE_IDS.includes(room)) {
+    if (elapsedHours >= 2) {
+      const discounted = rawCost * 0.5
+      return {
+        finalCost: discounted,
+        originalCost: rawCost,
+        hasSpecialPrice: true,
+        promoType: 'boardgame_discount',
+        promoLabel: '🎲 ลด 50% บอร์ดเกม (≥ 2 ชม.)',
+        discountAmount: rawCost - discounted
+      }
+    }
+  }
+
+  // ── ไม่มีโปร ──
+  return {
+    finalCost: rawCost,
+    originalCost: rawCost,
+    hasSpecialPrice: false,
+    promoType: null,
+    promoLabel: null,
+    discountAmount: 0
+  }
+}
+
+// legacy alias สำหรับ AppBlue.jsx (saveToHistory)
+const applyBoardGameDiscount = (room, rawCost, startTime, totalPauseDuration, pauseTime, isRunning, hourlyRate) => {
+  const result = applySpecialPricing(room, rawCost, startTime, totalPauseDuration, pauseTime, isRunning, hourlyRate || 0)
+  return {
+    discountedCost: result.finalCost,
+    hasDiscount: result.hasSpecialPrice,
+    originalCost: result.originalCost,
+    discountAmount: result.discountAmount
+  }
 }
 
 // Default product list
@@ -348,13 +435,14 @@ function AdminDashboardBlue({
       customer.pause_time,
       customer.is_running
     )
-    const { discountedCost, hasDiscount, originalCost, discountAmount } = applyBoardGameDiscount(
+    const pricing = applySpecialPricing(
       customer.room,
       rawCost,
       customer.start_time,
       customer.total_pause_duration,
       customer.pause_time,
-      customer.is_running
+      customer.is_running,
+      customer.hourly_rate
     )
     const elapsedTime = formatElapsedTime(
       customer.start_time,
@@ -364,10 +452,11 @@ function AdminDashboardBlue({
     )
     return {
       ...customer,
-      currentCost: discountedCost,
-      originalCost,
-      hasDiscount,
-      discountAmount,
+      currentCost: pricing.finalCost,
+      originalCost: pricing.originalCost,
+      hasDiscount: pricing.hasSpecialPrice,
+      discountAmount: pricing.discountAmount,
+      promoLabel: pricing.promoLabel,
       elapsedTime
     }
   })
@@ -915,7 +1004,7 @@ function AdminDashboardBlue({
                               }`}>
                                 {customer.hasDiscount && (
                                   <div className="text-[10px] text-orange-600 font-bold mb-0.5 whitespace-nowrap">
-                                    🎉 ลด 50% (≥2ชม.)
+                                    {customer.promoLabel}
                                   </div>
                                 )}
                                 <span className={`font-bold text-xl md:text-2xl ${customer.hasDiscount ? 'text-orange-600' : 'text-green-700'}`}>

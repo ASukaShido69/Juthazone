@@ -9,14 +9,27 @@ import HistoryViewBlue from './components/HistoryViewBlue'
 import AnalyticsViewBlue from './components/AnalyticsViewBlue'
 import { logLogoutBlue, logActivityBlue, calculateCostBlue, getDurationMinutes } from './utils/authUtilsBlue'
 
-// ═══ Board-game discount config ═══
+// ═══════════════════════════════════════════════════════════
+// SPECIAL PRICING RULES (ต้องตรงกับ AdminDashboardBlue)
+// ═══════════════════════════════════════════════════════════
 const BOARD_GAME_ZONE_IDS = ['board-game-big', 'board-game-small']
-const BOARD_GAME_DISCOUNT_HOURS = 2
-const BOARD_GAME_DISCOUNT_RATE = 0.5
+const PS_ZONE_IDS = ['ps-5', 'ps-6', 'ps-7', 'ps-8', 'ps-9', 'ps-10']
+const PS_PACKAGE_HOURS = 2
+const PS_PACKAGE_PRICE = 189
+
+const getElapsedHours = (customer) => {
+  const now = Date.now()
+  const start = new Date(customer.start_time).getTime()
+  let elapsedMs = now - start
+  if (customer.total_pause_duration) elapsedMs -= customer.total_pause_duration * 1000
+  if (!customer.is_running && customer.pause_time) {
+    elapsedMs -= (now - new Date(customer.pause_time).getTime())
+  }
+  return Math.max(0, elapsedMs) / 1000 / 60 / 60
+}
 
 /**
- * คำนวณราคาสุทธิหลังหักส่วนลดบอร์ดเกม (ถ้ามี)
- * @returns finalCost หลังหักส่วนลด
+ * คำนวณราคาสุทธิสำหรับบันทึกประวัติ (รองรับทุก zone)
  */
 const calculateFinalCostWithDiscount = (customer) => {
   const rawCost = calculateCostBlue(
@@ -26,22 +39,20 @@ const calculateFinalCostWithDiscount = (customer) => {
     customer.pause_time,
     customer.is_running
   )
+  const elapsedHours = getElapsedHours(customer)
 
-  if (!BOARD_GAME_ZONE_IDS.includes(customer.room)) return rawCost
-
-  // คำนวณเวลาที่เล่นจริง (ชั่วโมง)
-  const now = Date.now()
-  const start = new Date(customer.start_time).getTime()
-  let elapsedMs = now - start
-  if (customer.total_pause_duration) elapsedMs -= customer.total_pause_duration * 1000
-  if (!customer.is_running && customer.pause_time) {
-    elapsedMs -= (now - new Date(customer.pause_time).getTime())
+  // PS Package: ทุก 2 ชม. = 189 บาท + เศษคิด hourlyRate/ชม.
+  if (PS_ZONE_IDS.includes(customer.room) && elapsedHours >= PS_PACKAGE_HOURS) {
+    const fullPackages = Math.floor(elapsedHours / PS_PACKAGE_HOURS)
+    const remainderHours = elapsedHours % PS_PACKAGE_HOURS
+    return fullPackages * PS_PACKAGE_PRICE + remainderHours * (customer.hourly_rate || 0)
   }
-  const elapsedHours = elapsedMs / 1000 / 60 / 60
 
-  if (elapsedHours >= BOARD_GAME_DISCOUNT_HOURS) {
-    return rawCost * BOARD_GAME_DISCOUNT_RATE
+  // Board Game: >= 2 ชม. ลด 50%
+  if (BOARD_GAME_ZONE_IDS.includes(customer.room) && elapsedHours >= 2) {
+    return rawCost * 0.5
   }
+
   return rawCost
 }
 
