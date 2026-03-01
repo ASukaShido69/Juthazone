@@ -3,27 +3,61 @@ import { formatTimeDisplay } from '../utils/timeFormat'
 import { calculateCostBlue, formatElapsedTime } from '../utils/authUtilsBlue'
 import { logActivityBlue } from '../utils/authUtilsBlue'
 
+// ═══ Board-game discount config (ต้องตรงกับ AdminDashboardBlue) ═══
+const BOARD_GAME_ZONE_IDS = ['board-game-big', 'board-game-small']
+const BOARD_GAME_DISCOUNT_HOURS = 2
+const BOARD_GAME_DISCOUNT_RATE = 0.5
+
+const applyBoardGameDiscount = (room, rawCost, startTime, totalPauseDuration, pauseTime, isRunning) => {
+  if (!BOARD_GAME_ZONE_IDS.includes(room)) return { discountedCost: rawCost, hasDiscount: false, originalCost: rawCost }
+
+  const now = Date.now()
+  const start = new Date(startTime).getTime()
+  let elapsedMs = now - start
+  if (totalPauseDuration) elapsedMs -= totalPauseDuration * 1000
+  if (!isRunning && pauseTime) elapsedMs -= (now - new Date(pauseTime).getTime())
+  const elapsedHours = elapsedMs / 1000 / 60 / 60
+
+  if (elapsedHours >= BOARD_GAME_DISCOUNT_HOURS) {
+    return { discountedCost: rawCost * BOARD_GAME_DISCOUNT_RATE, hasDiscount: true, originalCost: rawCost }
+  }
+  return { discountedCost: rawCost, hasDiscount: false, originalCost: rawCost }
+}
+
 function CustomerViewBlue({ customers }) {
   const [roomFilter, setRoomFilter] = useState('all')
 
   // Calculate real-time cost and elapsed time for display (Blue-only)
   const displayCustomers = useMemo(() => {
-    return customers.map(customer => ({
-      ...customer,
-      currentCost: calculateCostBlue(
+    return customers.map(customer => {
+      const rawCost = calculateCostBlue(
         customer.start_time,
         customer.hourly_rate,
         customer.total_pause_duration,
         customer.pause_time,
         customer.is_running
-      ),
-      elapsedTime: formatElapsedTime(
+      )
+      const { discountedCost, hasDiscount, originalCost } = applyBoardGameDiscount(
+        customer.room,
+        rawCost,
         customer.start_time,
         customer.total_pause_duration,
         customer.pause_time,
         customer.is_running
       )
-    }))
+      return {
+        ...customer,
+        currentCost: discountedCost,
+        originalCost,
+        hasDiscount,
+        elapsedTime: formatElapsedTime(
+          customer.start_time,
+          customer.total_pause_duration,
+          customer.pause_time,
+          customer.is_running
+        )
+      }
+    })
   }, [customers])
 
   const roomOptions = useMemo(() => {
@@ -141,11 +175,31 @@ function CustomerViewBlue({ customers }) {
 
                   {/* Current Cost (Blue) */}
                   <div className="mb-3 md:mb-4 cost-tick">
-                    <div className="bg-gradient-to-r from-emerald-50 to-green-50 border border-emerald-300 rounded-2xl p-3 md:p-4 text-center shadow-sm">
-                      <p className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider">💰 ราคาปัจจุบัน</p>
-                      <p className="text-4xl sm:text-5xl md:text-6xl font-extrabold bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">
+                    <div className={`border rounded-2xl p-3 md:p-4 text-center shadow-sm ${
+                      customer.hasDiscount
+                        ? 'bg-gradient-to-r from-orange-50 to-yellow-50 border-orange-300'
+                        : 'bg-gradient-to-r from-emerald-50 to-green-50 border-emerald-300'
+                    }`}>
+                      {customer.hasDiscount && (
+                        <div className="mb-1 inline-block bg-orange-500 text-white text-xs font-bold px-2.5 py-0.5 rounded-full">
+                          🎉 ลด 50% บอร์ดเกม (เล่น ≥ 2 ชม.)
+                        </div>
+                      )}
+                      <p className={`text-[10px] font-bold uppercase tracking-wider ${customer.hasDiscount ? 'text-orange-500' : 'text-emerald-600'}`}>
+                        💰 ราคาปัจจุบัน
+                      </p>
+                      <p className={`text-4xl sm:text-5xl md:text-6xl font-extrabold bg-clip-text text-transparent ${
+                        customer.hasDiscount
+                          ? 'bg-gradient-to-r from-orange-500 to-red-500'
+                          : 'bg-gradient-to-r from-emerald-600 to-green-600'
+                      }`}>
                         ฿{customer.currentCost.toFixed(2)}
                       </p>
+                      {customer.hasDiscount && (
+                        <p className="text-sm text-gray-400 line-through mt-0.5">
+                          ฿{customer.originalCost.toFixed(2)}
+                        </p>
+                      )}
                       <div className="mt-2 flex items-center justify-center gap-2">
                         <span className="text-xs sm:text-sm font-semibold text-gray-500 bg-gray-100 px-2.5 py-0.5 rounded-full">
                           {customer.hourly_rate} บาท/ชม.

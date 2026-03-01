@@ -9,6 +9,42 @@ import HistoryViewBlue from './components/HistoryViewBlue'
 import AnalyticsViewBlue from './components/AnalyticsViewBlue'
 import { logLogoutBlue, logActivityBlue, calculateCostBlue, getDurationMinutes } from './utils/authUtilsBlue'
 
+// ═══ Board-game discount config ═══
+const BOARD_GAME_ZONE_IDS = ['board-game-big', 'board-game-small']
+const BOARD_GAME_DISCOUNT_HOURS = 2
+const BOARD_GAME_DISCOUNT_RATE = 0.5
+
+/**
+ * คำนวณราคาสุทธิหลังหักส่วนลดบอร์ดเกม (ถ้ามี)
+ * @returns finalCost หลังหักส่วนลด
+ */
+const calculateFinalCostWithDiscount = (customer) => {
+  const rawCost = calculateCostBlue(
+    customer.start_time,
+    customer.hourly_rate,
+    customer.total_pause_duration,
+    customer.pause_time,
+    customer.is_running
+  )
+
+  if (!BOARD_GAME_ZONE_IDS.includes(customer.room)) return rawCost
+
+  // คำนวณเวลาที่เล่นจริง (ชั่วโมง)
+  const now = Date.now()
+  const start = new Date(customer.start_time).getTime()
+  let elapsedMs = now - start
+  if (customer.total_pause_duration) elapsedMs -= customer.total_pause_duration * 1000
+  if (!customer.is_running && customer.pause_time) {
+    elapsedMs -= (now - new Date(customer.pause_time).getTime())
+  }
+  const elapsedHours = elapsedMs / 1000 / 60 / 60
+
+  if (elapsedHours >= BOARD_GAME_DISCOUNT_HOURS) {
+    return rawCost * BOARD_GAME_DISCOUNT_RATE
+  }
+  return rawCost
+}
+
 function AppBlue({ user, onLogout }) {
   const [customers, setCustomers] = useState([])
   const [nextId, setNextId] = useState(1)
@@ -358,7 +394,7 @@ function AppBlue({ user, onLogout }) {
             { 
               name: customerToComplete.name, 
               room: customerToComplete.room,
-              finalCost: calculateCostBlue(customerToComplete.start_time, customerToComplete.hourly_rate, customerToComplete.total_pause_duration)
+              finalCost: calculateFinalCostWithDiscount(customerToComplete)
             },
             customerToComplete.id
           )
@@ -435,13 +471,7 @@ function AppBlue({ user, onLogout }) {
     try {
       const endTime = new Date()
       const durationMinutes = getDurationMinutes(customer.start_time, endTime, customer.total_pause_duration)
-      const finalCost = calculateCostBlue(
-        customer.start_time,
-        customer.hourly_rate,
-        customer.total_pause_duration,
-        customer.pause_time,
-        customer.is_running
-      )
+      const finalCost = calculateFinalCostWithDiscount(customer)
 
       const { error } = await supabase
         .from('juthazoneb_customers_history')
