@@ -37,17 +37,20 @@ const ZONES = {
       { id: 'ps-10', label: '10', defaultPrice: 100 }
     ]
   },
-  'ps5-vip': {
-    label: '🎮 PS5 VIP',
+  'PS5-VIP': {
+    label: '🎮 PS5 VIP First Floor',
     items: [
       { id: 'ps5-2joy', label: '2 จอย', defaultPrice: 120 },
       { id: 'ps5-4joy', label: '4 จอย', defaultPrice: 160 }
     ]
   },
-  'karaoke': {
-    label: '🎤 คาราโอเกะ',
+  'VIPZONE': {
+    label: '🎮 VIP ZONE',
     items: [
-      { id: 'karaoke-main', label: 'คาราโอเกะ', defaultPrice: 219 }
+      { id: 'VIP-Karaoke', label: 'ห้อง VIP คาราโอเกะ', defaultPrice: 219 },
+      { id: 'VIP-บอร์ดเกม', label: 'ห้อง VIP บอร์ดเกม', defaultPrice: 219 },
+      { id: 'VIP-PS5', label: 'ห้อง VIP PS5', defaultPrice: 219 },
+      { id: 'VIP-Nintendo', label: 'ห้อง VIP Nintendo', defaultPrice: 219 }
     ]
   },
   'nintendo': {
