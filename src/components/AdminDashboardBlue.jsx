@@ -61,39 +61,7 @@ const ZONES = {
   }
 }
 
-// Board-game discount: เล่น >= 2 ชั่วโมง ลด 50%
-const BOARD_GAME_ZONE_IDS = ['board-game-big', 'board-game-small']
-const BOARD_GAME_DISCOUNT_HOURS = 2
-const BOARD_GAME_DISCOUNT_RATE = 0.5
-
-/**
- * คืนค่า { discountedCost, originalCost, hasDiscount, discountAmount }
- * สำหรับ board-game zone เท่านั้น
- */
-const applyBoardGameDiscount = (room, currentCost, startTime, totalPauseDuration, pauseTime, isRunning) => {
-  const isBoardGame = BOARD_GAME_ZONE_IDS.includes(room)
-  if (!isBoardGame) return { discountedCost: currentCost, originalCost: currentCost, hasDiscount: false, discountAmount: 0 }
-
-  // คำนวณเวลาที่เล่นจริง (นาที) — ใช้ logic เดียวกับ formatElapsedTime
-  const now = Date.now()
-  const start = new Date(startTime).getTime()
-  let elapsed = (now - start) / 1000 / 60 // minutes
-  if (totalPauseDuration) elapsed -= totalPauseDuration / 60
-  if (!isRunning && pauseTime) elapsed -= (now - new Date(pauseTime).getTime()) / 1000 / 60
-
-  const elapsedHours = elapsed / 60
-  const hasDiscount = elapsedHours >= BOARD_GAME_DISCOUNT_HOURS
-
-  if (!hasDiscount) return { discountedCost: currentCost, originalCost: currentCost, hasDiscount: false, discountAmount: 0 }
-
-  const discountedCost = currentCost * BOARD_GAME_DISCOUNT_RATE
-  return {
-    discountedCost,
-    originalCost: currentCost,
-    hasDiscount: true,
-    discountAmount: currentCost - discountedCost
-  }
-}
+// Default product list
 const DEFAULT_PRODUCTS = [
   { id: 'snack-large', name: 'ขนมห่อใหญ่', price: 30 },
   { id: 'cheeseball', name: 'ชีสบอล', price: 59 },
@@ -362,20 +330,9 @@ function AdminDashboardBlue({
       customer.pause_time,
       customer.is_running
     )
-    const discount = applyBoardGameDiscount(
-      customer.room,
-      currentCost,
-      customer.start_time,
-      customer.total_pause_duration,
-      customer.pause_time,
-      customer.is_running
-    )
     return {
       ...customer,
-      currentCost: discount.discountedCost,
-      originalCost: discount.originalCost,
-      hasDiscount: discount.hasDiscount,
-      discountAmount: discount.discountAmount,
+      currentCost,
       elapsedTime
     }
   })
@@ -449,6 +406,34 @@ function AdminDashboardBlue({
   const cancelEdit = () => {
     setEditingId(null)
     setEditForm({})
+  }
+
+  // ปรับเวลาเริ่ม +/- นาที (เลื่อน start_time เพื่อเพิ่ม/ลดเวลาที่นับ)
+  const adjustTime = async (customerId, minutesDelta) => {
+    if (!supabase) return
+    const customer = customers.find(c => c.id === customerId)
+    if (!customer) return
+
+    const newStartTime = new Date(
+      new Date(customer.start_time).getTime() - minutesDelta * 60 * 1000
+    ).toISOString()
+
+    try {
+      const { error } = await supabase
+        .from('juthazoneb_customers')
+        .update({ start_time: newStartTime, updated_at: new Date().toISOString() })
+        .eq('id', customerId)
+      if (error) throw error
+
+      await supabase
+        .from('juthazoneb_customers_history')
+        .update({ start_time: newStartTime, updated_at: new Date().toISOString() })
+        .eq('customer_id', customerId)
+        .eq('end_reason', 'in_progress')
+    } catch (err) {
+      console.error('adjustTime error:', err)
+      alert('ไม่สามารถปรับเวลาได้: ' + err.message)
+    }
   }
 
   // Handle zone update
@@ -888,27 +873,13 @@ function AdminDashboardBlue({
                                   />
                               </div>
                             ) : (
-                              <div className={`inline-block rounded-xl px-3 py-2 border-2 ${
-                                customer.hasDiscount
-                                  ? 'bg-gradient-to-r from-yellow-50 to-orange-50 border-orange-400'
-                                  : 'bg-gradient-to-r from-green-100 to-emerald-100 border-green-400'
-                              }`}>
-                                {customer.hasDiscount && (
-                                  <div className="text-xs text-orange-600 font-bold mb-0.5">
-                                    🎉 ลด 50% (เล่น ≥ 2 ชม.)
-                                  </div>
-                                )}
-                                <span className={`font-bold text-xl md:text-2xl ${customer.hasDiscount ? 'text-orange-600' : 'text-green-700'}`}>
+                              <div className="inline-block bg-gradient-to-r from-green-100 to-emerald-100 border-2 border-green-400 rounded-xl px-3 py-2">
+                                <span className="font-bold text-xl md:text-2xl text-green-700">
                                   ฿{customer.currentCost.toFixed(2)}
                                 </span>
-                                {customer.hasDiscount && (
-                                  <div className="text-xs text-gray-400 line-through mt-0.5">
-                                    ฿{customer.originalCost.toFixed(2)}
-                                  </div>
-                                )}
-                                {customer.is_running === false && (
-                                  <div className="text-xs text-orange-600 font-semibold mt-1">⏸️ หยุดชั่วคราว</div>
-                                )}
+                                  {customer.is_running === false && (
+                                    <div className="text-xs text-orange-600 font-semibold mt-1">⏸️ หยุดชั่วคราว</div>
+                                  )}
                               </div>
                             )}
                           </td>
@@ -964,6 +935,21 @@ function AdminDashboardBlue({
                                   >
                                     ✏️ แก้ไข
                                   </button>
+                                  {/* ปุ่มปรับเวลา +/- 5 นาที */}
+                                  <button
+                                    onClick={() => adjustTime(customer.id, -5)}
+                                    className="px-2 md:px-3 py-1 bg-purple-500 hover:bg-purple-600 text-white rounded-lg font-semibold text-xs md:text-sm"
+                                    title="ลดเวลา 5 นาที"
+                                  >
+                                    −5
+                                  </button>
+                                  <button
+                                    onClick={() => adjustTime(customer.id, 5)}
+                                    className="px-2 md:px-3 py-1 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg font-semibold text-xs md:text-sm"
+                                    title="เพิ่มเวลา 5 นาที"
+                                  >
+                                    +5
+                                  </button>
                                   <button
                                     onClick={() => toggleTimer(customer.id)}
                                     className={`px-2 md:px-3 py-1 rounded-lg text-white font-semibold text-xs md:text-sm ${
@@ -988,10 +974,7 @@ function AdminDashboardBlue({
                                   </button>
                                   <button
                                     onClick={() => {
-                                      const discountNote = customer.hasDiscount
-                                        ? `\n🎉 ส่วนลดบอร์ดเกม 50%: -฿${customer.discountAmount.toFixed(2)}\nราคาเต็ม: ฿${customer.originalCost.toFixed(2)}`
-                                        : ''
-                                      if (confirm(`✅ เสร็จสิ้นการใช้งานของ "${customer.name}"?\n\nราคารวม: ฿${customer.currentCost.toFixed(2)}${discountNote}\nจะบันทึกไว้ในประวัติ`)) {
+                                      if (confirm(`✅ เสร็จสิ้นการใช้งานของ "${customer.name}"?\n\nราคารวม: ฿${customer.currentCost.toFixed(2)}\nจะบันทึกไว้ในประวัติ`)) {
                                         completeCustomer(customer.id)
                                       }
                                     }}
