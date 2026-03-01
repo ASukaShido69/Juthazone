@@ -87,6 +87,7 @@ const applyBoardGameDiscount = (room, rawCost, startTime, totalPauseDuration, pa
 // Default product list
 const DEFAULT_PRODUCTS = [
   { id: 'snack-large', name: 'ขนมห่อใหญ่', price: 30 },
+  { id: 'snack-small', name: 'ขนมห่อเล็ก', price: 10 },
   { id: 'cheeseball', name: 'ชีสบอล', price: 59 },
   { id: 'nugget', name: 'นักเก็ต', price: 59 },
   { id: 'water', name: 'น้ำเปล่า', price: 15 },
