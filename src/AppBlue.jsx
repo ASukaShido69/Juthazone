@@ -17,6 +17,18 @@ const PS_ZONE_IDS = ['ps-5', 'ps-6', 'ps-7', 'ps-8', 'ps-9', 'ps-10']
 const PS_PACKAGE_HOURS = 2
 const PS_PACKAGE_PRICE = 189
 
+const SIM_BASIC_IDS = ['sim-1', 'sim-2']
+const SIM_BASIC_PACKAGE_HOURS = 2
+const SIM_BASIC_PACKAGE_PRICE = 199
+
+const SIM_PRO_IDS = ['sim-3', 'sim-4']
+const SIM_PRO_PACKAGE_HOURS = 2
+const SIM_PRO_PACKAGE_PRICE = 289
+
+const NINTENDO_IDS = ['nintendo-main']
+const NINTENDO_PACKAGE_HOURS = 2
+const NINTENDO_PACKAGE_PRICE = 149
+
 const getElapsedHours = (customer) => {
   const now = Date.now()
   const start = new Date(customer.start_time).getTime()
@@ -51,6 +63,27 @@ const calculateFinalCostWithDiscount = (customer) => {
   // Board Game: >= 2 ชม. ลด 50%
   if (BOARD_GAME_ZONE_IDS.includes(customer.room) && elapsedHours >= 2) {
     return rawCost * 0.5
+  }
+
+  // Sim ตัวพื้นฐาน: ทุก 2 ชม. = 199 บาท + เศษคิด hourlyRate/ชม.
+  if (SIM_BASIC_IDS.includes(customer.room) && elapsedHours >= SIM_BASIC_PACKAGE_HOURS) {
+    const fullPackages = Math.floor(elapsedHours / SIM_BASIC_PACKAGE_HOURS)
+    const remainderHours = elapsedHours % SIM_BASIC_PACKAGE_HOURS
+    return fullPackages * SIM_BASIC_PACKAGE_PRICE + remainderHours * (customer.hourly_rate || 0)
+  }
+
+  // Sim ตัวสมจริง: ทุก 2 ชม. = 289 บาท + เศษคิด hourlyRate/ชม.
+  if (SIM_PRO_IDS.includes(customer.room) && elapsedHours >= SIM_PRO_PACKAGE_HOURS) {
+    const fullPackages = Math.floor(elapsedHours / SIM_PRO_PACKAGE_HOURS)
+    const remainderHours = elapsedHours % SIM_PRO_PACKAGE_HOURS
+    return fullPackages * SIM_PRO_PACKAGE_PRICE + remainderHours * (customer.hourly_rate || 0)
+  }
+
+  // Nintendo: ทุก 2 ชม. = 149 บาท + เศษคิด hourlyRate/ชม.
+  if (NINTENDO_IDS.includes(customer.room) && elapsedHours >= NINTENDO_PACKAGE_HOURS) {
+    const fullPackages = Math.floor(elapsedHours / NINTENDO_PACKAGE_HOURS)
+    const remainderHours = elapsedHours % NINTENDO_PACKAGE_HOURS
+    return fullPackages * NINTENDO_PACKAGE_PRICE + remainderHours * (customer.hourly_rate || 0)
   }
 
   return rawCost

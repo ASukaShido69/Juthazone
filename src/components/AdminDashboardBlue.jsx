@@ -73,6 +73,21 @@ const PS_ZONE_IDS = ['ps-5', 'ps-6', 'ps-7', 'ps-8', 'ps-9', 'ps-10']
 const PS_PACKAGE_HOURS = 2        // ทุกๆ 2 ชั่วโมง
 const PS_PACKAGE_PRICE = 189      // ราคาโปร 2 ชั่วโมง
 
+// --- Sim ตัวพื้นฐาน: โปร ทุก 2 ชม. = 199 บาท ---
+const SIM_BASIC_IDS = ['sim-1', 'sim-2']
+const SIM_BASIC_PACKAGE_HOURS = 2
+const SIM_BASIC_PACKAGE_PRICE = 199
+
+// --- Sim ตัวสมจริง: โปร ทุก 2 ชม. = 289 บาท ---
+const SIM_PRO_IDS = ['sim-3', 'sim-4']
+const SIM_PRO_PACKAGE_HOURS = 2
+const SIM_PRO_PACKAGE_PRICE = 289
+
+// --- Nintendo: โปร ทุก 2 ชม. = 149 บาท ---
+const NINTENDO_IDS = ['nintendo-main']
+const NINTENDO_PACKAGE_HOURS = 2
+const NINTENDO_PACKAGE_PRICE = 149
+
 /**
  * คำนวณเวลาที่เล่นจริง (ชั่วโมง) หลังหักเวลา pause
  */
@@ -149,6 +164,66 @@ const applySpecialPricing = (room, rawCost, startTime, totalPauseDuration, pause
     }
   }
 
+  // ── Sim ตัวพื้นฐาน Package Pricing ──
+  if (SIM_BASIC_IDS.includes(room)) {
+    if (elapsedHours >= SIM_BASIC_PACKAGE_HOURS) {
+      const fullPackages = Math.floor(elapsedHours / SIM_BASIC_PACKAGE_HOURS)
+      const remainderHours = elapsedHours % SIM_BASIC_PACKAGE_HOURS
+      const total = fullPackages * SIM_BASIC_PACKAGE_PRICE + remainderHours * hourlyRate
+      const saving = rawCost - total
+      return {
+        finalCost: total,
+        originalCost: rawCost,
+        hasSpecialPrice: true,
+        promoType: 'sim_basic_package',
+        promoLabel: `🏎️ โปร Sim พื้นฐาน ${fullPackages}×2ชม. = ${fullPackages}×฿${SIM_BASIC_PACKAGE_PRICE}`,
+        discountAmount: saving > 0 ? saving : 0,
+        fullPackages,
+        remainderHours
+      }
+    }
+  }
+
+  // ── Sim ตัวสมจริง Package Pricing ──
+  if (SIM_PRO_IDS.includes(room)) {
+    if (elapsedHours >= SIM_PRO_PACKAGE_HOURS) {
+      const fullPackages = Math.floor(elapsedHours / SIM_PRO_PACKAGE_HOURS)
+      const remainderHours = elapsedHours % SIM_PRO_PACKAGE_HOURS
+      const total = fullPackages * SIM_PRO_PACKAGE_PRICE + remainderHours * hourlyRate
+      const saving = rawCost - total
+      return {
+        finalCost: total,
+        originalCost: rawCost,
+        hasSpecialPrice: true,
+        promoType: 'sim_pro_package',
+        promoLabel: `🏎️ โปร Sim สมจริง ${fullPackages}×2ชม. = ${fullPackages}×฿${SIM_PRO_PACKAGE_PRICE}`,
+        discountAmount: saving > 0 ? saving : 0,
+        fullPackages,
+        remainderHours
+      }
+    }
+  }
+
+  // ── Nintendo Package Pricing ──
+  if (NINTENDO_IDS.includes(room)) {
+    if (elapsedHours >= NINTENDO_PACKAGE_HOURS) {
+      const fullPackages = Math.floor(elapsedHours / NINTENDO_PACKAGE_HOURS)
+      const remainderHours = elapsedHours % NINTENDO_PACKAGE_HOURS
+      const total = fullPackages * NINTENDO_PACKAGE_PRICE + remainderHours * hourlyRate
+      const saving = rawCost - total
+      return {
+        finalCost: total,
+        originalCost: rawCost,
+        hasSpecialPrice: true,
+        promoType: 'nintendo_package',
+        promoLabel: `🎯 โปร Nintendo ${fullPackages}×2ชม. = ${fullPackages}×฿${NINTENDO_PACKAGE_PRICE}`,
+        discountAmount: saving > 0 ? saving : 0,
+        fullPackages,
+        remainderHours
+      }
+    }
+  }
+
   // ── ไม่มีโปร ──
   return {
     finalCost: rawCost,
@@ -220,6 +295,9 @@ function AdminDashboardBlue({
   const [notifOpen, setNotifOpen] = useState(false)
   const [editingId, setEditingId] = useState(null)
   const [editForm, setEditForm] = useState({})
+  // Rate adjustment — step ที่ใช้กด +/- ราคา/ชม. (ตั้งค่าได้ใน UI)
+  const [rateAdjustStep, setRateAdjustStep] = useState(39)
+  const [rateStepInput, setRateStepInput] = useState('39')
   const audioRef = useRef(null)
   const alarmTimeoutRef = useRef(null)
   const notificationsRef = useRef([])
@@ -557,6 +635,38 @@ function AdminDashboardBlue({
     } catch (err) {
       console.error('adjustTime error:', err)
       alert('ไม่สามารถปรับเวลาได้: ' + err.message)
+    }
+  }
+
+  // ── ปรับ hourly_rate +/- แบบ real-time ──
+  const adjustRate = async (customerId, delta) => {
+    if (!supabase) return
+    const customer = customers.find(c => c.id === customerId)
+    if (!customer) return
+    const newRate = Math.max(0, (customer.hourly_rate || 0) + delta)
+    try {
+      const { error } = await supabase
+        .from('juthazoneb_customers')
+        .update({ hourly_rate: newRate, updated_at: new Date().toISOString() })
+        .eq('id', customerId)
+      if (error) throw error
+      // sync history ด้วย
+      await supabase
+        .from('juthazoneb_customers_history')
+        .update({ hourly_rate: newRate, updated_at: new Date().toISOString() })
+        .eq('customer_id', customerId)
+        .eq('end_reason', 'in_progress')
+      if (user?.username) {
+        await logActivityBlue(
+          user.username,
+          'ADJUST_RATE',
+          `ปรับราคา ${delta > 0 ? '+' : ''}${delta} บาท/ชม. → ${newRate} บาท/ชม. (${customer.name})`,
+          { customer_id: customerId, delta, newRate }
+        )
+      }
+    } catch (err) {
+      console.error('adjustRate error:', err)
+      alert('ไม่สามารถปรับราคาได้: ' + err.message)
     }
   }
 
@@ -927,6 +1037,40 @@ function AdminDashboardBlue({
               📋 รายการลูกค้าทั้งหมด
               <span className="inline-flex items-center justify-center jz-badge text-sm font-bold px-2.5 py-0.5 rounded-full">{customers.length}</span>
             </h2>
+            {/* Rate Step Selector */}
+            <div className="flex flex-wrap items-center gap-2 bg-amber-50 border-2 border-amber-300 rounded-xl px-3 py-2">
+              <span className="text-xs font-bold text-amber-700">💰 ปรับราคา ±</span>
+              {/* Preset buttons */}
+              {[19, 39, 59, 79, 100].map(v => (
+                <button
+                  key={v}
+                  onClick={() => { setRateAdjustStep(v); setRateStepInput(String(v)) }}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition-all ${
+                    rateAdjustStep === v
+                      ? 'bg-amber-500 text-white border-amber-600 shadow'
+                      : 'bg-white text-amber-700 border-amber-300 hover:bg-amber-100'
+                  }`}
+                >
+                  {v}
+                </button>
+              ))}
+              {/* Custom input */}
+              <div className="flex items-center gap-1">
+                <input
+                  type="number"
+                  value={rateStepInput}
+                  onChange={e => setRateStepInput(e.target.value)}
+                  onBlur={() => {
+                    const v = parseFloat(rateStepInput)
+                    if (v > 0) setRateAdjustStep(v)
+                  }}
+                  className="w-16 px-2 py-1 border-2 border-amber-300 rounded-lg text-xs text-center font-bold focus:outline-none focus:border-amber-500"
+                  placeholder="กำหนดเอง"
+                  min="1"
+                />
+                <span className="text-xs text-amber-600 font-semibold">บาท/ชม.</span>
+              </div>
+            </div>
           </div>
           
           {customers.length === 0 ? (
@@ -977,9 +1121,22 @@ function AdminDashboardBlue({
                               <span className="inline-block font-bold text-lg md:text-xl text-cyan-600">
                                 {customer.elapsedTime}
                               </span>
-                              {customer.hourly_rate && (
-                                <div className="text-xs text-gray-500 mt-1">
-                                  {customer.hourly_rate} บาท/ชม.
+                              {/* Rate display + adjust buttons */}
+                              {customer.hourly_rate != null && (
+                                <div className="flex items-center justify-center gap-1 mt-1">
+                                  <button
+                                    onClick={() => adjustRate(customer.id, -rateAdjustStep)}
+                                    className="w-5 h-5 bg-red-400 hover:bg-red-500 active:scale-90 text-white rounded text-xs font-bold flex items-center justify-center transition-all"
+                                    title={`ลดราคา ฿${rateAdjustStep}/ชม.`}
+                                  >−</button>
+                                  <span className="text-xs font-bold text-amber-700 bg-amber-50 border border-amber-300 rounded px-1.5 py-0.5 min-w-[3rem] text-center">
+                                    ฿{customer.hourly_rate}/ชม.
+                                  </span>
+                                  <button
+                                    onClick={() => adjustRate(customer.id, rateAdjustStep)}
+                                    className="w-5 h-5 bg-green-500 hover:bg-green-600 active:scale-90 text-white rounded text-xs font-bold flex items-center justify-center transition-all"
+                                    title={`เพิ่มราคา ฿${rateAdjustStep}/ชม.`}
+                                  >+</button>
                                 </div>
                               )}
                             </div>

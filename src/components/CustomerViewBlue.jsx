@@ -11,6 +11,18 @@ const PS_ZONE_IDS = ['ps-5', 'ps-6', 'ps-7', 'ps-8', 'ps-9', 'ps-10']
 const PS_PACKAGE_HOURS = 2
 const PS_PACKAGE_PRICE = 189
 
+const SIM_BASIC_IDS = ['sim-1', 'sim-2']
+const SIM_BASIC_PACKAGE_HOURS = 2
+const SIM_BASIC_PACKAGE_PRICE = 199
+
+const SIM_PRO_IDS = ['sim-3', 'sim-4']
+const SIM_PRO_PACKAGE_HOURS = 2
+const SIM_PRO_PACKAGE_PRICE = 289
+
+const NINTENDO_IDS = ['nintendo-main']
+const NINTENDO_PACKAGE_HOURS = 2
+const NINTENDO_PACKAGE_PRICE = 149
+
 const getElapsedHours = (startTime, totalPauseDuration, pauseTime, isRunning) => {
   const now = Date.now()
   const start = new Date(startTime).getTime()
@@ -47,6 +59,45 @@ const applySpecialPricing = (room, rawCost, startTime, totalPauseDuration, pause
       hasSpecialPrice: true,
       promoLabel: '🎲 ลด 50% บอร์ดเกม (≥ 2 ชม.)',
       discountAmount: rawCost - discounted
+    }
+  }
+
+  if (SIM_BASIC_IDS.includes(room) && elapsedHours >= SIM_BASIC_PACKAGE_HOURS) {
+    const fullPackages = Math.floor(elapsedHours / SIM_BASIC_PACKAGE_HOURS)
+    const remainderHours = elapsedHours % SIM_BASIC_PACKAGE_HOURS
+    const total = fullPackages * SIM_BASIC_PACKAGE_PRICE + remainderHours * hourlyRate
+    return {
+      finalCost: total,
+      originalCost: rawCost,
+      hasSpecialPrice: true,
+      promoLabel: `🏎️ โปร Sim พื้นฐาน ${fullPackages}×2ชม. = ${fullPackages}×฿${SIM_BASIC_PACKAGE_PRICE}`,
+      discountAmount: Math.max(0, rawCost - total)
+    }
+  }
+
+  if (SIM_PRO_IDS.includes(room) && elapsedHours >= SIM_PRO_PACKAGE_HOURS) {
+    const fullPackages = Math.floor(elapsedHours / SIM_PRO_PACKAGE_HOURS)
+    const remainderHours = elapsedHours % SIM_PRO_PACKAGE_HOURS
+    const total = fullPackages * SIM_PRO_PACKAGE_PRICE + remainderHours * hourlyRate
+    return {
+      finalCost: total,
+      originalCost: rawCost,
+      hasSpecialPrice: true,
+      promoLabel: `🏎️ โปร Sim สมจริง ${fullPackages}×2ชม. = ${fullPackages}×฿${SIM_PRO_PACKAGE_PRICE}`,
+      discountAmount: Math.max(0, rawCost - total)
+    }
+  }
+
+  if (NINTENDO_IDS.includes(room) && elapsedHours >= NINTENDO_PACKAGE_HOURS) {
+    const fullPackages = Math.floor(elapsedHours / NINTENDO_PACKAGE_HOURS)
+    const remainderHours = elapsedHours % NINTENDO_PACKAGE_HOURS
+    const total = fullPackages * NINTENDO_PACKAGE_PRICE + remainderHours * hourlyRate
+    return {
+      finalCost: total,
+      originalCost: rawCost,
+      hasSpecialPrice: true,
+      promoLabel: `🎯 โปร Nintendo ${fullPackages}×2ชม. = ${fullPackages}×฿${NINTENDO_PACKAGE_PRICE}`,
+      discountAmount: Math.max(0, rawCost - total)
     }
   }
 
