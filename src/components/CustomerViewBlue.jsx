@@ -9,7 +9,7 @@ import { logActivityBlue } from '../utils/authUtilsBlue'
 const BOARD_GAME_ZONE_IDS = ['board-game-big', 'board-game-small']
 const PS_ZONE_IDS = ['ps-5', 'ps-6', 'ps-7', 'ps-8', 'ps-9', 'ps-10']
 const PS_PACKAGE_HOURS = 2
-const PS_PACKAGE_PRICE = 189
+const PS_DISCOUNT_PER_PACKAGE = 11  // หัก 11 บาท ต่อทุก 2 ชม. ที่ครบ
 
 const SIM_BASIC_IDS = ['sim-1', 'sim-2']
 const SIM_BASIC_PACKAGE_HOURS = 2
@@ -36,18 +36,18 @@ const applySpecialPricing = (room, rawCost, startTime, totalPauseDuration, pause
   const elapsedHours = getElapsedHours(startTime, totalPauseDuration, pauseTime, isRunning)
 
   if (PS_ZONE_IDS.includes(room)) {
-    if (elapsedHours < PS_PACKAGE_HOURS) {
+    const fullPackages = Math.floor(elapsedHours / PS_PACKAGE_HOURS)
+    if (fullPackages === 0) {
       return { finalCost: rawCost, originalCost: rawCost, hasSpecialPrice: false, promoLabel: null, discountAmount: 0 }
     }
-    const fullPackages = Math.floor(elapsedHours / PS_PACKAGE_HOURS)
-    const remainderHours = elapsedHours % PS_PACKAGE_HOURS
-    const total = fullPackages * PS_PACKAGE_PRICE + remainderHours * hourlyRate
+    const totalDiscount = fullPackages * PS_DISCOUNT_PER_PACKAGE
+    const finalCost = Math.max(0, rawCost - totalDiscount)
     return {
-      finalCost: total,
+      finalCost,
       originalCost: rawCost,
       hasSpecialPrice: true,
-      promoLabel: `🎮 โปร PS ${fullPackages}×2ชม. = ${fullPackages}×฿${PS_PACKAGE_PRICE}`,
-      discountAmount: Math.max(0, rawCost - total)
+      promoLabel: '🎮 ราคาโปรโมชั่น',
+      discountAmount: totalDiscount
     }
   }
 
@@ -278,11 +278,6 @@ function CustomerViewBlue({ customers }) {
                       }`}>
                         ฿{customer.currentCost.toFixed(2)}
                       </p>
-                      {customer.hasDiscount && (
-                        <p className="text-sm text-gray-400 line-through mt-0.5">
-                          ฿{customer.originalCost.toFixed(2)}
-                        </p>
-                      )}
                       <div className="mt-2 flex items-center justify-center gap-2">
                         <span className="text-xs sm:text-sm font-semibold text-gray-500 bg-gray-100 px-2.5 py-0.5 rounded-full">
                           {customer.hourly_rate} บาท/ชม.

@@ -68,10 +68,10 @@ const ZONES = {
 // --- บอร์ดเกม: เล่น >= 2 ชม. ลด 50% ---
 const BOARD_GAME_ZONE_IDS = ['board-game-big', 'board-game-small']
 
-// --- PS (ปกติ): โปร ทุก 2 ชม. = 189 บาท ส่วนที่เกิน คิด hourlyRate/ชม. ---
+// --- PS: ครบทุก 2 ชม. หัก 11 บาทต่อรอบ ---
 const PS_ZONE_IDS = ['ps-5', 'ps-6', 'ps-7', 'ps-8', 'ps-9', 'ps-10']
 const PS_PACKAGE_HOURS = 2        // ทุกๆ 2 ชั่วโมง
-const PS_PACKAGE_PRICE = 189      // ราคาโปร 2 ชั่วโมง
+const PS_DISCOUNT_PER_PACKAGE = 11  // ส่วนลดต่อรอบ 2 ชม.
 
 // --- Sim ตัวพื้นฐาน: โปร ทุก 2 ชม. = 199 บาท ---
 const SIM_BASIC_IDS = ['sim-1', 'sim-2']
@@ -101,20 +101,13 @@ const getElapsedHours = (startTime, totalPauseDuration, pauseTime, isRunning) =>
 }
 
 /**
- * คำนวณราคา PS พร้อมโปรโมชั่น:
- * - ทุก 2 ชม. = 189 บาท
- * - เศษที่เกิน คิด hourlyRate/ชม. (pro-rated)
- * เช่น 2:30 ชม. = 189 + 0.5×100 = 239
- *      4:00 ชม. = 189×2 = 378
- *      4:30 ชม. = 189×2 + 0.5×100 = 428
+ * คำนวณราคา PS พร้อมโปรโมชั่นแบบใหม่:
+ * - ราคาปกติวิ่งตามเวลาจริง (pro-rated)
+ * - ทุกๆ 2 ชม. ที่ครบ → หัก 11 บาท
+ * เช่น เล่น 2:30 ชม. hourly=100 → rawCost=250 → หัก 11×1 = 239
+ *      เล่น 4:00 ชม. hourly=100 → rawCost=400 → หัก 11×2 = 378
+ *      เล่น 4:30 ชม. hourly=100 → rawCost=450 → หัก 11×2 = 428
  */
-const calcPSPackageCost = (elapsedHours, hourlyRate) => {
-  const fullPackages = Math.floor(elapsedHours / PS_PACKAGE_HOURS)
-  const remainderHours = elapsedHours % PS_PACKAGE_HOURS
-  const packageCost = fullPackages * PS_PACKAGE_PRICE
-  const remainderCost = remainderHours * hourlyRate
-  return { total: packageCost + remainderCost, fullPackages, remainderHours, packageCost, remainderCost }
-}
 
 /**
  * ฟังก์ชันหลัก: คืนค่า pricing info ที่ถูกต้องตาม zone
@@ -122,10 +115,11 @@ const calcPSPackageCost = (elapsedHours, hourlyRate) => {
 const applySpecialPricing = (room, rawCost, startTime, totalPauseDuration, pauseTime, isRunning, hourlyRate) => {
   const elapsedHours = getElapsedHours(startTime, totalPauseDuration, pauseTime, isRunning)
 
-  // ── PS Package Pricing ──
+  // ── PS: ราคาปกติ pro-rated แต่ทุก 2 ชม. หัก 11 บาท ──
   if (PS_ZONE_IDS.includes(room)) {
-    if (elapsedHours < PS_PACKAGE_HOURS) {
-      // ยังไม่ถึง 2 ชม. คิดปกติ
+    const fullPackages = Math.floor(elapsedHours / PS_PACKAGE_HOURS)
+    if (fullPackages === 0) {
+      // ยังไม่ถึง 2 ชม. — คิดปกติ
       return {
         finalCost: rawCost,
         originalCost: rawCost,
@@ -135,17 +129,16 @@ const applySpecialPricing = (room, rawCost, startTime, totalPauseDuration, pause
         discountAmount: 0
       }
     }
-    const ps = calcPSPackageCost(elapsedHours, hourlyRate)
-    const saving = rawCost - ps.total
+    const totalDiscount = fullPackages * PS_DISCOUNT_PER_PACKAGE
+    const finalCost = Math.max(0, rawCost - totalDiscount)
     return {
-      finalCost: ps.total,
+      finalCost,
       originalCost: rawCost,
       hasSpecialPrice: true,
-      promoType: 'ps_package',
-      promoLabel: `🎮 โปร PS ${ps.fullPackages}×2ชม. = ${ps.fullPackages}×฿${PS_PACKAGE_PRICE}`,
-      discountAmount: saving > 0 ? saving : 0,
-      fullPackages: ps.fullPackages,
-      remainderHours: ps.remainderHours
+      promoType: 'ps_discount',
+      promoLabel: `🎮 โปร PS ส่วนลด ${fullPackages}×฿${PS_DISCOUNT_PER_PACKAGE} = -฿${totalDiscount}`,
+      discountAmount: totalDiscount,
+      fullPackages
     }
   }
 

@@ -15,7 +15,7 @@ import { logLogoutBlue, logActivityBlue, calculateCostBlue, getDurationMinutes }
 const BOARD_GAME_ZONE_IDS = ['board-game-big', 'board-game-small']
 const PS_ZONE_IDS = ['ps-5', 'ps-6', 'ps-7', 'ps-8', 'ps-9', 'ps-10']
 const PS_PACKAGE_HOURS = 2
-const PS_PACKAGE_PRICE = 189
+const PS_DISCOUNT_PER_PACKAGE = 11  // หัก 11 บาท ต่อทุก 2 ชม. ที่ครบ
 
 const SIM_BASIC_IDS = ['sim-1', 'sim-2']
 const SIM_BASIC_PACKAGE_HOURS = 2
@@ -53,11 +53,14 @@ const calculateFinalCostWithDiscount = (customer) => {
   )
   const elapsedHours = getElapsedHours(customer)
 
-  // PS Package: ทุก 2 ชม. = 189 บาท + เศษคิด hourlyRate/ชม.
-  if (PS_ZONE_IDS.includes(customer.room) && elapsedHours >= PS_PACKAGE_HOURS) {
+  // PS: ราคา pro-rated หัก 11 บาท ต่อทุก 2 ชม. ที่ครบ
+  if (PS_ZONE_IDS.includes(customer.room)) {
     const fullPackages = Math.floor(elapsedHours / PS_PACKAGE_HOURS)
-    const remainderHours = elapsedHours % PS_PACKAGE_HOURS
-    return fullPackages * PS_PACKAGE_PRICE + remainderHours * (customer.hourly_rate || 0)
+    if (fullPackages > 0) {
+      const totalDiscount = fullPackages * PS_DISCOUNT_PER_PACKAGE
+      return Math.max(0, rawCost - totalDiscount)
+    }
+    return rawCost
   }
 
   // Board Game: >= 2 ชม. ลด 50%
