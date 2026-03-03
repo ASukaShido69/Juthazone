@@ -246,6 +246,7 @@ const DEFAULT_PRODUCTS = [
   { id: 'cheeseball', name: 'ชีสบอล', price: 59 },
   { id: 'nugget', name: 'นักเก็ต', price: 59 },
   { id: 'water', name: 'น้ำเปล่า', price: 15 },
+  { id: 'topping', name: 'ท็อปปิ้ง', price: 10 },
   { id: 'mamaok', name: 'มาม่าOk', price: 25 },
   { id: 'mamatub', name: 'มาม่าถ้วย', price: 25 },
   { id: 'mamakorea', name: 'มาม่าเกาหลี', price: 50 },
