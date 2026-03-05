@@ -63,9 +63,12 @@ const calculateFinalCostWithDiscount = (customer) => {
     return rawCost
   }
 
-  // Board Game: >= 2 ชม. ลด 50%
-  if (BOARD_GAME_ZONE_IDS.includes(customer.room) && elapsedHours >= 2) {
-    return rawCost * 0.5
+  // Board Game: 2 ชม.แรกราคาปกติ, ชม.ที่ 3+ ลด 50% เฉพาะส่วนที่เกิน
+  if (BOARD_GAME_ZONE_IDS.includes(customer.room) && elapsedHours > 2) {
+    const first2HoursCost = 2 * (customer.hourly_rate || 0)
+    const extraHours = elapsedHours - 2
+    const extraCost = extraHours * (customer.hourly_rate || 0) * 0.5
+    return first2HoursCost + extraCost
   }
 
   // Sim ตัวพื้นฐาน: ทุก 2 ชม. = 199 บาท + เศษคิด hourlyRate/ชม.

@@ -51,14 +51,17 @@ const applySpecialPricing = (room, rawCost, startTime, totalPauseDuration, pause
     }
   }
 
-  if (BOARD_GAME_ZONE_IDS.includes(room) && elapsedHours >= 2) {
-    const discounted = rawCost * 0.5
+  if (BOARD_GAME_ZONE_IDS.includes(room) && elapsedHours > 2) {
+    const first2HoursCost = 2 * hourlyRate
+    const extraHours = elapsedHours - 2
+    const extraCost = extraHours * hourlyRate * 0.5
+    const finalCost = first2HoursCost + extraCost
     return {
-      finalCost: discounted,
+      finalCost,
       originalCost: rawCost,
       hasSpecialPrice: true,
-      promoLabel: '🎲 ลด 50% บอร์ดเกม (≥ 2 ชม.)',
-      discountAmount: rawCost - discounted
+      promoLabel: '🎲 ลด 50% บอร์ดเกม (หลัง 2 ชม.)',
+      discountAmount: rawCost - finalCost
     }
   }
 

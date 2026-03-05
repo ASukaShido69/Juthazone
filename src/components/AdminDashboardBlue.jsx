@@ -65,7 +65,7 @@ const ZONES = {
 // SPECIAL PRICING RULES
 // ═══════════════════════════════════════════════════════════
 
-// --- บอร์ดเกม: เล่น >= 2 ชม. ลด 50% ---
+// --- บอร์ดเกม: 2 ชม.แรกราคาปกติ, ชม.ที่ 3+ ลด 50% เฉพาะส่วนที่เกิน 2 ชม. ---
 const BOARD_GAME_ZONE_IDS = ['board-game-big', 'board-game-small']
 
 // --- PS: ครบทุก 2 ชม. หัก 11 บาทต่อรอบ ---
@@ -142,17 +142,21 @@ const applySpecialPricing = (room, rawCost, startTime, totalPauseDuration, pause
     }
   }
 
-  // ── Board Game: ≥2 ชม. ลด 50% ──
+  // ── Board Game: 2 ชม.แรกราคาปกติ, ชม.ที่ 3+ ลด 50% เฉพาะส่วนที่เกิน ──
   if (BOARD_GAME_ZONE_IDS.includes(room)) {
-    if (elapsedHours >= 2) {
-      const discounted = rawCost * 0.5
+    if (elapsedHours > 2) {
+      const first2HoursCost = 2 * hourlyRate
+      const extraHours = elapsedHours - 2
+      const extraCost = extraHours * hourlyRate * 0.5
+      const finalCost = first2HoursCost + extraCost
+      const discountAmount = rawCost - finalCost
       return {
-        finalCost: discounted,
+        finalCost,
         originalCost: rawCost,
         hasSpecialPrice: true,
         promoType: 'boardgame_discount',
-        promoLabel: '🎲 ลด 50% บอร์ดเกม (≥ 2 ชม.)',
-        discountAmount: rawCost - discounted
+        promoLabel: '🎲 ลด 50% บอร์ดเกม (หลัง 2 ชม.)',
+        discountAmount
       }
     }
   }
