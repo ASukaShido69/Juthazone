@@ -684,6 +684,7 @@ function AdminDashboard({
                   <option value="ชั้น 2 ห้อง VIP">ชั้น 2 ห้อง VIP</option>
                   <option value="ชั้น 3 ห้อง VIP KARAOKE">ชั้น 3 ห้อง VIP KARAOKE</option>
                   <option value="ชั้น 3 ห้อง Golf">ชั้น 3 Golf</option>
+                  <option value="ชั้น 3 ห้อง Golf">ชั้น 4 VIP KARAOKE</option>
                 </select>
               </div>
 
