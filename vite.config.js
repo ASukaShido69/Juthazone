@@ -9,6 +9,7 @@ export default defineConfig({
     cssMinify: true,
     sourcemap: false,
     rollupOptions: {
+      external: ['jspdf-autotable'],
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom'],

@@ -43,8 +43,47 @@ const formatDateTime = (timestamp) => {
     month: 'short',
     day: 'numeric',
     hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  })
+}
+
+// Format date only
+const formatDate = (timestamp) => {
+  if (!timestamp) return '-'
+  const date = new Date(timestamp)
+  return date.toLocaleDateString('th-TH', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  })
+}
+
+// Format time only
+const formatTime = (timestamp) => {
+  if (!timestamp) return '-'
+  const date = new Date(timestamp)
+  return date.toLocaleTimeString('th-TH', {
+    hour: '2-digit',
     minute: '2-digit'
   })
+}
+
+// Format duration
+const formatDuration = (minutes) => {
+  if (!minutes) return '-'
+  const hours = Math.floor(minutes / 60)
+  const mins = Math.round(minutes % 60)
+  if (hours > 0) {
+    return `${hours} ชม. ${mins} นาที`
+  }
+  return `${mins} นาที`
+}
+
+// Format currency
+const formatCurrency = (amount) => {
+  if (!amount && amount !== 0) return '-'
+  return `฿${parseFloat(amount).toFixed(2)}`
 }
 
 // Get end reason text
@@ -72,9 +111,9 @@ const getRoomStats = (data) => {
 }
 
 /**
- * Export History to Excel
+ * Export History to Excel - Enhanced Version
  */
-export const exportToExcel = async (data, fileName = 'juthazone-report') => {
+export const exportToExcel = async (data, fileName = 'juthazone-report', options = {}) => {
   // Ensure imports are loaded
   await initializeImports()
 
@@ -89,82 +128,163 @@ export const exportToExcel = async (data, fileName = 'juthazone-report') => {
   }
 
   try {
-    // Prepare data for Excel
-    const excelData = data.map(item => ({
-      'ลำดับที่': item.id,
-      'ชื่อลูกค้า': item.name,
-      'ห้อง': item.room,
-      'เริ่ม': formatDateTime(item.start_time),
-      'จบ': formatDateTime(item.end_time),
-      'ระยะเวลา (นาที)': item.duration_minutes,
-      'ค่าใช้จ่าย': item.final_cost,
-      'สถานะจ่าย': item.is_paid ? 'จ่ายแล้ว' : 'ยังไม่จ่าย',
-      'สถานะ': getEndReasonText(item.end_reason),
-      'Note': item.note || '-'
+    const now = new Date()
+    const timestamp = now.toISOString().slice(0, 10)
+    const { zone = 'red', includeCharts = false } = options
+
+    // Enhanced data preparation
+    const excelData = data.map((item, index) => ({
+      'ลำดับที่': index + 1,
+      'รหัสลูกค้า': item.id || `CUST-${String(index + 1).padStart(6, '0')}`,
+      'ชื่อลูกค้า': item.name || '-',
+      'ห้อง/โซน': item.room || '-',
+      'วันที่เริ่ม': formatDate(item.start_time),
+      'เวลาเริ่ม': formatTime(item.start_time),
+      'วันที่สิ้นสุด': formatDate(item.end_time),
+      'เวลาสิ้นสุด': formatTime(item.end_time),
+      'ระยะเวลา (นาที)': item.duration_minutes || 0,
+      'ระยะเวลา (ชม.และนาที)': formatDuration(item.duration_minutes),
+      'อัตราต่อชั่วโมง': item.hourly_rate || '-',
+      'ค่าใช้จ่าย': parseFloat(item.final_cost || 0).toFixed(2),
+      'สถานะการจ่าย': item.is_paid ? '✅ จ่ายแล้ว' : '❌ ยังไม่จ่าย',
+      'วิธีการจ่าย': item.payment_method === 'cash' ? '💵 เงินสด' : '🏦 โอนเงิน',
+      'กะทำงาน': item.shift ? `กะ ${item.shift}` : 'ไม่ระบุ',
+      'พนักงาน': item.added_by || '-',
+      'สถานะการใช้งาน': getEndReasonText(item.end_reason),
+      'หมายเหตุ': item.note || '-',
+      'วันที่สร้าง': formatDateTime(item.created_at),
+      'วันที่อัพเดท': formatDateTime(item.updated_at)
     }))
 
-    // Create workbook
+    // Create main data sheet with enhanced formatting
     const ws = XLSX.utils.json_to_sheet(excelData)
     
-    // Set column widths
+    // Set column widths for better readability
     ws['!cols'] = [
-      { wch: 8 },  // ID
-      { wch: 15 }, // ชื่อ
-      { wch: 12 }, // ห้อง
-      { wch: 18 }, // เริ่ม
-      { wch: 18 }, // จบ
-      { wch: 15 }, // ระยะเวลา
-      { wch: 12 }, // ค่า
-      { wch: 12 }, // สถานะจ่าย
-      { wch: 12 }, // สถานะ
-      { wch: 20 }  // Note
+      { wch: 8 },   // ลำดับที่
+      { wch: 15 },  // รหัสลูกค้า
+      { wch: 20 },  // ชื่อลูกค้า
+      { wch: 15 },  // ห้อง/โซน
+      { wch: 12 },  // วันที่เริ่ม
+      { wch: 10 },  // เวลาเริ่ม
+      { wch: 12 },  // วันที่สิ้นสุด
+      { wch: 10 },  // เวลาสิ้นสุด
+      { wch: 15 },  // ระยะเวลา (นาที)
+      { wch: 20 },  // ระยะเวลา (ชม.และนาที)
+      { wch: 12 },  // อัตราต่อชั่วโมง
+      { wch: 12 },  // ค่าใช้จ่าย
+      { wch: 15 },  // สถานะการจ่าย
+      { wch: 12 },  // วิธีการจ่าย
+      { wch: 10 },  // กะทำงาน
+      { wch: 12 },  // พนักงาน
+      { wch: 15 },  // สถานะการใช้งาน
+      { wch: 25 },  // หมายเหตุ
+      { wch: 18 },  // วันที่สร้าง
+      { wch: 18 }   // วันที่อัพเดท
     ]
 
     const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, 'รายงาน')
+    XLSX.utils.book_append_sheet(wb, ws, 'รายงานฉบับละเอียด')
 
-    // Add summary sheet
-    const now = new Date()
-    const totalRevenue = data.reduce((sum, item) => sum + parseFloat(item.final_cost), 0)
+    // Enhanced summary sheet
+    const totalRevenue = data.reduce((sum, item) => sum + parseFloat(item.final_cost || 0), 0)
     const paidCount = data.filter(item => item.is_paid).length
+    const unpaidCount = data.length - paidCount
+    const totalHours = data.reduce((sum, item) => sum + parseFloat(item.duration_minutes || 0), 0) / 60
+    const avgRevenuePerCustomer = data.length > 0 ? totalRevenue / data.length : 0
+    const avgTimePerCustomer = data.length > 0 ? totalHours / data.length : 0
     
     const summaryData = [
-      ['สรุปรายงาน Juthazone'],
-      ['วันที่รายงาน', now.toLocaleDateString('th-TH')],
+      ['📊 สรุปรายงาน JUTHAZONE'],
       [''],
-      ['สรุปทั่วไป'],
-      ['จำนวนทั้งหมด', data.length],
-      ['รายได้รวม', totalRevenue.toFixed(2)],
-      ['จ่ายแล้ว', paidCount],
-      ['ยังไม่จ่าย', data.length - paidCount],
+      ['📅 ข้อมูลรายงาน'],
+      ['วันที่สร้างรายงาน', formatDate(now)],
+      ['เวลาสร้างรายงาน', formatTime(now)],
+      ['โซนที่ส่งออก', zone === 'blue' ? '🔵 BLUE ZONE' : '🔴 RED ZONE'],
+      ['จำนวนรายการทั้งหมด', data.length],
       [''],
-      ['สถิติตามห้อง']
+      ['💰 สรุปรายได้'],
+      ['รายได้รวมทั้งหมด', formatCurrency(totalRevenue)],
+      ['รายได้เฉลี่ยต่อลูกค้า', formatCurrency(avgRevenuePerCustomer)],
+      ['จำนวนที่จ่ายแล้ว', `${paidCount} รายการ (${((paidCount/data.length)*100).toFixed(1)}%)`],
+      ['จำนวนที่ยังไม่จ่าย', `${unpaidCount} รายการ (${((unpaidCount/data.length)*100).toFixed(1)}%)`],
+      [''],
+      ['⏱️ สรุปเวลาใช้งาน'],
+      ['เวลารวมทั้งหมด', `${totalHours.toFixed(1)} ชั่วโมง`],
+      ['เวลาเฉลี่ยต่อลูกค้า', `${avgTimePerCustomer.toFixed(1)} ชั่วโมง`],
+      [''],
+      ['📊 สถิติตามห้อง/โซน']
     ]
 
+    // Enhanced room statistics
     const roomStats = getRoomStats(data)
-    Object.entries(roomStats).forEach(([room, stats]) => {
-      summaryData.push([room, stats.count, stats.revenue.toFixed(2)])
+    const sortedRoomStats = Object.entries(roomStats)
+      .sort(([,a], [,b]) => b.revenue - a.revenue) // Sort by revenue descending
+    
+    sortedRoomStats.forEach(([room, stats]) => {
+      summaryData.push([
+        room,
+        `${stats.count} รายการ`,
+        formatCurrency(stats.revenue),
+        `${((stats.revenue/totalRevenue)*100).toFixed(1)}%`
+      ])
     })
 
     const wsSummary = XLSX.utils.aoa_to_sheet(summaryData)
-    wsSummary['!cols'] = [{ wch: 25 }, { wch: 15 }]
-    XLSX.utils.book_append_sheet(wb, wsSummary, 'สรุป')
+    wsSummary['!cols'] = [
+      { wch: 25 }, // หมวดหมู่
+      { wch: 20 }, // ค่า
+      { wch: 15 }, // จำนวน
+      { wch: 10 }  // %
+    ]
+    XLSX.utils.book_append_sheet(wb, wsSummary, 'สรุปรายงาน')
 
-    // Download
-    const timestamp = now.toISOString().slice(0, 10)
-    XLSX.writeFile(wb, `${fileName}-${timestamp}.xlsx`)
+    // Payment method analysis sheet
+    const paymentStats = {}
+    data.forEach(item => {
+      const method = item.payment_method === 'cash' ? 'เงินสด' : 'โอนเงิน'
+      if (!paymentStats[method]) {
+        paymentStats[method] = { count: 0, revenue: 0 }
+      }
+      paymentStats[method].count += 1
+      paymentStats[method].revenue += parseFloat(item.final_cost || 0)
+    })
+
+    const paymentData = [
+      ['💳 วิเคราะห์วิธีการจ่าย'],
+      [''],
+      ['วิธีการจ่าย', 'จำนวนรายการ', 'รายได้', 'เปอร์เซ็นต์']
+    ]
+
+    Object.entries(paymentStats).forEach(([method, stats]) => {
+      paymentData.push([
+        method,
+        stats.count,
+        formatCurrency(stats.revenue),
+        `${((stats.revenue/totalRevenue)*100).toFixed(1)}%`
+      ])
+    })
+
+    const wsPayment = XLSX.utils.aoa_to_sheet(paymentData)
+    wsPayment['!cols'] = [{ wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 10 }]
+    XLSX.utils.book_append_sheet(wb, wsPayment, 'วิเคราะห์การจ่าย')
+
+    // Download with enhanced filename
+    const zonePrefix = zone === 'blue' ? 'Blue' : 'Red'
+    const enhancedFileName = `${zonePrefix}_Report_${timestamp}_${data.length}items.xlsx`
+    XLSX.writeFile(wb, enhancedFileName)
     
-    alert('✅ ส่งออก Excel สำเร็จ')
+    alert(`✅ ส่งออก Excel สำเร็จ\n📊 จำนวน ${data.length} รายการ\n💰 รายได้รวม ${formatCurrency(totalRevenue)}`)
   } catch (error) {
     console.error('Excel export error:', error)
-    alert('❌ เกิดข้อผิดพลาดในการส่งออก Excel')
+    alert('❌ เกิดข้อผิดพลาดในการส่งออก Excel: ' + error.message)
   }
 }
 
 /**
- * Export to PDF (Report)
+ * Export to PDF - Enhanced Professional Version
  */
-export const exportToPDF = async (data, userName = 'Admin') => {
+export const exportToPDF = async (data, userName = 'Admin', options = {}) => {
   // Ensure imports are loaded
   await initializeImports()
 
@@ -183,117 +303,204 @@ export const exportToPDF = async (data, userName = 'Admin') => {
     const now = new Date()
     const pageWidth = doc.internal.pageSize.getWidth()
     const pageHeight = doc.internal.pageSize.getHeight()
-    let yPos = 20
-
-    // Header
-    doc.setFillColor(147, 51, 234) // Purple
-    doc.rect(0, 0, pageWidth, 40, 'F')
+    const { zone = 'red', includeCharts = false } = options
     
-    doc.setFont('Mali', 'bold')
-    doc.setFontSize(28)
+    // Calculate statistics
+    const totalRevenue = data.reduce((sum, item) => sum + parseFloat(item.final_cost || 0), 0)
+    const paidCount = data.filter(item => item.is_paid).length
+    const unpaidCount = data.length - paidCount
+    const totalHours = data.reduce((sum, item) => sum + parseFloat(item.duration_minutes || 0), 0) / 60
+    const avgRevenuePerCustomer = data.length > 0 ? totalRevenue / data.length : 0
+    
+    // Colors based on zone
+    const primaryColor = zone === 'blue' ? [37, 99, 235] : [220, 38, 38]  // blue-600 or red-600
+    const secondaryColor = zone === 'blue' ? [59, 130, 246] : [239, 68, 68]  // blue-500 or red-500
+    
+    let yPos = 15
+
+    // Enhanced Header with gradient effect
+    doc.setFillColor(...primaryColor)
+    doc.rect(0, 0, pageWidth, 45, 'F')
+    
+    // Add subtle pattern
+    doc.setFillColor(255, 255, 255, 0.1)
+    for (let i = 0; i < pageWidth; i += 10) {
+      doc.rect(i, 0, 5, 45, 'F')
+    }
+    
+    // Logo and title
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(32)
     doc.setTextColor(255, 255, 255)
-    doc.text('JUTHAZONE', pageWidth / 2, 20, { align: 'center' })
+    doc.text('JUTHAZONE', pageWidth / 2, 25, { align: 'center' })
   
-    doc.setFontSize(14)
-    doc.text('รายงานสรุปยอดประจำเดือน', pageWidth / 2, 32, { align: 'center' })
+    doc.setFontSize(16)
+    doc.text('รายงานการใช้งานประจำวัน', pageWidth / 2, 38, { align: 'center' })
+
+    // Zone indicator
+    doc.setFillColor(255, 255, 255)
+    doc.setRoundedRect(pageWidth - 35, 5, 30, 12, 3)
+    doc.setFontSize(10)
+    doc.setTextColor(...primaryColor)
+    doc.text(zone === 'blue' ? 'BLUE' : 'RED', pageWidth - 20, 12, { align: 'center' })
 
     // Reset color
     doc.setTextColor(0, 0, 0)
-    doc.setFont('Mali', 'normal')
+    doc.setFont('helvetica', 'normal')
     doc.setFontSize(11)
 
-    yPos = 50
+    yPos = 55
 
-    // Report info
-    doc.text(`วันที่รายงาน: ${now.toLocaleDateString('th-TH')}`, 20, yPos)
-    yPos += 7
-    doc.text(`ผู้จัดทำ: ${userName}`, 20, yPos)
-    yPos += 7
-    doc.text(`เวลา: ${now.toLocaleTimeString('th-TH')}`, 20, yPos)
-    yPos += 12
+    // Report information box
+    doc.setFillColor(240, 240, 240)
+    doc.setRoundedRect(15, yPos - 5, pageWidth - 30, 25, 3)
+    doc.setFont('helvetica', 'bold')
+    doc.text(`วันที่รายงาน: ${formatDate(now)}`, 25, yPos + 3)
+    doc.text(`ผู้จัดทำ: ${userName}`, 25, yPos + 10)
+    doc.text(`เวลา: ${formatTime(now)}`, 25, yPos + 17)
+    doc.text(`โซน: ${zone === 'blue' ? '🔵 BLUE ZONE' : '🔴 RED ZONE'}`, pageWidth - 60, yPos + 10)
+    
+    yPos += 35
 
-    // Summary box
-    const totalRevenue = data.reduce((sum, item) => sum + parseFloat(item.final_cost), 0)
-    const paidCount = data.filter(item => item.is_paid).length
-    const totalHours = data.reduce((sum, item) => sum + parseFloat(item.duration_minutes), 0) / 60
+    // Enhanced Summary Cards
+    const summaryCards = [
+      { label: 'รายได้รวม', value: formatCurrency(totalRevenue), icon: '💰', color: [34, 197, 94] },
+      { label: 'จำนวนลูกค้า', value: `${data.length} คน`, icon: '👥', color: [59, 130, 246] },
+      { label: 'เวลารวม', value: `${totalHours.toFixed(1)} ชม.`, icon: '⏱️', color: [251, 146, 60] },
+      { label: 'จ่ายแล้ว', value: `${paidCount}/${data.length} คน`, icon: '✅', color: [34, 197, 94] }
+    ]
 
-    doc.setFillColor(230, 240, 250)
-    doc.rect(20, yPos - 5, pageWidth - 40, 30, 'F')
-    doc.setFont('Mali', 'bold')
-    doc.setFontSize(12)
-    doc.text(`รายได้รวม: ฿${totalRevenue.toFixed(2)}`, 30, yPos + 3)
-    doc.text(`จำนวนลูกค้า: ${data.length} คน`, 30, yPos + 10)
-    doc.text(`เวลารวม: ${totalHours.toFixed(1)} ชม.`, 30, yPos + 17)
-    doc.text(`จ่ายแล้ว: ${paidCount}/${data.length} คน`, 110, yPos + 10)
-
-    yPos += 40
-
-    // Table
-    const columns = ['ชื่อ', 'ห้อง', 'ระยะเวลา', 'ค่า', 'สถานะ']
-    const tableData = data.map(item => [
-      item.name,
-      item.room,
-      `${item.duration_minutes.toFixed(0)} นาที`,
-      `฿${item.final_cost}`,
-      item.is_paid ? '✓ จ่าย' : '✗ ยังไม่จ่าย'
-    ])
-
-    // Simple table
-    doc.setFont('Mali', 'bold')
-    doc.setFontSize(10)
-    const columnWidths = [40, 25, 35, 25, 30]
-    let xPos = 20
-
-    // Header
-    columns.forEach((col, idx) => {
-      doc.setFillColor(147, 51, 234)
+    const cardWidth = (pageWidth - 40) / 2
+    const cardHeight = 25
+    
+    summaryCards.forEach((card, index) => {
+      const x = 20 + (index % 2) * (cardWidth + 10)
+      const y = yPos + Math.floor(index / 2) * (cardHeight + 10)
+      
+      // Card background
+      doc.setFillColor(...card.color, 0.1)
+      doc.setRoundedRect(x, y, cardWidth, cardHeight, 3)
+      
+      // Card border
+      doc.setDrawColor(...card.color)
+      doc.setLineWidth(0.5)
+      doc.setRoundedRect(x, y, cardWidth, cardHeight, 3)
+      
+      // Card content
+      doc.setFillColor(...card.color)
+      doc.circle(x + 10, y + 12, 4, 'F')
       doc.setTextColor(255, 255, 255)
-      doc.rect(xPos, yPos, columnWidths[idx], 8, 'F')
-      doc.text(col, xPos + 2, yPos + 5)
-      xPos += columnWidths[idx]
+      doc.setFontSize(12)
+      doc.text(card.icon, x + 10, y + 16, { align: 'center' })
+      
+      doc.setTextColor(...card.color)
+      doc.setFont('helvetica', 'bold')
+      doc.text(card.label, x + 20, y + 10)
+      doc.setFontSize(14)
+      doc.text(card.value, x + 20, y + 18)
     })
 
-    yPos += 8
-    doc.setTextColor(0, 0, 0)
-    doc.setFont('Mali', 'normal')
+    yPos += 65
 
-    // Data rows
-    tableData.forEach((row, rowIdx) => {
-      if (yPos > pageHeight - 20) {
+    // Detailed Table with enhanced styling
+    doc.setFillColor(...primaryColor)
+    doc.rect(15, yPos - 5, pageWidth - 30, 10, 'F')
+    
+    doc.setTextColor(255, 255, 255)
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(12)
+    doc.text('ลำดับ', 20, yPos)
+    doc.text('ชื่อลูกค้า', 35, yPos)
+    doc.text('ห้อง', 80, yPos)
+    doc.text('ระยะเวลา', 110, yPos)
+    doc.text('ค่าใช้จ่าย', 140, yPos)
+    doc.text('สถานะ', 170, yPos)
+
+    yPos += 10
+    doc.setTextColor(0, 0, 0)
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(10)
+
+    // Table data with alternating row colors
+    data.forEach((item, index) => {
+      if (yPos > pageHeight - 30) {
         doc.addPage()
         yPos = 20
+        
+        // Repeat header on new page
+        doc.setFillColor(...primaryColor)
+        doc.rect(15, yPos - 5, pageWidth - 30, 10, 'F')
+        doc.setTextColor(255, 255, 255)
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(12)
+        doc.text('ลำดับ', 20, yPos)
+        doc.text('ชื่อลูกค้า', 35, yPos)
+        doc.text('ห้อง', 80, yPos)
+        doc.text('ระยะเวลา', 110, yPos)
+        doc.text('ค่าใช้จ่าย', 140, yPos)
+        doc.text('สถานะ', 170, yPos)
+        
+        yPos += 10
+        doc.setTextColor(0, 0, 0)
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(10)
       }
       
-      if (rowIdx % 2 === 0) {
-        doc.setFillColor(240, 240, 240)
-        xPos = 20
-        let maxWidth = 0
-        columnWidths.forEach(w => maxWidth += w)
-        doc.rect(20, yPos, maxWidth, 7, 'F')
+      // Alternating row background
+      if (index % 2 === 0) {
+        doc.setFillColor(245, 245, 245)
+        doc.rect(15, yPos - 3, pageWidth - 30, 8, 'F')
       }
-
-      xPos = 20
-      row.forEach((cell, idx) => {
-        doc.text(cell, xPos + 2, yPos + 5)
-        xPos += columnWidths[idx]
-      })
-      yPos += 7
+      
+      // Status color coding
+      const statusColor = item.is_paid ? [34, 197, 94] : [239, 68, 68]
+      
+      doc.text((index + 1).toString(), 20, yPos + 3)
+      doc.text((item.name || '-').substring(0, 15), 35, yPos + 3)
+      doc.text((item.room || '-').substring(0, 12), 80, yPos + 3)
+      doc.text(`${item.duration_minutes || 0} นาที`, 110, yPos + 3)
+      doc.text(formatCurrency(item.final_cost || 0), 140, yPos + 3)
+      
+      // Status with color
+      doc.setFillColor(...statusColor, 0.1)
+      doc.setRoundedRect(170, yPos - 2, 30, 6, 2)
+      doc.setDrawColor(...statusColor)
+      doc.setRoundedRect(170, yPos - 2, 30, 6, 2)
+      doc.setTextColor(...statusColor)
+      doc.text(item.is_paid ? 'จ่ายแล้ว' : 'ยังไม่จ่าย', 185, yPos + 3, { align: 'center' })
+      doc.setTextColor(0, 0, 0)
+      
+      yPos += 8
     })
 
-    // Footer
-    yPos = pageHeight - 15
+    // Footer with enhanced design
+    yPos = pageHeight - 25
+    
+    // Footer background
+    doc.setFillColor(...primaryColor, 0.05)
+    doc.rect(0, yPos, pageWidth, 25, 'F')
+    
+    // Footer line
+    doc.setDrawColor(...primaryColor)
+    doc.setLineWidth(0.5)
+    doc.line(15, yPos, pageWidth - 15, yPos)
+    
     doc.setFontSize(9)
     doc.setTextColor(100, 100, 100)
-    doc.text('จัดทำโดยระบบ JUTHAZONE', pageWidth / 2, yPos, { align: 'center' })
-    doc.text(`${now.toLocaleDateString('th-TH')} ${now.toLocaleTimeString('th-TH')}`, pageWidth / 2, yPos + 5, { align: 'center' })
+    doc.text('จัดทำโดยระบบ JUTHAZONE', pageWidth / 2, yPos + 8, { align: 'center' })
+    doc.text(`${formatDate(now)} ${formatTime(now)}`, pageWidth / 2, yPos + 15, { align: 'center' })
+    doc.text('หน้า ' + doc.internal.getNumberOfPages(), pageWidth / 2, yPos + 22, { align: 'center' })
 
-    // Save
+    // Save with enhanced filename
     const timestamp = now.toISOString().slice(0, 10)
-    doc.save(`juthazone-report-${timestamp}.pdf`)
-    alert('✅ ส่งออก PDF สำเร็จ')
+    const zonePrefix = zone === 'blue' ? 'Blue' : 'Red'
+    const fileName = `${zonePrefix}_Report_${timestamp}.pdf`
+    doc.save(fileName)
+    
+    alert(`✅ ส่งออก PDF สำเร็จ\n📊 จำนวน ${data.length} รายการ\n💰 รายได้รวม ${formatCurrency(totalRevenue)}`)
   } catch (error) {
     console.error('PDF export error:', error)
-    alert('❌ เกิดข้อผิดพลาดในการส่งออก PDF')
+    alert('❌ เกิดข้อผิดพลาดในการส่งออก PDF: ' + error.message)
   }
 }
 
@@ -425,6 +632,148 @@ export const printReceipt = async (customer, zone = 'red') => {
   }
 }
 
+/**
+ * Export Daily Summary to Excel - Enhanced Version
+ */
+export const exportDailySummaryToExcel = async (vipData, computerData, selectedDate, selectedShift, options = {}) => {
+  await initializeImports()
+  
+  if (!XLSX) {
+    alert('❌ Excel export not available. Please try again later.')
+    return
+  }
+
+  try {
+    const now = new Date()
+    const timestamp = now.toISOString().slice(0, 10)
+    const { zone = 'red' } = options
+
+    // Enhanced VIP sheet
+    const vipSheet = vipData.map((entry, index) => ({
+      'ลำดับ': index + 1,
+      'รหัส': `VIP-${String(index + 1).padStart(6, '0')}`,
+      'ชื่อลูกค้า': entry.name || '-',
+      'ห้อง': entry.room || '-',
+      'วันที่': formatDate(entry.start_time),
+      'เวลาเริ่ม': formatTime(entry.start_time),
+      'เวลาสิ้นสุด': formatTime(entry.end_time),
+      'ระยะเวลา (นาที)': entry.duration_minutes || 0,
+      'ระยะเวลา (ชม.และนาที)': formatDuration(entry.duration_minutes),
+      'ค่าใช้จ่าย': parseFloat(entry.final_cost || 0).toFixed(2),
+      'วิธีการจ่าย': entry.payment_method === 'cash' ? '💵 เงินสด' : '🏦 โอนเงิน',
+      'กะทำงาน': entry.shift ? `กะ ${entry.shift}` : 'ไม่ระบุ',
+      'พนักงาน': entry.added_by || '-',
+      'หมายเหตุ': entry.note || '-',
+      'สถานะ': getEndReasonText(entry.end_reason)
+    }))
+
+    // Enhanced Computer sheet
+    const computerSheet = computerData.map((entry, index) => ({
+      'ลำดับ': index + 1,
+      'รหัส': `PC-${String(index + 1).padStart(6, '0')}`,
+      'กะ': entry.shift ? `กะ ${entry.shift}` : 'ไม่ระบุ',
+      'วันที่': formatDate(entry.created_at || entry.start_time),
+      'เวลา': formatTime(entry.created_at || entry.start_time),
+      'จำนวนโอน': parseFloat(entry.transfer_amount || 0).toFixed(2),
+      'จำนวนสด': parseFloat(entry.cash_amount || 0).toFixed(2),
+      'รวม': parseFloat(entry.total_cost || 0).toFixed(2),
+      'พนักงาน': entry.added_by || '-',
+      'หมายเหตุ': entry.note || '-',
+      'วันที่สร้าง': formatDateTime(entry.created_at)
+    }))
+
+    // Calculate comprehensive statistics
+    const vipStats = {
+      total: vipData.reduce((sum, e) => sum + parseFloat(e.final_cost || 0), 0),
+      transfer: vipData.filter(e => (e.payment_method || 'transfer') === 'transfer').reduce((sum, e) => sum + parseFloat(e.final_cost || 0), 0),
+      cash: vipData.filter(e => (e.payment_method || 'transfer') === 'cash').reduce((sum, e) => sum + parseFloat(e.final_cost || 0), 0),
+      count: vipData.length,
+      avgPerCustomer: vipData.length > 0 ? vipData.reduce((sum, e) => sum + parseFloat(e.final_cost || 0), 0) / vipData.length : 0
+    }
+
+    const computerStats = {
+      total: computerData.reduce((sum, e) => sum + parseFloat(e.total_cost || 0), 0),
+      transfer: computerData.reduce((sum, e) => sum + parseFloat(e.transfer_amount || 0), 0),
+      cash: computerData.reduce((sum, e) => sum + parseFloat(e.cash_amount || 0), 0),
+      count: computerData.length,
+      avgPerTransaction: computerData.length > 0 ? computerData.reduce((sum, e) => sum + parseFloat(e.total_cost || 0), 0) / computerData.length : 0
+    }
+
+    const grandStats = {
+      total: vipStats.total + computerStats.total,
+      transfer: vipStats.transfer + computerStats.transfer,
+      cash: vipStats.cash + computerStats.cash,
+      count: vipStats.count + computerStats.count
+    }
+
+    // Enhanced summary sheet
+    const summaryData = [
+      ['📊 รายงานสรุปยอดประจำวัน JUTHAZONE'],
+      [''],
+      ['📅 ข้อมูลรายงาน'],
+      ['วันที่รายงาน', formatDate(selectedDate)],
+      ['เวลาสร้างรายงาน', formatTime(now)],
+      ['โซน', zone === 'blue' ? '🔵 BLUE ZONE' : '🔴 RED ZONE'],
+      ['กะที่เลือก', selectedShift === 'all' ? 'ทุกกะ' : `กะ ${selectedShift}`],
+      [''],
+      ['💰 สรุปยอดห้อง VIP'],
+      ['จำนวนลูกค้า', `${vipStats.count} คน`],
+      ['รายได้รวม', formatCurrency(vipStats.total)],
+      ['เงินโอน', formatCurrency(vipStats.transfer)],
+      ['เงินสด', formatCurrency(vipStats.cash)],
+      ['รายได้เฉลี่ยต่อคน', formatCurrency(vipStats.avgPerCustomer)],
+      [''],
+      ['🏆 สรุปรวมทั้งหมด'],
+      ['รายได้รวมทั้งหมด', formatCurrency(grandStats.total)],
+      ['เงินโอนรวม', formatCurrency(grandStats.transfer)],
+      ['เงินสดรวม', formatCurrency(grandStats.cash)],
+      ['จำนวนรายการทั้งหมด', `${grandStats.count} รายการ`],
+      ['อัตราส่วนเงินโอน', `${((grandStats.transfer/grandStats.total)*100).toFixed(1)}%`],
+      ['อัตราส่วนเงินสด', `${((grandStats.cash/grandStats.total)*100).toFixed(1)}%`]
+    ]
+
+    const wb = XLSX.utils.book_new()
+    
+    // Add sheets with enhanced formatting
+    const wsSummary = XLSX.utils.aoa_to_sheet(summaryData)
+    wsSummary['!cols'] = [{ wch: 30 }, { wch: 20 }]
+    XLSX.utils.book_append_sheet(wb, wsSummary, 'สรุปยอดประจำวัน')
+    
+    if (vipSheet.length > 0) {
+      const wsVip = XLSX.utils.json_to_sheet(vipSheet)
+      wsVip['!cols'] = [
+        { wch: 8 }, { wch: 12 }, { wch: 20 }, { wch: 15 }, { wch: 12 },
+        { wch: 10 }, { wch: 10 }, { wch: 15 }, { wch: 20 }, { wch: 12 },
+        { wch: 15 }, { wch: 10 }, { wch: 12 }, { wch: 25 }, { wch: 15 }
+      ]
+      XLSX.utils.book_append_sheet(wb, wsVip, 'รายละเอียดห้อง VIP')
+    }
+    
+    if (computerSheet.length > 0) {
+      const wsComputer = XLSX.utils.json_to_sheet(computerSheet)
+      wsComputer['!cols'] = [
+        { wch: 8 }, { wch: 12 }, { wch: 10 }, { wch: 12 }, { wch: 10 },
+        { wch: 15 }, { wch: 15 }, { wch: 12 }, { wch: 12 }, { wch: 25 }, { wch: 18 }
+      ]
+      XLSX.utils.book_append_sheet(wb, wsComputer, 'รายละเอียด Computer Zone')
+    }
+
+    // Enhanced filename
+    const zonePrefix = zone === 'blue' ? 'Blue' : 'Red'
+    const shiftSuffix = selectedShift === 'all' ? 'AllShifts' : `Shift${selectedShift}`
+    const fileName = `${zonePrefix}_DailySummary_${selectedDate}_${shiftSuffix}.xlsx`
+    
+    XLSX.writeFile(wb, fileName)
+    alert(`✅ ส่งออก Excel สำเร็จ\n📊 วันที่ ${formatDate(selectedDate)}\n💰 รายได้รวม ${formatCurrency(grandStats.total)}`)
+  } catch (error) {
+    console.error('Daily summary Excel export error:', error)
+    alert('❌ เกิดข้อผิดพลาดในการส่งออก Excel: ' + error.message)
+  }
+}
+
+/**
+ * Export Daily Summary to PDF - Enhanced Version
+ */
 /**
  * Quick print receipt from history record (convenience wrapper)
  */
