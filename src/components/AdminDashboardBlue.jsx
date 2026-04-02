@@ -68,10 +68,10 @@ const ZONES = {
 // --- บอร์ดเกม: 2 ชม.แรกราคาปกติ, ชม.ที่ 3+ ลด 50% เฉพาะส่วนที่เกิน 2 ชม. ---
 const BOARD_GAME_ZONE_IDS = ['board-game-big', 'board-game-small']
 
-// --- PS: ครบทุก 2 ชม. หัก 11 บาทต่อรอบ ---
+// --- PS ปกติ: โปร 2 ชม. = 169 บาท, 4 ชม. = 299 บาท ---
 const PS_ZONE_IDS = ['ps-5', 'ps-6', 'ps-7', 'ps-8', 'ps-9', 'ps-10']
-const PS_PACKAGE_HOURS = 2        // ทุกๆ 2 ชั่วโมง
-const PS_DISCOUNT_PER_PACKAGE = 11  // ส่วนลดต่อรอบ 2 ชม.
+const PS_PACKAGE_2H_PRICE = 169
+const PS_PACKAGE_4H_PRICE = 299
 
 // --- Sim ตัวพื้นฐาน: โปร ทุก 2 ชม. = 179 บาท ---
 const SIM_BASIC_IDS = ['sim-1', 'sim-2']
@@ -87,11 +87,6 @@ const SIM_PRO_PACKAGE_PRICE = 259
 const NINTENDO_IDS = ['nintendo-main']
 const NINTENDO_PACKAGE_2H_PRICE = 129
 const NINTENDO_PACKAGE_4H_PRICE = 249
-
-// --- PS5 ปกติ: โปร 2 ชม. = 169 บาท, 4 ชม. = 299 บาท ---
-const PS5_REGULAR_IDS = ['VIP-PS5']
-const PS5_REGULAR_PACKAGE_2H_PRICE = 169
-const PS5_REGULAR_PACKAGE_4H_PRICE = 299
 
 /**
  * คำนวณเวลาที่เล่นจริง (ชั่วโมง) หลังหักเวลา pause
@@ -120,30 +115,41 @@ const getElapsedHours = (startTime, totalPauseDuration, pauseTime, isRunning) =>
 const applySpecialPricing = (room, rawCost, startTime, totalPauseDuration, pauseTime, isRunning, hourlyRate) => {
   const elapsedHours = getElapsedHours(startTime, totalPauseDuration, pauseTime, isRunning)
 
-  // ── PS: ราคาปกติ pro-rated แต่ทุก 2 ชม. หัก 11 บาท ──
+  // ── PS ปกติ Package Pricing ──
   if (PS_ZONE_IDS.includes(room)) {
-    const fullPackages = Math.floor(elapsedHours / PS_PACKAGE_HOURS)
-    if (fullPackages === 0) {
-      // ยังไม่ถึง 2 ชม. — คิดปกติ
-      return {
-        finalCost: rawCost,
-        originalCost: rawCost,
-        hasSpecialPrice: false,
-        promoType: null,
-        promoLabel: null,
-        discountAmount: 0
+    if (elapsedHours >= 4) {
+      const fullPackages = Math.floor(elapsedHours / 4)
+      const remainderHours = elapsedHours % 4
+      let total = fullPackages * PS_PACKAGE_4H_PRICE
+      if (remainderHours >= 2) {
+        total += PS_PACKAGE_2H_PRICE
+      } else if (remainderHours > 0) {
+        total += remainderHours * hourlyRate
       }
-    }
-    const totalDiscount = fullPackages * PS_DISCOUNT_PER_PACKAGE
-    const finalCost = Math.max(0, rawCost - totalDiscount)
-    return {
-      finalCost,
-      originalCost: rawCost,
-      hasSpecialPrice: true,
-      promoType: 'ps_discount',
-      promoLabel: `🎮 โปร PS ส่วนลด ${fullPackages}×฿${PS_DISCOUNT_PER_PACKAGE} = -฿${totalDiscount}`,
-      discountAmount: totalDiscount,
-      fullPackages
+      const saving = rawCost - total
+      return {
+        finalCost: total,
+        originalCost: rawCost,
+        hasSpecialPrice: true,
+        promoType: 'ps_package',
+        promoLabel: `🎮 โปร PS - ฿${total.toFixed(2)}`,
+        discountAmount: saving > 0 ? saving : 0
+      }
+    } else if (elapsedHours >= 2) {
+      const fullPackages = Math.floor(elapsedHours / 2)
+      const remainderHours = elapsedHours % 2
+      const total = fullPackages * PS_PACKAGE_2H_PRICE + remainderHours * hourlyRate
+      const saving = rawCost - total
+      return {
+        finalCost: total,
+        originalCost: rawCost,
+        hasSpecialPrice: true,
+        promoType: 'ps_package',
+        promoLabel: `🎮 โปร PS - ฿${total.toFixed(2)}`,
+        discountAmount: saving > 0 ? saving : 0,
+        fullPackages,
+        remainderHours
+      }
     }
   }
 
@@ -237,44 +243,6 @@ const applySpecialPricing = (room, rawCost, startTime, totalPauseDuration, pause
         hasSpecialPrice: true,
         promoType: 'nintendo_package',
         promoLabel: `🎯 โปร Nintendo - ฿${total.toFixed(2)}`,
-        discountAmount: saving > 0 ? saving : 0,
-        fullPackages,
-        remainderHours
-      }
-    }
-  }
-
-  // ── PS5 ปกติ Package Pricing ──
-  if (PS5_REGULAR_IDS.includes(room)) {
-    if (elapsedHours >= 4) {
-      const fullPackages = Math.floor(elapsedHours / 4)
-      const remainderHours = elapsedHours % 4
-      let total = fullPackages * PS5_REGULAR_PACKAGE_4H_PRICE
-      if (remainderHours >= 2) {
-        total += PS5_REGULAR_PACKAGE_2H_PRICE
-      } else if (remainderHours > 0) {
-        total += remainderHours * hourlyRate
-      }
-      const saving = rawCost - total
-      return {
-        finalCost: total,
-        originalCost: rawCost,
-        hasSpecialPrice: true,
-        promoType: 'ps5_regular_package',
-        promoLabel: `🎮 โปร PS5 - ฿${total.toFixed(2)}`,
-        discountAmount: saving > 0 ? saving : 0
-      }
-    } else if (elapsedHours >= 2) {
-      const fullPackages = Math.floor(elapsedHours / 2)
-      const remainderHours = elapsedHours % 2
-      const total = fullPackages * PS5_REGULAR_PACKAGE_2H_PRICE + remainderHours * hourlyRate
-      const saving = rawCost - total
-      return {
-        finalCost: total,
-        originalCost: rawCost,
-        hasSpecialPrice: true,
-        promoType: 'ps5_regular_package',
-        promoLabel: `🎮 โปร PS5 - ฿${total.toFixed(2)}`,
         discountAmount: saving > 0 ? saving : 0,
         fullPackages,
         remainderHours
