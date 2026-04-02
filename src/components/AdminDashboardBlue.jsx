@@ -88,11 +88,6 @@ const NINTENDO_IDS = ['nintendo-main']
 const NINTENDO_PACKAGE_2H_PRICE = 129
 const NINTENDO_PACKAGE_4H_PRICE = 249
 
-// --- PS5 VIP: โปร 2 ชม. = 169 บาท, 4 ชม. = 299 บาท ---
-const PS5_VIP_IDS = ['ps5-2joy', 'ps5-4joy']
-const PS5_PACKAGE_2H_PRICE = 169
-const PS5_PACKAGE_4H_PRICE = 299
-
 // --- PS5 ปกติ: โปร 2 ชม. = 169 บาท, 4 ชม. = 299 บาท ---
 const PS5_REGULAR_IDS = ['VIP-PS5']
 const PS5_REGULAR_PACKAGE_2H_PRICE = 169
@@ -228,7 +223,7 @@ const applySpecialPricing = (room, rawCost, startTime, totalPauseDuration, pause
         originalCost: rawCost,
         hasSpecialPrice: true,
         promoType: 'nintendo_package',
-        promoLabel: `🎯 โปร Nintendo ${fullPackages > 0 ? fullPackages + '×4ชม.' : ''}${remainderHours >= 2 ? (fullPackages > 0 ? ' + ' : '') + '1×2ชม.' : ''}`,
+        promoLabel: `🎯 โปร Nintendo - ฿${total.toFixed(2)}`,
         discountAmount: saving > 0 ? saving : 0
       }
     } else if (elapsedHours >= 2) {
@@ -241,7 +236,7 @@ const applySpecialPricing = (room, rawCost, startTime, totalPauseDuration, pause
         originalCost: rawCost,
         hasSpecialPrice: true,
         promoType: 'nintendo_package',
-        promoLabel: `🎯 โปร Nintendo ${fullPackages}×2ชม. = ${fullPackages}×฿${NINTENDO_PACKAGE_2H_PRICE}`,
+        promoLabel: `🎯 โปร Nintendo - ฿${total.toFixed(2)}`,
         discountAmount: saving > 0 ? saving : 0,
         fullPackages,
         remainderHours
@@ -266,7 +261,7 @@ const applySpecialPricing = (room, rawCost, startTime, totalPauseDuration, pause
         originalCost: rawCost,
         hasSpecialPrice: true,
         promoType: 'ps5_regular_package',
-        promoLabel: `🎮 โปร PS5 ${fullPackages > 0 ? fullPackages + '×4ชม.' : ''}${remainderHours >= 2 ? (fullPackages > 0 ? ' + ' : '') + '1×2ชม.' : ''}`,
+        promoLabel: `🎮 โปร PS5 - ฿${total.toFixed(2)}`,
         discountAmount: saving > 0 ? saving : 0
       }
     } else if (elapsedHours >= 2) {
@@ -279,7 +274,7 @@ const applySpecialPricing = (room, rawCost, startTime, totalPauseDuration, pause
         originalCost: rawCost,
         hasSpecialPrice: true,
         promoType: 'ps5_regular_package',
-        promoLabel: `🎮 โปร PS5 ${fullPackages}×2ชม. = ${fullPackages}×฿${PS5_REGULAR_PACKAGE_2H_PRICE}`,
+        promoLabel: `🎮 โปร PS5 - ฿${total.toFixed(2)}`,
         discountAmount: saving > 0 ? saving : 0,
         fullPackages,
         remainderHours

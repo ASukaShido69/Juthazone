@@ -13,15 +13,19 @@ const PS_DISCOUNT_PER_PACKAGE = 11  // หัก 11 บาท ต่อทุก
 
 const SIM_BASIC_IDS = ['sim-1', 'sim-2']
 const SIM_BASIC_PACKAGE_HOURS = 2
-const SIM_BASIC_PACKAGE_PRICE = 199
+const SIM_BASIC_PACKAGE_PRICE = 179
 
 const SIM_PRO_IDS = ['sim-3', 'sim-4']
 const SIM_PRO_PACKAGE_HOURS = 2
-const SIM_PRO_PACKAGE_PRICE = 289
+const SIM_PRO_PACKAGE_PRICE = 259
 
 const NINTENDO_IDS = ['nintendo-main']
-const NINTENDO_PACKAGE_HOURS = 2
-const NINTENDO_PACKAGE_PRICE = 149
+const NINTENDO_PACKAGE_2H_PRICE = 129
+const NINTENDO_PACKAGE_4H_PRICE = 249
+
+const PS5_REGULAR_IDS = ['VIP-PS5']
+const PS5_REGULAR_PACKAGE_2H_PRICE = 169
+const PS5_REGULAR_PACKAGE_4H_PRICE = 299
 
 const getElapsedHours = (startTime, totalPauseDuration, pauseTime, isRunning) => {
   const now = Date.now()
@@ -78,29 +82,158 @@ const applySpecialPricing = (room, rawCost, startTime, totalPauseDuration, pause
     }
   }
 
-  if (SIM_PRO_IDS.includes(room) && elapsedHours >= SIM_PRO_PACKAGE_HOURS) {
-    const fullPackages = Math.floor(elapsedHours / SIM_PRO_PACKAGE_HOURS)
-    const remainderHours = elapsedHours % SIM_PRO_PACKAGE_HOURS
-    const total = fullPackages * SIM_PRO_PACKAGE_PRICE + remainderHours * hourlyRate
-    return {
-      finalCost: total,
-      originalCost: rawCost,
-      hasSpecialPrice: true,
-      promoLabel: `🏎️ โปร Sim สมจริง ${fullPackages}×2ชม. = ${fullPackages}×฿${SIM_PRO_PACKAGE_PRICE}`,
-      discountAmount: Math.max(0, rawCost - total)
+  if (NINTENDO_IDS.includes(room)) {
+    if (elapsedHours >= 4) {
+      const fullPackages = Math.floor(elapsedHours / 4)
+      const remainderHours = elapsedHours % 4
+      let total = fullPackages * NINTENDO_PACKAGE_4H_PRICE
+      if (remainderHours >= 2) {
+        total += NINTENDO_PACKAGE_2H_PRICE
+      } else if (remainderHours > 0) {
+        total += remainderHours * hourlyRate
+      }
+      return {
+        finalCost: total,
+        originalCost: rawCost,
+        hasSpecialPrice: true,
+        promoLabel: `🎯 โปร Nintendo - ฿${total.toFixed(2)}`,
+        discountAmount: Math.max(0, rawCost - total)
+      }
+    } else if (elapsedHours >= 2) {
+      const fullPackages = Math.floor(elapsedHours / 2)
+      const remainderHours = elapsedHours % 2
+      const total = fullPackages * NINTENDO_PACKAGE_2H_PRICE + remainderHours * hourlyRate
+      return {
+        finalCost: total,
+        originalCost: rawCost,
+        hasSpecialPrice: true,
+        promoLabel: `🎯 โปร Nintendo - ฿${total.toFixed(2)}`,
+        discountAmount: Math.max(0, rawCost - total)
+      }
     }
   }
 
-  if (NINTENDO_IDS.includes(room) && elapsedHours >= NINTENDO_PACKAGE_HOURS) {
-    const fullPackages = Math.floor(elapsedHours / NINTENDO_PACKAGE_HOURS)
-    const remainderHours = elapsedHours % NINTENDO_PACKAGE_HOURS
-    const total = fullPackages * NINTENDO_PACKAGE_PRICE + remainderHours * hourlyRate
-    return {
-      finalCost: total,
-      originalCost: rawCost,
-      hasSpecialPrice: true,
-      promoLabel: `🎯 โปร Nintendo ${fullPackages}×2ชม. = ${fullPackages}×฿${NINTENDO_PACKAGE_PRICE}`,
-      discountAmount: Math.max(0, rawCost - total)
+  if (PS5_REGULAR_IDS.includes(room)) {
+    if (elapsedHours >= 4) {
+      const fullPackages = Math.floor(elapsedHours / 4)
+      const remainderHours = elapsedHours % 4
+      let total = fullPackages * PS5_REGULAR_PACKAGE_4H_PRICE
+      if (remainderHours >= 2) {
+        total += PS5_REGULAR_PACKAGE_2H_PRICE
+      } else if (remainderHours > 0) {
+        total += remainderHours * hourlyRate
+      }
+      return {
+        finalCost: total,
+        originalCost: rawCost,
+        hasSpecialPrice: true,
+        promoLabel: `🎮 โปร PS5 - ฿${total.toFixed(2)}`,
+        discountAmount: Math.max(0, rawCost - total)
+      }
+    } else if (elapsedHours >= 2) {
+      const fullPackages = Math.floor(elapsedHours / 2)
+      const remainderHours = elapsedHours % 2
+      const total = fullPackages * PS5_REGULAR_PACKAGE_2H_PRICE + remainderHours * hourlyRate
+      return {
+        finalCost: total,
+        originalCost: rawCost,
+        hasSpecialPrice: true,
+        promoLabel: `🎮 โปร PS5 - ฿${total.toFixed(2)}`,
+        discountAmount: Math.max(0, rawCost - total)
+      }
+    }
+  }
+
+  if (NINTENDO_IDS.includes(room)) {
+    if (elapsedHours >= 4) {
+      const fullPackages = Math.floor(elapsedHours / 4)
+      const remainderHours = elapsedHours % 4
+      let total = fullPackages * NINTENDO_PACKAGE_4H_PRICE
+      if (remainderHours >= 2) {
+        total += NINTENDO_PACKAGE_2H_PRICE
+      } else if (remainderHours > 0) {
+        total += remainderHours * hourlyRate
+      }
+      return {
+        finalCost: total,
+        originalCost: rawCost,
+        hasSpecialPrice: true,
+        promoLabel: `🎯 โปร Nintendo ${fullPackages > 0 ? fullPackages + '×4ชม.' : ''}${remainderHours >= 2 ? (fullPackages > 0 ? ' + ' : '') + '1×2ชม.' : ''}`,
+        discountAmount: Math.max(0, rawCost - total)
+      }
+    } else if (elapsedHours >= 2) {
+      const fullPackages = Math.floor(elapsedHours / 2)
+      const remainderHours = elapsedHours % 2
+      const total = fullPackages * NINTENDO_PACKAGE_2H_PRICE + remainderHours * hourlyRate
+      return {
+        finalCost: total,
+        originalCost: rawCost,
+        hasSpecialPrice: true,
+        promoLabel: `🎯 โปร Nintendo ${fullPackages}×2ชม. = ${fullPackages}×฿${NINTENDO_PACKAGE_2H_PRICE}`,
+        discountAmount: Math.max(0, rawCost - total)
+      }
+    }
+  }
+
+  if (PS5_VIP_IDS.includes(room)) {
+    if (elapsedHours >= 4) {
+      const fullPackages = Math.floor(elapsedHours / 4)
+      const remainderHours = elapsedHours % 4
+      let total = fullPackages * PS5_PACKAGE_4H_PRICE
+      if (remainderHours >= 2) {
+        total += PS5_PACKAGE_2H_PRICE
+      } else if (remainderHours > 0) {
+        total += remainderHours * hourlyRate
+      }
+      return {
+        finalCost: total,
+        originalCost: rawCost,
+        hasSpecialPrice: true,
+        promoLabel: `🎮 โปร PS5 VIP ${fullPackages > 0 ? fullPackages + '×4ชม.' : ''}${remainderHours >= 2 ? (fullPackages > 0 ? ' + ' : '') + '1×2ชม.' : ''}`,
+        discountAmount: Math.max(0, rawCost - total)
+      }
+    } else if (elapsedHours >= 2) {
+      const fullPackages = Math.floor(elapsedHours / 2)
+      const remainderHours = elapsedHours % 2
+      const total = fullPackages * PS5_PACKAGE_2H_PRICE + remainderHours * hourlyRate
+      return {
+        finalCost: total,
+        originalCost: rawCost,
+        hasSpecialPrice: true,
+        promoLabel: `🎮 โปร PS5 VIP ${fullPackages}×2ชม. = ${fullPackages}×฿${PS5_PACKAGE_2H_PRICE}`,
+        discountAmount: Math.max(0, rawCost - total)
+      }
+    }
+  }
+
+  if (PS5_REGULAR_IDS.includes(room)) {
+    if (elapsedHours >= 4) {
+      const fullPackages = Math.floor(elapsedHours / 4)
+      const remainderHours = elapsedHours % 4
+      let total = fullPackages * PS5_REGULAR_PACKAGE_4H_PRICE
+      if (remainderHours >= 2) {
+        total += PS5_REGULAR_PACKAGE_2H_PRICE
+      } else if (remainderHours > 0) {
+        total += remainderHours * hourlyRate
+      }
+      return {
+        finalCost: total,
+        originalCost: rawCost,
+        hasSpecialPrice: true,
+        promoLabel: `🎮 โปร PS5 ${fullPackages > 0 ? fullPackages + '×4ชม.' : ''}${remainderHours >= 2 ? (fullPackages > 0 ? ' + ' : '') + '1×2ชม.' : ''}`,
+        discountAmount: Math.max(0, rawCost - total)
+      }
+    } else if (elapsedHours >= 2) {
+      const fullPackages = Math.floor(elapsedHours / 2)
+      const remainderHours = elapsedHours % 2
+      const total = fullPackages * PS5_REGULAR_PACKAGE_2H_PRICE + remainderHours * hourlyRate
+      return {
+        finalCost: total,
+        originalCost: rawCost,
+        hasSpecialPrice: true,
+        promoLabel: `🎮 โปร PS5 ${fullPackages}×2ชม. = ${fullPackages}×฿${PS5_REGULAR_PACKAGE_2H_PRICE}`,
+        discountAmount: Math.max(0, rawCost - total)
+      }
     }
   }
 

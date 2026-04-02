@@ -19,15 +19,19 @@ const PS_DISCOUNT_PER_PACKAGE = 11  // หัก 11 บาท ต่อทุก
 
 const SIM_BASIC_IDS = ['sim-1', 'sim-2']
 const SIM_BASIC_PACKAGE_HOURS = 2
-const SIM_BASIC_PACKAGE_PRICE = 199
+const SIM_BASIC_PACKAGE_PRICE = 179
 
 const SIM_PRO_IDS = ['sim-3', 'sim-4']
 const SIM_PRO_PACKAGE_HOURS = 2
-const SIM_PRO_PACKAGE_PRICE = 289
+const SIM_PRO_PACKAGE_PRICE = 259
 
 const NINTENDO_IDS = ['nintendo-main']
-const NINTENDO_PACKAGE_HOURS = 2
-const NINTENDO_PACKAGE_PRICE = 149
+const NINTENDO_PACKAGE_2H_PRICE = 129
+const NINTENDO_PACKAGE_4H_PRICE = 249
+
+const PS5_REGULAR_IDS = ['VIP-PS5']
+const PS5_REGULAR_PACKAGE_2H_PRICE = 169
+const PS5_REGULAR_PACKAGE_4H_PRICE = 299
 
 const getElapsedHours = (customer) => {
   const now = Date.now()
@@ -53,7 +57,7 @@ const calculateFinalCostWithDiscount = (customer) => {
   )
   const elapsedHours = getElapsedHours(customer)
 
-  // PS: ราคา pro-rated หัก 11 บาท ต่อทุก 2 ชม. ที่ครบ
+  // PS: ราคา pro-rated 
   if (PS_ZONE_IDS.includes(customer.room)) {
     const fullPackages = Math.floor(elapsedHours / PS_PACKAGE_HOURS)
     if (fullPackages > 0) {
@@ -85,11 +89,42 @@ const calculateFinalCostWithDiscount = (customer) => {
     return fullPackages * SIM_PRO_PACKAGE_PRICE + remainderHours * (customer.hourly_rate || 0)
   }
 
-  // Nintendo: ทุก 2 ชม. = 149 บาท + เศษคิด hourlyRate/ชม.
-  if (NINTENDO_IDS.includes(customer.room) && elapsedHours >= NINTENDO_PACKAGE_HOURS) {
-    const fullPackages = Math.floor(elapsedHours / NINTENDO_PACKAGE_HOURS)
-    const remainderHours = elapsedHours % NINTENDO_PACKAGE_HOURS
-    return fullPackages * NINTENDO_PACKAGE_PRICE + remainderHours * (customer.hourly_rate || 0)
+  // Nintendo: ทุก 2 ชม. = 129 บาท, ทุก 4 ชม. = 249 บาท + เศษคิด hourlyRate/ชม.
+  if (NINTENDO_IDS.includes(customer.room)) {
+    if (elapsedHours >= 4) {
+      const fullPackages = Math.floor(elapsedHours / 4)
+      const remainderHours = elapsedHours % 4
+      let total = fullPackages * NINTENDO_PACKAGE_4H_PRICE
+      if (remainderHours >= 2) {
+        total += NINTENDO_PACKAGE_2H_PRICE
+      } else if (remainderHours > 0) {
+        total += remainderHours * (customer.hourly_rate || 0)
+      }
+      return total
+    } else if (elapsedHours >= 2) {
+      const fullPackages = Math.floor(elapsedHours / 2)
+      const remainderHours = elapsedHours % 2
+      return fullPackages * NINTENDO_PACKAGE_2H_PRICE + remainderHours * (customer.hourly_rate || 0)
+    }
+  }
+
+  // PS5 ปกติ: ทุก 2 ชม. = 169 บาท, ทุก 4 ชม. = 299 บาท + เศษคิด hourlyRate/ชม.
+  if (PS5_REGULAR_IDS.includes(customer.room)) {
+    if (elapsedHours >= 4) {
+      const fullPackages = Math.floor(elapsedHours / 4)
+      const remainderHours = elapsedHours % 4
+      let total = fullPackages * PS5_REGULAR_PACKAGE_4H_PRICE
+      if (remainderHours >= 2) {
+        total += PS5_REGULAR_PACKAGE_2H_PRICE
+      } else if (remainderHours > 0) {
+        total += remainderHours * (customer.hourly_rate || 0)
+      }
+      return total
+    } else if (elapsedHours >= 2) {
+      const fullPackages = Math.floor(elapsedHours / 2)
+      const remainderHours = elapsedHours % 2
+      return fullPackages * PS5_REGULAR_PACKAGE_2H_PRICE + remainderHours * (customer.hourly_rate || 0)
+    }
   }
 
   return rawCost
