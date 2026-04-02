@@ -124,77 +124,18 @@ const applySpecialPricing = (room, rawCost, startTime, totalPauseDuration, pause
     }
   }
 
-  if (NINTENDO_IDS.includes(room)) {
-    if (elapsedHours >= 4) {
-      const fullPackages = Math.floor(elapsedHours / 4)
-      const remainderHours = elapsedHours % 4
-      let total = fullPackages * NINTENDO_PACKAGE_4H_PRICE
-      if (remainderHours >= 2) {
-        total += NINTENDO_PACKAGE_2H_PRICE
-      } else if (remainderHours > 0) {
-        total += remainderHours * hourlyRate
-      }
-      return {
-        finalCost: total,
-        originalCost: rawCost,
-        hasSpecialPrice: true,
-        promoLabel: `🎯 โปร Nintendo ${fullPackages > 0 ? fullPackages + '×4ชม.' : ''}${remainderHours >= 2 ? (fullPackages > 0 ? ' + ' : '') + '1×2ชม.' : ''}`,
-        discountAmount: Math.max(0, rawCost - total)
-      }
-    } else if (elapsedHours >= 2) {
-      const fullPackages = Math.floor(elapsedHours / 2)
-      const remainderHours = elapsedHours % 2
-      const total = fullPackages * NINTENDO_PACKAGE_2H_PRICE + remainderHours * hourlyRate
-      return {
-        finalCost: total,
-        originalCost: rawCost,
-        hasSpecialPrice: true,
-        promoLabel: `🎯 โปร Nintendo ${fullPackages}×2ชม. = ${fullPackages}×฿${NINTENDO_PACKAGE_2H_PRICE}`,
-        discountAmount: Math.max(0, rawCost - total)
-      }
-    }
-  }
-
-  if (PS5_VIP_IDS.includes(room)) {
-    if (elapsedHours >= 4) {
-      const fullPackages = Math.floor(elapsedHours / 4)
-      const remainderHours = elapsedHours % 4
-      let total = fullPackages * PS5_PACKAGE_4H_PRICE
-      if (remainderHours >= 2) {
-        total += PS5_PACKAGE_2H_PRICE
-      } else if (remainderHours > 0) {
-        total += remainderHours * hourlyRate
-      }
-      return {
-        finalCost: total,
-        originalCost: rawCost,
-        hasSpecialPrice: true,
-        promoLabel: `🎮 โปร PS5 VIP ${fullPackages > 0 ? fullPackages + '×4ชม.' : ''}${remainderHours >= 2 ? (fullPackages > 0 ? ' + ' : '') + '1×2ชม.' : ''}`,
-        discountAmount: Math.max(0, rawCost - total)
-      }
-    } else if (elapsedHours >= 2) {
-      const fullPackages = Math.floor(elapsedHours / 2)
-      const remainderHours = elapsedHours % 2
-      const total = fullPackages * PS5_PACKAGE_2H_PRICE + remainderHours * hourlyRate
-      return {
-        finalCost: total,
-        originalCost: rawCost,
-        hasSpecialPrice: true,
-        promoLabel: `🎮 โปร PS5 VIP ${fullPackages}×2ชม. = ${fullPackages}×฿${PS5_PACKAGE_2H_PRICE}`,
-        discountAmount: Math.max(0, rawCost - total)
-      }
-    }
-  }
-
   return { finalCost: rawCost, originalCost: rawCost, hasSpecialPrice: false, promoLabel: null, discountAmount: 0 }
 }
 
 function CustomerViewBlue({ customers }) {
   const [roomFilter, setRoomFilter] = useState('all')
 
+  // Safety check for customers prop
+  const safeCustomers = customers || []
+
   // Calculate real-time cost and elapsed time for display (Blue-only)
   const displayCustomers = useMemo(() => {
-    return customers.map(customer => {
+    return safeCustomers.map(customer => {
       const rawCost = calculateCostBlue(
         customer.start_time,
         customer.hourly_rate,
@@ -226,13 +167,13 @@ function CustomerViewBlue({ customers }) {
         )
       }
     })
-  }, [customers])
+  }, [safeCustomers])
 
   const roomOptions = useMemo(() => {
     const set = new Set()
-    customers.forEach(c => c.room && set.add(c.room))
+    safeCustomers.forEach(c => c.room && set.add(c.room))
     return Array.from(set).sort((a, b) => a.localeCompare(b, 'th'))
-  }, [customers])
+  }, [safeCustomers])
 
   const filteredCustomers = useMemo(() => {
     if (roomFilter === 'all') return displayCustomers
@@ -265,12 +206,12 @@ function CustomerViewBlue({ customers }) {
             🔵 JUTHAZONE BLUE 🔵
           </h1>
           <p className="text-sm sm:text-base md:text-lg text-white/90 font-semibold glass-light inline-block px-4 py-2 md:px-6 md:py-2 rounded-full">
-            ระบบคำนวณราคาตามเวลาจริง | รายการ: {customers.length} | แสดง: {filteredCustomers.length}
+            ระบบคำนวณราคาตามเวลาจริง | รายการ: {safeCustomers.length} | แสดง: {filteredCustomers.length}
           </p>
         </div>
 
         {/* Room Filter */}
-        {customers.length > 0 && (
+        {safeCustomers.length > 0 && (
           <div className="glass-light rounded-2xl shadow-xl p-4 mb-4 md:mb-6 slide-up-1">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-white font-semibold drop-shadow text-sm">🏠 ห้อง:</span>
@@ -278,10 +219,10 @@ function CustomerViewBlue({ customers }) {
                 onClick={() => setRoomFilter('all')}
                 className={`px-3 py-1.5 rounded-full text-sm font-semibold border transition-all duration-200 ${roomFilter === 'all' ? 'bg-white text-blue-700 shadow-lg scale-105' : 'bg-white/10 text-white border-white/30 hover:bg-white/20'}`}
               >
-                ทั้งหมด ({customers.length})
+                ทั้งหมด ({safeCustomers.length})
               </button>
               {roomOptions.map(room => {
-                const count = customers.filter(c => c.room === room).length
+                const count = safeCustomers.filter(c => c.room === room).length
                 return (
                   <button
                     key={room}
@@ -296,7 +237,7 @@ function CustomerViewBlue({ customers }) {
           </div>
         )}
 
-        {customers.length === 0 ? (
+        {safeCustomers.length === 0 ? (
           <div className="bg-white/95 backdrop-blur-sm rounded-2xl md:rounded-3xl shadow-2xl p-8 md:p-12 text-center border-2 border-white/50">
             <div className="text-6xl md:text-8xl mb-4 md:mb-6 animate-bounce-slow">🔵</div>
             <p className="text-2xl md:text-3xl text-gray-700 font-bold mb-2">ยังไม่มีรายการ</p>
