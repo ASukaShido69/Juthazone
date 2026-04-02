@@ -73,20 +73,30 @@ const PS_ZONE_IDS = ['ps-5', 'ps-6', 'ps-7', 'ps-8', 'ps-9', 'ps-10']
 const PS_PACKAGE_HOURS = 2        // ทุกๆ 2 ชั่วโมง
 const PS_DISCOUNT_PER_PACKAGE = 11  // ส่วนลดต่อรอบ 2 ชม.
 
-// --- Sim ตัวพื้นฐาน: โปร ทุก 2 ชม. = 199 บาท ---
+// --- Sim ตัวพื้นฐาน: โปร ทุก 2 ชม. = 179 บาท ---
 const SIM_BASIC_IDS = ['sim-1', 'sim-2']
 const SIM_BASIC_PACKAGE_HOURS = 2
-const SIM_BASIC_PACKAGE_PRICE = 199
+const SIM_BASIC_PACKAGE_PRICE = 179
 
-// --- Sim ตัวสมจริง: โปร ทุก 2 ชม. = 289 บาท ---
+// --- Sim ตัวสมจริง: โปร ทุก 2 ชม. = 259 บาท ---
 const SIM_PRO_IDS = ['sim-3', 'sim-4']
 const SIM_PRO_PACKAGE_HOURS = 2
-const SIM_PRO_PACKAGE_PRICE = 289
+const SIM_PRO_PACKAGE_PRICE = 259
 
-// --- Nintendo: โปร ทุก 2 ชม. = 149 บาท ---
+// --- Nintendo: โปร 2 ชม. = 129 บาท, 4 ชม. = 249 บาท ---
 const NINTENDO_IDS = ['nintendo-main']
-const NINTENDO_PACKAGE_HOURS = 2
-const NINTENDO_PACKAGE_PRICE = 149
+const NINTENDO_PACKAGE_2H_PRICE = 129
+const NINTENDO_PACKAGE_4H_PRICE = 249
+
+// --- PS5 VIP: โปร 2 ชม. = 169 บาท, 4 ชม. = 299 บาท ---
+const PS5_VIP_IDS = ['ps5-2joy', 'ps5-4joy']
+const PS5_PACKAGE_2H_PRICE = 169
+const PS5_PACKAGE_4H_PRICE = 299
+
+// --- PS5 ปกติ: โปร 2 ชม. = 169 บาท, 4 ชม. = 299 บาท ---
+const PS5_REGULAR_IDS = ['VIP-PS5']
+const PS5_REGULAR_PACKAGE_2H_PRICE = 169
+const PS5_REGULAR_PACKAGE_4H_PRICE = 299
 
 /**
  * คำนวณเวลาที่เล่นจริง (ชั่วโมง) หลังหักเวลา pause
@@ -203,17 +213,73 @@ const applySpecialPricing = (room, rawCost, startTime, totalPauseDuration, pause
 
   // ── Nintendo Package Pricing ──
   if (NINTENDO_IDS.includes(room)) {
-    if (elapsedHours >= NINTENDO_PACKAGE_HOURS) {
-      const fullPackages = Math.floor(elapsedHours / NINTENDO_PACKAGE_HOURS)
-      const remainderHours = elapsedHours % NINTENDO_PACKAGE_HOURS
-      const total = fullPackages * NINTENDO_PACKAGE_PRICE + remainderHours * hourlyRate
+    if (elapsedHours >= 4) {
+      const fullPackages = Math.floor(elapsedHours / 4)
+      const remainderHours = elapsedHours % 4
+      let total = fullPackages * NINTENDO_PACKAGE_4H_PRICE
+      if (remainderHours >= 2) {
+        total += NINTENDO_PACKAGE_2H_PRICE
+      } else if (remainderHours > 0) {
+        total += remainderHours * hourlyRate
+      }
       const saving = rawCost - total
       return {
         finalCost: total,
         originalCost: rawCost,
         hasSpecialPrice: true,
         promoType: 'nintendo_package',
-        promoLabel: `🎯 โปร Nintendo ${fullPackages}×2ชม. = ${fullPackages}×฿${NINTENDO_PACKAGE_PRICE}`,
+        promoLabel: `🎯 โปร Nintendo ${fullPackages > 0 ? fullPackages + '×4ชม.' : ''}${remainderHours >= 2 ? (fullPackages > 0 ? ' + ' : '') + '1×2ชม.' : ''}`,
+        discountAmount: saving > 0 ? saving : 0
+      }
+    } else if (elapsedHours >= 2) {
+      const fullPackages = Math.floor(elapsedHours / 2)
+      const remainderHours = elapsedHours % 2
+      const total = fullPackages * NINTENDO_PACKAGE_2H_PRICE + remainderHours * hourlyRate
+      const saving = rawCost - total
+      return {
+        finalCost: total,
+        originalCost: rawCost,
+        hasSpecialPrice: true,
+        promoType: 'nintendo_package',
+        promoLabel: `🎯 โปร Nintendo ${fullPackages}×2ชม. = ${fullPackages}×฿${NINTENDO_PACKAGE_2H_PRICE}`,
+        discountAmount: saving > 0 ? saving : 0,
+        fullPackages,
+        remainderHours
+      }
+    }
+  }
+
+  // ── PS5 ปกติ Package Pricing ──
+  if (PS5_REGULAR_IDS.includes(room)) {
+    if (elapsedHours >= 4) {
+      const fullPackages = Math.floor(elapsedHours / 4)
+      const remainderHours = elapsedHours % 4
+      let total = fullPackages * PS5_REGULAR_PACKAGE_4H_PRICE
+      if (remainderHours >= 2) {
+        total += PS5_REGULAR_PACKAGE_2H_PRICE
+      } else if (remainderHours > 0) {
+        total += remainderHours * hourlyRate
+      }
+      const saving = rawCost - total
+      return {
+        finalCost: total,
+        originalCost: rawCost,
+        hasSpecialPrice: true,
+        promoType: 'ps5_regular_package',
+        promoLabel: `🎮 โปร PS5 ${fullPackages > 0 ? fullPackages + '×4ชม.' : ''}${remainderHours >= 2 ? (fullPackages > 0 ? ' + ' : '') + '1×2ชม.' : ''}`,
+        discountAmount: saving > 0 ? saving : 0
+      }
+    } else if (elapsedHours >= 2) {
+      const fullPackages = Math.floor(elapsedHours / 2)
+      const remainderHours = elapsedHours % 2
+      const total = fullPackages * PS5_REGULAR_PACKAGE_2H_PRICE + remainderHours * hourlyRate
+      const saving = rawCost - total
+      return {
+        finalCost: total,
+        originalCost: rawCost,
+        hasSpecialPrice: true,
+        promoType: 'ps5_regular_package',
+        promoLabel: `🎮 โปร PS5 ${fullPackages}×2ชม. = ${fullPackages}×฿${PS5_REGULAR_PACKAGE_2H_PRICE}`,
         discountAmount: saving > 0 ? saving : 0,
         fullPackages,
         remainderHours
